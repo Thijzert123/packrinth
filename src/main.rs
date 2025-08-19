@@ -2,74 +2,81 @@ mod json;
 mod request;
 mod subcommand;
 
+use std::path::{Path, PathBuf};
+use anyhow::{bail, Result};
 use crate::json::config;
 use crate::json::config::Modpack;
 use clap::Parser;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     // Initialize logger so that the user sees the logs in the terminal
     simple_logger::init_with_level(log::Level::Debug).unwrap_or_else(|error| {
-        println!("Could not initialize logger: {}", error);
+        eprintln!("Could not initialize logger: {}", error);
     });
 
-    // println!("{:#?}", Version::from_id("ND4ROcMQ")?);
-    //
-    // println!("{:#?}", Modpack::from_working_dir()?);
-
-    Cli::parse().run()?;
-
-    Ok(())
+    Cli::parse().run()
 }
 
 #[derive(Parser, Debug)]
 struct Cli {
     #[clap(subcommand)]
-    command: Option<Command>,
+    subcommand: Option<SubCommand>,
 
     #[clap(flatten)]
     config_args: ConfigArgs,
 }
 
 #[derive(Parser, Debug)]
-enum Command {
+enum SubCommand {
     Branch(subcommand::BranchArgs),
     Update(subcommand::UpdateArgs),
 }
 
 #[derive(Parser, Debug)]
 struct ConfigArgs {
-    /// If no modpack configuration file exists, initialize a new project.
-    /// When this option is passed, a new branch might also be created.
+    /// Initialize a new modpack if one doesn't exist
     #[clap(short, long, global = true)]
-    new: bool,
+    pub init: bool,
+
+    /// Set the root directory of the modpack
+    #[clap(short, long, global = true)]
+    pub directory: Option<PathBuf>,
 }
 
 impl Cli {
-    fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let modpack = Modpack::from_working_dir(self.config_args.new)?;
+    fn run(&mut self) -> Result<()> {
+        let working_dir = match &self.config_args.directory {
+            Some(dir) => dir,
+            None => &std::env::current_dir()?,
+        };
+
+        let mut modpack =  match self.config_args.init {
+            true => Modpack::new(working_dir)?,
+            false => Modpack::from_directory(working_dir)?,
+        };
+
         if modpack.pack_format != config::CURRENT_PACK_FORMAT {
-            // TODO add better handling to user here
-            println!("Current pack format is not supported");
-            return Ok(());
+            bail!("Pack format {} is not supported by this Packrinth version. Please use a configuration with pack format {}.", modpack.pack_format, config::CURRENT_PACK_FORMAT);
         }
 
-        if let Some(command) = &self.command {
-            return command.run(modpack, &self.config_args);
+        if let Some(command) = &self.subcommand {
+            return command.run(working_dir, &mut modpack, &self.config_args);
         }
 
         Ok(())
     }
 }
 
-impl Command {
+impl SubCommand {
     fn run(
         &self,
-        modpack: Modpack,
+        directory: &Path,
+        modpack: &mut Modpack,
         config_args: &ConfigArgs,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<()> {
         match self {
-            Command::Branch(args) => args.run(modpack, config_args),
-            Command::Update(args) => args.run(modpack, config_args),
+            SubCommand::Branch(args) => args.run(directory, modpack, config_args),
+            SubCommand::Update(args) => args.run(directory, modpack, config_args),
         }
     }
 }

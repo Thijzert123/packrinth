@@ -1,12 +1,11 @@
 use crate::json::{json_to_file, modrinth};
-use crate::{PackrinthError, request};
-use anyhow::{Result, bail};
-use clap::Error;
+use crate::request;
+use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Pack format version. Can be used for checking if the user uses the right packrinth
 /// version for their project.
@@ -14,9 +13,9 @@ pub const CURRENT_PACK_FORMAT: u16 = 1;
 
 // TODO add option to filter featured versions only (https://docs.modrinth.com/api/operations/getprojectversions)
 pub fn newest_version_for_project(
-    project_id: String,
-    loaders: Vec<String>,
-    game_versions: Vec<String>,
+    project_id: &str,
+    loaders: &Vec<String>,
+    game_versions: &Vec<String>,
 ) -> Result<Version, Box<dyn std::error::Error>> {
     let endpoint = format!(
         "/project/{project_id}/version?loaders={loaders:?}&game_versions={game_versions:?}"
@@ -63,6 +62,7 @@ const OVERRIDES_DIR_NAME: &str = "overrides";
 /// used for the branch. They should only be updated via one of the commands.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Branch {
+    pub name: String,
     pub version: String,
     pub minecraft_versions: Vec<String>,
     pub loaders: Vec<Loader>,
@@ -78,6 +78,7 @@ struct BranchConfig {
     pub loaders: Vec<Loader>,
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Loader {
     // For resource packs and data packs
@@ -174,72 +175,85 @@ pub enum Side {
 }
 
 impl Modpack {
-    /// Tries to load the config file from the working directory.
-    /// If the config file doesn't exist, a file with default configuration will be made
-    /// if <code>allow_init</code> is set to <code>true</code>.
-    pub fn from_working_dir(allow_init: bool) -> Result<Self> {
-        match fs::read_to_string(MODPACK_CONFIG_FILE_NAME) {
-            Ok(contents) => Ok(serde_json::from_str(&contents)?),
-            Err(error) => {
-                if error.kind() == std::io::ErrorKind::NotFound && allow_init {
-                    let modpack = Self {
-                        pack_format: CURRENT_PACK_FORMAT,
-                        name: "My Modrinth modpack".to_string(),
-                        summary: "Short summary for this modpack".to_string(),
-                        author: "John Doe".to_string(),
-                        branches: Vec::new(),
-                        projects: HashMap::new(),
-                    };
-                    Self::save(&modpack)?;
-                    Ok(modpack)
-                } else {
-                    bail!(error)
-                }
+    pub fn new(directory: &PathBuf) -> Result<Self> {
+        match fs::metadata(directory) {
+            Ok(metadata) => if metadata.is_file() {
+                bail!("Given path {} is a file, not a directory", directory.display())
             }
+            Err(_) => fs::create_dir_all(directory)?
         }
+
+        let modpack = Self {
+            pack_format: CURRENT_PACK_FORMAT,
+            name: "My Modrinth modpack".to_string(),
+            summary: "Short summary for this modpack".to_string(),
+            author: "John Doe".to_string(),
+            branches: Vec::new(),
+            projects: HashMap::new(),
+        };
+        let config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
+        json_to_file(&modpack, config_path)?;
+        Ok(modpack)
     }
 
-    pub fn save(&self) -> Result<()> {
-        json_to_file(self, MODPACK_CONFIG_FILE_NAME)
+    pub fn from_directory(directory: &Path) -> Result<Self> {
+        let config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
+        Ok(serde_json::from_str(&fs::read_to_string(config_path)?)?)
     }
 }
 
 impl Branch {
-    pub fn from_working_dir2(name: &String) -> Result<Self> {
-        match fs::metadata(name) {
+    /// Creates a new branch.
+    /// If it already exists, it just returns the existing branch.
+    pub fn new(directory: &Path, modpack: &mut Modpack, name: &String) -> Result<Self> {
+        if !modpack.branches.contains(name) {
+            modpack.branches.push(name.clone());
+            json_to_file(&modpack, directory.join(MODPACK_CONFIG_FILE_NAME))?;
+        }
+        let branch_dir = directory.join(name);
+        if let Ok(exists) = fs::exists(&branch_dir) && !exists {
+            fs::create_dir(&branch_dir)?;
+        }
+        Self::from_directory(directory, name)
+    }
+
+    pub fn from_directory(directory: &Path, name: &String) -> Result<Self> {
+        let branch_dir = directory.join(name);
+        match fs::metadata(&branch_dir).with_context(|| format!("Branch {} doesn't exist", name)) {
             Ok(metadata) => {
                 if metadata.is_dir() {
-                    let branch_config_path = PathBuf::from(&name).join(BRANCH_CONFIG_FILE_NAME);
-                    let branch_config = match fs::read_to_string(&branch_config_path) {
+                    let branch_config_path = branch_dir.join(BRANCH_CONFIG_FILE_NAME);
+                    let branch_config = match fs::read_to_string(&branch_config_path).with_context(|| format!("Failed to read {}", &branch_config_path.display())) {
                         Ok(contents) => {
                             let branch_config: BranchConfig = serde_json::from_str(&contents)?;
                             branch_config
                         }
-                        Err(error) => {
-                            if error.kind() == std::io::ErrorKind::NotFound {
-                                Self::create_default_branch_config(branch_config_path)?
+                        Err(error) if error.downcast_ref::<std::io::Error>().is_some() => {
+                            if error.downcast_ref::<std::io::Error>().unwrap().kind() == std::io::ErrorKind::NotFound {
+                                Self::create_default_branch_config(&branch_config_path)?
                             } else {
                                 bail!(error)
                             }
                         }
+                        Err(error) => bail!(error),
                     };
-                    let branch_versions_path = PathBuf::from(&name).join(BRANCH_VERSIONS_FILE_NAME);
-                    let branch_versions = match fs::read_to_string(&branch_versions_path) {
+                    let branch_versions_path = branch_dir.join(BRANCH_VERSIONS_FILE_NAME);
+                    let branch_versions = match fs::read_to_string(&branch_versions_path).with_context(|| format!("Failed to read {}", &branch_versions_path.display())) {
                         Ok(contents) => {
                             let branch_versions: BranchVersions = serde_json::from_str(&contents)?;
                             branch_versions
                         }
-                        Err(error) => {
-                            if error.kind() == std::io::ErrorKind::NotFound {
-                                let branch_versions = BranchVersions { versions: vec![] };
-                                json_to_file(&branch_versions, &branch_versions_path)?;
-                                branch_versions
+                        Err(error) if error.downcast_ref::<std::io::Error>().is_some() => {
+                            if error.downcast_ref::<std::io::Error>().unwrap().kind() == std::io::ErrorKind::NotFound {
+                                Self::create_default_branch_versions(&branch_versions_path)?
                             } else {
                                 bail!(error)
                             }
                         }
+                        Err(error) => bail!(error),
                     };
                     Ok(Self {
+                        name: name.clone(),
                         version: branch_config.version,
                         minecraft_versions: branch_config.minecraft_versions,
                         loaders: branch_config.loaders,
@@ -253,66 +267,7 @@ impl Branch {
         }
     }
 
-    pub fn from_working_dir(
-        modpack: &mut Modpack,
-        name: &String,
-        allow_init: bool,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        if !modpack.branches.contains(name) && allow_init {
-            modpack.branches.push(name.clone());
-            json_to_file(&modpack, MODPACK_CONFIG_FILE_NAME)?;
-        }
-
-        let overrides_path = PathBuf::from(&name).join(OVERRIDES_DIR_NAME);
-        fs::create_dir_all(&overrides_path)?;
-
-        let branch_config_path = PathBuf::from(&name).join(BRANCH_CONFIG_FILE_NAME);
-        let branch_config = match fs::read_to_string(&branch_config_path) {
-            Ok(contents) => {
-                let branch_config: BranchConfig = serde_json::from_str(&contents)?;
-                branch_config
-            }
-            Err(error) => {
-                if error.kind() == std::io::ErrorKind::NotFound && allow_init {
-                    let branch_config = BranchConfig {
-                        version: "1.0.0-vanilla".to_string(),
-                        minecraft_versions: vec!["1.21.7".to_string(), "1.21.8".to_string()],
-                        loaders: vec![Loader::Minecraft, Loader::VanillaShader],
-                    };
-                    json_to_file(&branch_config, &branch_config_path)?;
-                    branch_config
-                } else {
-                    return Err(Box::new(error));
-                }
-            }
-        };
-        let branch_versions_path = PathBuf::from(&name).join(BRANCH_VERSIONS_FILE_NAME);
-        let branch_versions = match fs::read_to_string(&branch_versions_path) {
-            Ok(contents) => {
-                let branch_versions: BranchVersions = serde_json::from_str(&contents)?;
-                branch_versions
-            }
-            Err(error) => {
-                if error.kind() == std::io::ErrorKind::NotFound && allow_init {
-                    let branch_versions = BranchVersions { versions: vec![] };
-                    json_to_file(&branch_versions, &branch_versions_path)?;
-                    branch_versions
-                } else {
-                    return Err(Box::new(error));
-                }
-            }
-        };
-        Ok(Self {
-            version: branch_config.version,
-            minecraft_versions: branch_config.minecraft_versions,
-            loaders: branch_config.loaders,
-            versions: branch_versions.versions,
-        })
-    }
-
-    // pub fn all_from_working_dir(modpack: &mut Modpack, )
-
-    fn create_default_branch_config(branch_config_path: PathBuf) -> Result<BranchConfig> {
+    fn create_default_branch_config(branch_config_path: &PathBuf) -> Result<BranchConfig> {
         let branch_config = BranchConfig {
             version: "1.0.0-vanilla".to_string(),
             minecraft_versions: vec!["1.21.7".to_string(), "1.21.8".to_string()],
@@ -322,10 +277,19 @@ impl Branch {
         Ok(branch_config)
     }
 
-    fn create_default_branch_versions(branch_versions_path: PathBuf) -> Result<BranchVersions> {
+    fn create_default_branch_versions(branch_versions_path: &PathBuf) -> Result<BranchVersions> {
         let branch_versions = BranchVersions { versions: vec![] };
         json_to_file(&branch_versions, branch_versions_path)?;
         Ok(branch_versions)
+    }
+}
+
+impl Display for Branch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Branch {}:", self.name)?;
+        writeln!(f, "  - Branch version: {}", self.version)?;
+        writeln!(f, "  - Acceptable Minecraft versions: {}", self.minecraft_versions.join(", "))?;
+        write!(f, "  - Acceptable loaders: {:?}", self.loaders) // TODO make this pretty
     }
 }
 
@@ -363,7 +327,7 @@ impl Version {
             file_url: primary_file_url.expect("No primary file found").clone(),
             file_name: primary_file_name.expect("No primary file found").clone(),
             file_sha512: primary_file_sha512.expect("No primary file found").clone(),
-            file_size: primary_file_size.expect("No primary file found").clone(),
+            file_size: *primary_file_size.expect("No primary file found"),
         })
     }
 
