@@ -65,7 +65,7 @@ impl Cli {
         }
 
         if let Some(command) = &self.subcommand {
-            return command.run(working_dir, &mut modpack, &self.config_args);
+            return command.run(&mut modpack, &self.config_args);
         }
 
         Ok(())
@@ -73,11 +73,11 @@ impl Cli {
 }
 
 impl SubCommand {
-    fn run(&self, directory: &Path, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
+    fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
         match self {
-            SubCommand::Project(args) => args.run(directory, modpack, config_args),
-            SubCommand::Branch(args) => args.run(directory, modpack, config_args),
-            SubCommand::Update(args) => args.run(directory, modpack, config_args),
+            SubCommand::Project(args) => args.run(modpack, config_args),
+            SubCommand::Branch(args) => args.run(modpack, config_args),
+            SubCommand::Update(args) => args.run(modpack, config_args),
         }
     }
 }

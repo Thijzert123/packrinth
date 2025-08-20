@@ -96,18 +96,13 @@ struct RemoveBranchesArgs {
 }
 
 impl ProjectArgs {
-    pub fn run(
-        &self,
-        directory: &Path,
-        modpack: &mut Modpack,
-        config_args: &ConfigArgs,
-    ) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
         if let Some(command) = &self.command {
             match command {
-                ProjectSubCommand::List(args) => args.run(directory, modpack, config_args),
-                ProjectSubCommand::Add(args) => args.run(directory, modpack, config_args),
-                ProjectSubCommand::Override(args) => args.run(directory, modpack, config_args),
-                ProjectSubCommand::Remove(args) => args.run(directory, modpack, config_args),
+                ProjectSubCommand::List(args) => args.run(modpack, config_args),
+                ProjectSubCommand::Add(args) => args.run(modpack, config_args),
+                ProjectSubCommand::Override(args) => args.run(modpack, config_args),
+                ProjectSubCommand::Remove(args) => args.run(modpack, config_args),
             }
         } else if let Some(project_names) = &self.projects {
             let project_map = project_names
@@ -124,13 +119,13 @@ impl ProjectArgs {
                 .collect();
             ListProjectsArgs::list(&project_map)
         } else {
-            ListProjectsArgs::run(&ListProjectsArgs {}, directory, modpack, config_args)
+            ListProjectsArgs::run(&ListProjectsArgs {}, modpack, config_args)
         }
     }
 }
 
 impl ListProjectsArgs {
-    pub fn run(&self, _: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
         Self::list(&modpack.projects)
     }
 
@@ -175,7 +170,7 @@ impl ListProjectsArgs {
 }
 
 impl AddProjectsArgs {
-    pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
         let include_or_exclude = if let Some(include) = self.include.clone() {
             Some(IncludeOrExclude::Include(include))
         } else {
@@ -189,19 +184,19 @@ impl AddProjectsArgs {
 }
 
 impl OverrideProjectArgs {
-    pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
         Ok(())
     }
 }
 
 impl RemoveProjectsArgs {
-    pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
         modpack.remove_projects(&self.projects)
     }
 }
 
 impl UpdateArgs {
-    pub fn run(&self, directory: &Path, modpack: &Modpack, config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<()> {
         if self.branch.is_none() {
             for project in &modpack.projects {
                 // let thing = Branch::from_working_dir(modpack, &"test".to_string(), false);
@@ -215,29 +210,24 @@ impl UpdateArgs {
 }
 
 impl BranchArgs {
-    pub fn run(
-        &self,
-        directory: &Path,
-        modpack: &mut Modpack,
-        config_args: &ConfigArgs,
-    ) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
         if let Some(command) = &self.command {
             match command {
-                BranchSubCommand::List(args) => args.run(directory, modpack, config_args),
-                BranchSubCommand::Add(args) => args.run(directory, modpack, config_args),
-                BranchSubCommand::Remove(args) => args.run(directory, modpack, config_args),
+                BranchSubCommand::List(args) => args.run(modpack, config_args),
+                BranchSubCommand::Add(args) => args.run(modpack, config_args),
+                BranchSubCommand::Remove(args) => args.run(modpack, config_args),
             }
         } else if let Some(branch_names) = &self.branches {
-            ListBranchesArgs::list(directory, branch_names)
+            ListBranchesArgs::list(&modpack.directory, branch_names)
         } else {
-            ListBranchesArgs::run(&ListBranchesArgs {}, directory, modpack, config_args)
+            ListBranchesArgs::run(&ListBranchesArgs {}, modpack, config_args)
         }
     }
 }
 
 impl ListBranchesArgs {
-    pub fn run(&self, directory: &Path, modpack: &Modpack, _: &ConfigArgs) -> Result<()> {
-        Self::list(directory, &modpack.branches)
+    pub fn run(&self, modpack: &Modpack, _: &ConfigArgs) -> Result<()> {
+        Self::list(&modpack.directory, &modpack.branches)
     }
 
     pub fn list(directory: &Path, branches: &[String]) -> Result<()> {
@@ -282,7 +272,7 @@ impl ListBranchesArgs {
 }
 
 impl AddBranchesArgs {
-    pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
         let mut iter = self.branches.iter().peekable();
         while let Some(branch_name) = iter.next() {
             let new_branch = modpack.new_branch(branch_name)?;
@@ -299,10 +289,10 @@ impl AddBranchesArgs {
 }
 
 impl RemoveBranchesArgs {
-    pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
         println!(
             "These branches in directory {} will be removed:",
-            directory.display()
+            modpack.directory.display()
         );
         for branch in &self.branches {
             println!("  - {}", branch);

@@ -219,7 +219,8 @@ impl Modpack {
     pub fn from_directory(directory: &Path) -> Result<Self> {
         let modpack_config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
 
-        let mut modpack: Modpack = serde_json::from_str(&fs::read_to_string(&modpack_config_path)?)?;
+        let mut modpack: Modpack =
+            serde_json::from_str(&fs::read_to_string(&modpack_config_path)?)?;
         modpack.directory = PathBuf::from(directory);
         modpack.modpack_config_path = modpack_config_path;
 
