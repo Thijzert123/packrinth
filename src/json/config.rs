@@ -38,15 +38,16 @@ pub struct Modpack {
     pub summary: String,
     pub author: String,
     pub branches: Vec<String>,
-    pub projects: HashMap<String, Option<Project>>, // TODO check if option here can be removed
+    pub projects: HashMap<String, Option<ProjectSettings>>, // TODO check if option here can be removed
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Project {
+pub struct ProjectSettings {
+    // HashMap<Minecraft version, Project version id>
     pub version_overrides: Option<HashMap<String, String>>,
 
     #[serde(flatten)]
-    pub include_or_existing: Option<IncludeOrExclude>,
+    pub include_or_exclude: Option<IncludeOrExclude>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

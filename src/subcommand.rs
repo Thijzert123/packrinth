@@ -1,9 +1,47 @@
+use std::collections::HashMap;
 use crate::ConfigArgs;
 use crate::json::config;
-use crate::json::config::{Branch, Modpack};
+use crate::json::config::{Branch, IncludeOrExclude, Modpack, ProjectSettings};
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use std::path::Path;
+
+#[derive(Debug, Parser)]
+pub struct ProjectArgs {
+    #[clap(subcommand)]
+    command: Option<ProjectSubCommand>,
+
+    projects: Option<Vec<String>>,
+}
+
+#[derive(Parser, Debug)]
+enum ProjectSubCommand {
+    #[clap(alias = "ls")]
+    List(ListProjectsArgs),
+
+    Add(AddProjectArgs),
+
+    #[clap(alias = "rm")]
+    Remove(RemoveProjectArgs),
+}
+
+#[derive(Parser, Debug)]
+struct ListProjectsArgs;
+
+#[derive(Parser, Debug)]
+struct AddProjectArgs {
+    projects: Vec<String>,
+}
+
+#[derive(Parser, Debug)]
+struct RemoveProjectArgs {
+    projects: Vec<String>,
+}
+
+#[derive(Debug, Parser)]
+pub struct UpdateArgs {
+    branch: Option<String>,
+}
 
 #[derive(Debug, Parser)]
 pub struct BranchArgs {
@@ -20,6 +58,7 @@ enum BranchSubCommand {
 
     Add(AddBranchArgs),
 
+    #[clap(alias = "rm")]
     Remove(RemoveBranchArgs),
 }
 
@@ -36,9 +75,79 @@ struct RemoveBranchArgs {
     branches: Vec<String>,
 }
 
-#[derive(Debug, Parser)]
-pub struct UpdateArgs {
-    branch: Option<String>,
+impl ProjectArgs {
+    pub fn run(
+        &self,
+        directory: &Path,
+        modpack: &mut Modpack,
+        config_args: &ConfigArgs,
+    ) -> Result<()> {
+        if let Some(command) = &self.command {
+            match command {
+                ProjectSubCommand::List(args) => args.run(directory, modpack, config_args),
+                ProjectSubCommand::Add(args) => args.run(directory, modpack, config_args),
+                ProjectSubCommand::Remove(args) => args.run(directory, modpack, config_args),
+            }
+        } else if let Some(project_names) = &self.projects {
+            let project_map = project_names.into_iter().map(|x| (x.clone(), None)).collect();
+            ListProjectsArgs::list(&project_map)
+        } else {
+            ListProjectsArgs::run(&ListProjectsArgs {}, directory, modpack, config_args)
+        }
+    }
+}
+
+impl ListProjectsArgs {
+    pub fn run(&self, _: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+        Self::list(&modpack.projects)
+    }
+
+    pub fn list(projects: &HashMap<String, Option<ProjectSettings>>) -> Result<()> {
+        if projects.is_empty() {
+            println!("There are no projects added to this modpack yet.");
+            return Ok(());
+        }
+
+        let mut iter = projects.iter().peekable();
+        while let Some(project) = iter.next() {
+            println!("{}", project.0);
+
+            if let Some(project_settings) = project.1 {
+                if let Some(overrides) = &project_settings.version_overrides {
+                    println!("  - Overrides:");
+                    for version_override in overrides {
+                        println!("    - {}: {}", version_override.0, version_override.1);
+                    }
+                }
+
+                if let Some(include_or_exclude) = &project_settings.include_or_exclude {
+                    match include_or_exclude {
+                        IncludeOrExclude::Include(includes) => println!("  - Includes: {}", includes.join(", ")),
+                        IncludeOrExclude::Exclude(excludes) => println!("  - Excludes: {}", excludes.join(", ")),
+                    }
+                }
+            }
+
+            // Print new line between projects, but not at the very end.
+            if iter.peek().is_some() {
+                println!();
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl AddProjectArgs {
+    pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl RemoveProjectArgs {
+    pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl UpdateArgs {
@@ -82,6 +191,11 @@ impl ListBranchesArgs {
     }
 
     pub fn list(directory: &Path, branches: &[String]) -> Result<()> {
+        if branches.is_empty() {
+            println!("There are no branches added to this modpack yet.");
+            return Ok(());
+        }
+
         let mut iter = branches.iter().peekable();
         while let Some(branch_name) = iter.next() {
             match Branch::from_directory(directory, branch_name).with_context(|| {

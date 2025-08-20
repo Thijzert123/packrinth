@@ -28,6 +28,7 @@ struct Cli {
 
 #[derive(Parser, Debug)]
 enum SubCommand {
+    Project(subcommand::ProjectArgs),
     Branch(subcommand::BranchArgs),
     Update(subcommand::UpdateArgs),
 }
@@ -74,6 +75,7 @@ impl Cli {
 impl SubCommand {
     fn run(&self, directory: &Path, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
         match self {
+            SubCommand::Project(args) => args.run(directory, modpack, config_args),
             SubCommand::Branch(args) => args.run(directory, modpack, config_args),
             SubCommand::Update(args) => args.run(directory, modpack, config_args),
         }
