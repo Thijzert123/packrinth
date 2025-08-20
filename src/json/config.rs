@@ -1,11 +1,12 @@
 use crate::json::{json_to_file, modrinth};
 use crate::request;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
+use dialoguer::Confirm;
 
 /// Pack format version. Can be used for checking if the user uses the right packrinth
 /// version for their project.
@@ -27,7 +28,7 @@ pub fn newest_version_for_project(
     Version::from_modrinth_version(&modrinth_versions[0])
 }
 
-const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
+pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 
 /// Config file at the root of the project. File is named <code>modpack.json</code>.
 #[derive(Debug, Serialize, Deserialize)]
@@ -105,7 +106,7 @@ pub enum Loader {
     #[serde(rename = "liteloader")]
     LiteLoader,
     #[serde(rename = "modloader")]
-    RigusamisModLoader,
+    RisugamisModLoader,
     #[serde(rename = "nilloader")]
     NilLoader,
     #[serde(rename = "ornithe")]
@@ -177,10 +178,15 @@ pub enum Side {
 impl Modpack {
     pub fn new(directory: &PathBuf) -> Result<Self> {
         match fs::metadata(directory) {
-            Ok(metadata) => if metadata.is_file() {
-                bail!("Given path {} is a file, not a directory", directory.display())
+            Ok(metadata) => {
+                if metadata.is_file() {
+                    bail!(
+                        "Given path {} is a file, not a directory",
+                        directory.display()
+                    )
+                }
             }
-            Err(_) => fs::create_dir_all(directory)?
+            Err(_) => fs::create_dir_all(directory)?,
         }
 
         let modpack = Self {
@@ -211,7 +217,9 @@ impl Branch {
             json_to_file(&modpack, directory.join(MODPACK_CONFIG_FILE_NAME))?;
         }
         let branch_dir = directory.join(name);
-        if let Ok(exists) = fs::exists(&branch_dir) && !exists {
+        if let Ok(exists) = fs::exists(&branch_dir)
+            && !exists
+        {
             fs::create_dir(&branch_dir)?;
         }
         Self::from_directory(directory, name)
@@ -223,28 +231,38 @@ impl Branch {
             Ok(metadata) => {
                 if metadata.is_dir() {
                     let branch_config_path = branch_dir.join(BRANCH_CONFIG_FILE_NAME);
-                    let branch_config = match fs::read_to_string(&branch_config_path).with_context(|| format!("Failed to read {}", &branch_config_path.display())) {
-                        Ok(contents) => {
-                            let branch_config: BranchConfig = serde_json::from_str(&contents)?;
-                            branch_config
-                        }
-                        Err(error) if error.downcast_ref::<std::io::Error>().is_some() => {
-                            if error.downcast_ref::<std::io::Error>().unwrap().kind() == std::io::ErrorKind::NotFound {
-                                Self::create_default_branch_config(&branch_config_path)?
-                            } else {
-                                bail!(error)
+                    let branch_config =
+                        match fs::read_to_string(&branch_config_path).with_context(|| {
+                            format!("Failed to read {}", &branch_config_path.display())
+                        }) {
+                            Ok(contents) => {
+                                let branch_config: BranchConfig = serde_json::from_str(&contents)?;
+                                branch_config
                             }
-                        }
-                        Err(error) => bail!(error),
-                    };
+                            Err(error) if error.downcast_ref::<std::io::Error>().is_some() => {
+                                if error.downcast_ref::<std::io::Error>().unwrap().kind()
+                                    == std::io::ErrorKind::NotFound
+                                {
+                                    Self::create_default_branch_config(&branch_config_path)?
+                                } else {
+                                    bail!(error)
+                                }
+                            }
+                            Err(error) => bail!(error),
+                        };
                     let branch_versions_path = branch_dir.join(BRANCH_VERSIONS_FILE_NAME);
-                    let branch_versions = match fs::read_to_string(&branch_versions_path).with_context(|| format!("Failed to read {}", &branch_versions_path.display())) {
+                    let branch_versions = match fs::read_to_string(&branch_versions_path)
+                        .with_context(|| {
+                            format!("Failed to read {}", &branch_versions_path.display())
+                        }) {
                         Ok(contents) => {
                             let branch_versions: BranchVersions = serde_json::from_str(&contents)?;
                             branch_versions
                         }
                         Err(error) if error.downcast_ref::<std::io::Error>().is_some() => {
-                            if error.downcast_ref::<std::io::Error>().unwrap().kind() == std::io::ErrorKind::NotFound {
+                            if error.downcast_ref::<std::io::Error>().unwrap().kind()
+                                == std::io::ErrorKind::NotFound
+                            {
                                 Self::create_default_branch_versions(&branch_versions_path)?
                             } else {
                                 bail!(error)
@@ -265,6 +283,45 @@ impl Branch {
             }
             Err(error) => bail!(error),
         }
+    }
+
+    pub fn remove_all(directory: &Path, modpack: &mut Modpack, names: &Vec<String>) -> Result<()> {
+        println!("These branches in directory {} will be removed:", directory.display());
+        for name in names {
+            println!("  - {}", name);
+        }
+        println!("Please keep in mind that all the content of the branches will be removed, including overrides.");
+        println!();
+
+        let confirmation = Confirm::new()
+            .with_prompt("Do you want to continue?")
+            .wait_for_newline(true)
+            .default(false)
+            .interact()
+            .expect("Error while interacting with confirmation");
+
+        if confirmation {
+            println!();
+            for name in names {
+                let branch_path = directory.join(name);
+
+                if modpack.branches.contains(name) {
+                    modpack.branches.retain(|x| x != name);
+                    if let Ok(exists) = fs::exists(&branch_path)
+                        && exists
+                    {
+                        fs::remove_dir_all(&branch_path)?;
+                    }
+                }
+                json_to_file(&modpack, directory.join(MODPACK_CONFIG_FILE_NAME))?;
+
+                println!("Removed {}", branch_path.display());
+            }
+        } else {
+            println!("Aborted action");
+        }
+
+        Ok(())
     }
 
     fn create_default_branch_config(branch_config_path: &PathBuf) -> Result<BranchConfig> {
@@ -288,8 +345,54 @@ impl Display for Branch {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Branch {}:", self.name)?;
         writeln!(f, "  - Branch version: {}", self.version)?;
-        writeln!(f, "  - Acceptable Minecraft versions: {}", self.minecraft_versions.join(", "))?;
-        write!(f, "  - Acceptable loaders: {:?}", self.loaders) // TODO make this pretty
+        writeln!(
+            f,
+            "  - Acceptable Minecraft versions: {}",
+            self.minecraft_versions.join(", ")
+        )?;
+        write!(f, "  - Acceptable loaders: {}", Loader::value_vec(&self.loaders).join(", "))
+    }
+}
+
+impl Loader {
+    pub fn value_vec(loaders: &Vec<Self>) -> Vec<&str> {
+        let mut values = Vec::new();
+        for loader in loaders {
+            values.push(loader.value());
+        }
+        values
+    }
+
+    fn value(&self) -> &str {
+        match self {
+            Loader::Minecraft => "Minecraft",
+            Loader::Fabric => "Fabric",
+            Loader::Forge => "Forge",
+            Loader::NeoForge => "NeoForge",
+            Loader::Quilt => "Quilt",
+            Loader::Babric => "Babric",
+            Loader::BTABabric => "BTA (Babric)",
+            Loader::JavaAgent => "Java Agent",
+            Loader::LegacyFabric => "Legacy Fabric",
+            Loader::LiteLoader => "LiteLoader",
+            Loader::RisugamisModLoader => "Risugami's ModLoader",
+            Loader::NilLoader => "NilLoader",
+            Loader::Ornithe => "Ornithe",
+            Loader::Rift => "Rift",
+            Loader::Canvas => "Canvas",
+            Loader::Iris => "Iris",
+            Loader::Optifine => "OptiFine",
+            Loader::VanillaShader => "Vanilla Shader",
+            Loader::Bukkit => "Bukkit",
+            Loader::Folia => "Folia",
+            Loader::Paper => "Paper",
+            Loader::Purpur => "Purpur",
+            Loader::Spigot => "Spigot",
+            Loader::Sponge => "Sponge",
+            Loader::BungeeCord => "BungeeCord",
+            Loader::Velocity => "Velocity",
+            Loader::Waterfall => "Waterfall",
+        }
     }
 }
 

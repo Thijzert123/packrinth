@@ -3,9 +3,9 @@
 pub mod config;
 mod modrinth;
 
-use std::fmt::Debug;
 use anyhow::{Context, Result};
 use serde::Serialize;
+use std::fmt::Debug;
 use std::fs;
 use std::path::Path;
 
@@ -14,7 +14,9 @@ where
     T: ?Sized + Serialize + Debug,
     P: AsRef<Path>,
 {
-    let json = serde_json::to_string_pretty(json_value).with_context(|| format!("Failed to serialize {:?} to JSON", json_value))?;
-    fs::write(&file, json).with_context(|| format!("Failed write to {}", &file.as_ref().display()))?;
+    let json = serde_json::to_string_pretty(json_value)
+        .with_context(|| format!("Failed to serialize {:?} to JSON", json_value))?;
+    fs::write(&file, json)
+        .with_context(|| format!("Failed write to {}", &file.as_ref().display()))?;
     Ok(())
 }
