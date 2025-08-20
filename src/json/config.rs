@@ -33,7 +33,7 @@ pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 
 /// Config file at the root of the project. File is named <code>modpack.json</code>.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Modpack<'a> {
+pub struct Modpack {
     pub pack_format: u16,
     pub name: String,
     pub summary: String,
@@ -41,8 +41,8 @@ pub struct Modpack<'a> {
     pub branches: Vec<String>,
     pub projects: HashMap<String, ProjectSettings>,
 
-    #[serde(skip, default = "Modpack::default_path")]
-    pub directory: &'a Path,
+    #[serde(skip)]
+    pub directory: PathBuf,
 
     #[serde(skip)]
     pub modpack_config_path: PathBuf,
@@ -187,13 +187,8 @@ pub enum Side {
     Both,
 }
 
-impl<'a> Modpack<'a> {
-    pub fn default_path() -> &'a Path {
-        // This default path should always be changed when initializing a Modpack.
-        Path::new("TEMP_PLACEHOLDER_THIS_SHOULD_BE_CHANGED_WHEN_INITIALIZING")
-    }
-
-    pub fn new(directory: &'a Path) -> Result<Self> {
+impl Modpack {
+    pub fn new(directory: &Path) -> Result<Self> {
         match fs::metadata(directory) {
             Ok(metadata) => {
                 if metadata.is_file() {
@@ -213,7 +208,7 @@ impl<'a> Modpack<'a> {
             author: "John Doe".to_string(),
             branches: Vec::new(),
             projects: HashMap::new(),
-            directory,
+            directory: PathBuf::from(directory),
             modpack_config_path: directory.join(MODPACK_CONFIG_FILE_NAME),
         };
 
@@ -221,11 +216,11 @@ impl<'a> Modpack<'a> {
         Ok(modpack)
     }
 
-    pub fn from_directory(directory: &'a Path) -> Result<Self> {
+    pub fn from_directory(directory: &Path) -> Result<Self> {
         let modpack_config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
 
         let mut modpack: Modpack = serde_json::from_str(&fs::read_to_string(&modpack_config_path)?)?;
-        modpack.directory = directory;
+        modpack.directory = PathBuf::from(directory);
         modpack.modpack_config_path = modpack_config_path;
 
         Ok(modpack)
@@ -278,7 +273,7 @@ impl<'a> Modpack<'a> {
         {
             fs::create_dir(&branch_dir)?;
         }
-        Branch::from_directory(self.directory, name)
+        Branch::from_directory(&self.directory, name)
     }
 
     pub fn remove_branches(&mut self, branch_names: &Vec<String>) -> Result<()> {
