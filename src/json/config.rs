@@ -1,12 +1,12 @@
 use crate::json::{json_to_file, modrinth};
 use crate::request;
 use anyhow::{Context, Result, bail};
+use dialoguer::Confirm;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
-use dialoguer::Confirm;
 
 /// Pack format version. Can be used for checking if the user uses the right packrinth
 /// version for their project.
@@ -287,11 +287,16 @@ impl Branch {
     }
 
     pub fn remove_all(directory: &Path, modpack: &mut Modpack, names: &Vec<String>) -> Result<()> {
-        println!("These branches in directory {} will be removed:", directory.display());
+        println!(
+            "These branches in directory {} will be removed:",
+            directory.display()
+        );
         for name in names {
             println!("  - {}", name);
         }
-        println!("Please keep in mind that all the content of the branches will be removed, including overrides.");
+        println!(
+            "Please keep in mind that all the content of the branches will be removed, including overrides."
+        );
         println!();
 
         let confirmation = Confirm::new()
@@ -351,7 +356,11 @@ impl Display for Branch {
             "  - Acceptable Minecraft versions: {}",
             self.minecraft_versions.join(", ")
         )?;
-        write!(f, "  - Acceptable loaders: {}", Loader::value_vec(&self.loaders).join(", "))
+        write!(
+            f,
+            "  - Acceptable loaders: {}",
+            Loader::value_vec(&self.loaders).join(", ")
+        )
     }
 }
 

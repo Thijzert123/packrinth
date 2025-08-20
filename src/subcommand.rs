@@ -1,9 +1,9 @@
-use std::collections::HashMap;
 use crate::ConfigArgs;
 use crate::json::config;
 use crate::json::config::{Branch, IncludeOrExclude, Modpack, ProjectSettings};
 use anyhow::{Context, Result, bail};
 use clap::Parser;
+use std::collections::HashMap;
 use std::path::Path;
 
 #[derive(Debug, Parser)]
@@ -89,7 +89,10 @@ impl ProjectArgs {
                 ProjectSubCommand::Remove(args) => args.run(directory, modpack, config_args),
             }
         } else if let Some(project_names) = &self.projects {
-            let project_map = project_names.into_iter().map(|x| (x.clone(), None)).collect();
+            let project_map = project_names
+                .into_iter()
+                .map(|x| (x.clone(), None))
+                .collect();
             ListProjectsArgs::list(&project_map)
         } else {
             ListProjectsArgs::run(&ListProjectsArgs {}, directory, modpack, config_args)
@@ -122,8 +125,12 @@ impl ListProjectsArgs {
 
                 if let Some(include_or_exclude) = &project_settings.include_or_exclude {
                     match include_or_exclude {
-                        IncludeOrExclude::Include(includes) => println!("  - Includes: {}", includes.join(", ")),
-                        IncludeOrExclude::Exclude(excludes) => println!("  - Excludes: {}", excludes.join(", ")),
+                        IncludeOrExclude::Include(includes) => {
+                            println!("  - Includes: {}", includes.join(", "))
+                        }
+                        IncludeOrExclude::Exclude(excludes) => {
+                            println!("  - Excludes: {}", excludes.join(", "))
+                        }
                     }
                 }
             }
