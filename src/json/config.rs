@@ -32,7 +32,7 @@ pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 
 /// Config file at the root of the project. File is named <code>modpack.json</code>.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Modpack {
+pub struct Modpack { // TODO add field for directory, but don't put it in the final json
     pub pack_format: u16,
     pub name: String,
     pub summary: String,
@@ -51,6 +51,7 @@ pub struct ProjectSettings {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone)]
 pub enum IncludeOrExclude {
     Include(Vec<String>),
     Exclude(Vec<String>),
@@ -207,12 +208,31 @@ impl Modpack {
         let config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
         Ok(serde_json::from_str(&fs::read_to_string(config_path)?)?)
     }
+
+    pub fn add_all(&mut self, directory: &Path, projects: &[String], version_overrides: Option<HashMap<String, String>>, include_or_exclude: Option<IncludeOrExclude>) -> Result<()> {
+        for project in projects {
+            self.projects.insert(
+                String::from(project),
+                if include_or_exclude.clone().is_some() {
+                    Some(ProjectSettings {
+                        version_overrides: None,
+                        include_or_exclude: include_or_exclude.clone(),
+                    })
+                } else {
+                    None
+                },
+            );
+        }
+
+        let config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
+        json_to_file(self, config_path)
+    }
 }
 
 impl Branch {
     /// Creates a new branch.
     /// If it already exists, it just returns the existing branch.
-    pub fn new(directory: &Path, modpack: &mut Modpack, name: &String) -> Result<Self> {
+    pub fn new(directory: &Path, modpack: &mut Modpack, name: &String) -> Result<Self> { // TODO put these functions in the Modpack impl
         if !modpack.branches.contains(name) {
             modpack.branches.push(name.clone());
             json_to_file(&modpack, directory.join(MODPACK_CONFIG_FILE_NAME))?;

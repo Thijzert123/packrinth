@@ -36,7 +36,7 @@ enum SubCommand {
 #[derive(Parser, Debug)]
 struct ConfigArgs {
     /// Initialize a new modpack if one doesn't exist
-    #[clap(short, long, global = true)]
+    #[clap(long, global = true)]
     pub init: bool,
 
     /// Set the root directory of the modpack
