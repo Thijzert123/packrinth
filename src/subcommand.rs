@@ -3,9 +3,9 @@ use crate::json::config;
 use crate::json::config::{Branch, IncludeOrExclude, Modpack, ProjectSettings};
 use anyhow::{Context, Result, bail};
 use clap::Parser;
+use dialoguer::Confirm;
 use std::collections::HashMap;
 use std::path::Path;
-use dialoguer::Confirm;
 
 #[derive(Debug, Parser)]
 pub struct ProjectArgs {
@@ -110,7 +110,18 @@ impl ProjectArgs {
                 ProjectSubCommand::Remove(args) => args.run(directory, modpack, config_args),
             }
         } else if let Some(project_names) = &self.projects {
-            let project_map = project_names.iter().map(|x| (x.clone(), ProjectSettings { version_overrides: None, include_or_exclude: None })).collect();
+            let project_map = project_names
+                .iter()
+                .map(|x| {
+                    (
+                        x.clone(),
+                        ProjectSettings {
+                            version_overrides: None,
+                            include_or_exclude: None,
+                        },
+                    )
+                })
+                .collect();
             ListProjectsArgs::list(&project_map)
         } else {
             ListProjectsArgs::run(&ListProjectsArgs {}, directory, modpack, config_args)
@@ -134,23 +145,23 @@ impl ListProjectsArgs {
             println!("{}", project.0);
 
             // if let Some(project_settings) = project.1 {
-                if let Some(overrides) = &project.1.version_overrides {
-                    println!("  - Overrides:");
-                    for version_override in overrides {
-                        println!("    - {}: {}", version_override.0, version_override.1);
-                    }
+            if let Some(overrides) = &project.1.version_overrides {
+                println!("  - Overrides:");
+                for version_override in overrides {
+                    println!("    - {}: {}", version_override.0, version_override.1);
                 }
+            }
 
-                if let Some(include_or_exclude) = &project.1.include_or_exclude {
-                    match include_or_exclude {
-                        IncludeOrExclude::Include(includes) => {
-                            println!("  - Includes: {}", includes.join(", "))
-                        }
-                        IncludeOrExclude::Exclude(excludes) => {
-                            println!("  - Excludes: {}", excludes.join(", "))
-                        }
+            if let Some(include_or_exclude) = &project.1.include_or_exclude {
+                match include_or_exclude {
+                    IncludeOrExclude::Include(includes) => {
+                        println!("  - Includes: {}", includes.join(", "))
+                    }
+                    IncludeOrExclude::Exclude(excludes) => {
+                        println!("  - Excludes: {}", excludes.join(", "))
                     }
                 }
+            }
             // }
 
             // Print new line between projects, but not at the very end.
@@ -171,7 +182,7 @@ impl AddProjectsArgs {
             self.exclude.clone().map(IncludeOrExclude::Exclude)
         };
 
-        modpack.add_projects(directory, &self.projects, None, include_or_exclude)?;
+        modpack.add_projects(&self.projects, None, include_or_exclude)?;
 
         Ok(())
     }
@@ -185,7 +196,7 @@ impl OverrideProjectArgs {
 
 impl RemoveProjectsArgs {
     pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
-        modpack.remove_projects(directory, &self.projects)
+        modpack.remove_projects(&self.projects)
     }
 }
 
@@ -274,7 +285,7 @@ impl AddBranchesArgs {
     pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
         let mut iter = self.branches.iter().peekable();
         while let Some(branch_name) = iter.next() {
-            let new_branch = Branch::new(directory, modpack, branch_name)?;
+            let new_branch = modpack.new_branch(branch_name)?;
             println!("{}", &new_branch);
 
             // Print new line between branches, but not at the very end.
@@ -310,7 +321,7 @@ impl RemoveBranchesArgs {
         println!();
 
         if confirmation {
-            Branch::remove_all(directory, modpack, &self.branches)?; // TODO evaluate all ? for better error handling. Skipping a failed branch removal is better than stopping the program entirely
+            modpack.remove_branches(&self.branches)?; // TODO evaluate all ? for better error handling. Skipping a failed branch removal is better than stopping the program entirely
             if self.branches.len() == 1 {
                 println!("Removed {} branch", self.branches.len());
             } else {

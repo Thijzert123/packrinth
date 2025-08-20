@@ -4,10 +4,10 @@ use anyhow::{Context, Result, bail};
 use dialoguer::Confirm;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::env::current_dir;
 use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
-use clap::Parser;
 
 /// Pack format version. Can be used for checking if the user uses the right packrinth
 /// version for their project.
@@ -33,13 +33,19 @@ pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 
 /// Config file at the root of the project. File is named <code>modpack.json</code>.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Modpack { // TODO add field for directory, but don't put it in the final json
+pub struct Modpack<'a> {
     pub pack_format: u16,
     pub name: String,
     pub summary: String,
     pub author: String,
     pub branches: Vec<String>,
-    pub projects: HashMap<String, ProjectSettings>, // TODO check if option here can be removed
+    pub projects: HashMap<String, ProjectSettings>,
+
+    #[serde(skip, default = "Modpack::default_path")]
+    pub directory: &'a Path,
+
+    #[serde(skip)]
+    pub modpack_config_path: PathBuf,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -181,8 +187,13 @@ pub enum Side {
     Both,
 }
 
-impl Modpack {
-    pub fn new(directory: &PathBuf) -> Result<Self> {
+impl<'a> Modpack<'a> {
+    pub fn default_path() -> &'a Path {
+        // This default path should always be changed when initializing a Modpack.
+        Path::new("TEMP_PLACEHOLDER_THIS_SHOULD_BE_CHANGED_WHEN_INITIALIZING")
+    }
+
+    pub fn new(directory: &'a Path) -> Result<Self> {
         match fs::metadata(directory) {
             Ok(metadata) => {
                 if metadata.is_file() {
@@ -202,63 +213,94 @@ impl Modpack {
             author: "John Doe".to_string(),
             branches: Vec::new(),
             projects: HashMap::new(),
+            directory,
+            modpack_config_path: directory.join(MODPACK_CONFIG_FILE_NAME),
         };
-        let config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
-        json_to_file(&modpack, config_path)?;
+
+        json_to_file(&modpack, &modpack.modpack_config_path)?;
         Ok(modpack)
     }
 
-    pub fn from_directory(directory: &Path) -> Result<Self> {
-        let config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
-        Ok(serde_json::from_str(&fs::read_to_string(config_path)?)?)
+    pub fn from_directory(directory: &'a Path) -> Result<Self> {
+        let modpack_config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
+
+        let mut modpack: Modpack = serde_json::from_str(&fs::read_to_string(&modpack_config_path)?)?;
+        modpack.directory = directory;
+        modpack.modpack_config_path = modpack_config_path;
+
+        Ok(modpack)
     }
 
-    pub fn add_projects(&mut self, directory: &Path, projects: &[String], version_overrides: Option<HashMap<String, String>>, include_or_exclude: Option<IncludeOrExclude>) -> Result<()> {
+    pub fn add_projects(
+        &mut self,
+        projects: &[String],
+        version_overrides: Option<HashMap<String, String>>,
+        include_or_exclude: Option<IncludeOrExclude>,
+    ) -> Result<()> {
         for project in projects {
             self.projects.insert(
                 String::from(project),
                 if include_or_exclude.clone().is_some() {
                     ProjectSettings {
-                        version_overrides: None,
+                        version_overrides: version_overrides.clone(),
                         include_or_exclude: include_or_exclude.clone(),
                     }
                 } else {
-                    ProjectSettings{version_overrides:None, include_or_exclude:None }
+                    ProjectSettings {
+                        version_overrides: None,
+                        include_or_exclude: None,
+                    }
                 },
             );
         }
 
-        let config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
-        json_to_file(self, config_path)
+        json_to_file(self, &self.modpack_config_path)
     }
 
-    pub fn remove_projects(&mut self, directory: &Path, projects: &[String]) -> Result<()> {
+    pub fn remove_projects(&mut self, projects: &[String]) -> Result<()> {
         for project in projects {
             self.projects.remove(&String::from(project));
         }
 
-        let config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
-        json_to_file(self, config_path)
+        json_to_file(self, &self.modpack_config_path)
     }
-}
 
-impl Branch {
     /// Creates a new branch.
     /// If it already exists, it just returns the existing branch.
-    pub fn new(directory: &Path, modpack: &mut Modpack, name: &String) -> Result<Self> { // TODO put these functions in the Modpack impl
-        if !modpack.branches.contains(name) {
-            modpack.branches.push(name.clone());
-            json_to_file(&modpack, directory.join(MODPACK_CONFIG_FILE_NAME))?;
+    pub fn new_branch(&mut self, name: &String) -> Result<Branch> {
+        if !self.branches.contains(name) {
+            self.branches.push(name.clone());
+            json_to_file(self, &self.modpack_config_path)?;
         }
-        let branch_dir = directory.join(name);
+        let branch_dir = self.directory.join(name);
         if let Ok(exists) = fs::exists(&branch_dir)
             && !exists
         {
             fs::create_dir(&branch_dir)?;
         }
-        Self::from_directory(directory, name)
+        Branch::from_directory(self.directory, name)
     }
 
+    pub fn remove_branches(&mut self, branch_names: &Vec<String>) -> Result<()> {
+        for branch_name in branch_names {
+            let branch_path = self.directory.join(branch_name);
+
+            if self.branches.contains(branch_name) {
+                self.branches.retain(|x| x != branch_name);
+                if let Ok(exists) = fs::exists(&branch_path)
+                    && exists
+                {
+                    fs::remove_dir_all(&branch_path)?;
+                }
+            }
+            json_to_file(self, &self.modpack_config_path)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Branch {
     pub fn from_directory(directory: &Path, name: &String) -> Result<Self> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir).with_context(|| format!("Branch {} doesn't exist", name)) {
@@ -317,24 +359,6 @@ impl Branch {
             }
             Err(error) => bail!(error),
         }
-    }
-
-    pub fn remove_all(directory: &Path, modpack: &mut Modpack, branch_names: &Vec<String>) -> Result<()> {
-        for branch_name in branch_names {
-            let branch_path = directory.join(branch_name);
-
-            if modpack.branches.contains(branch_name) {
-                modpack.branches.retain(|x| x != branch_name);
-                if let Ok(exists) = fs::exists(&branch_path)
-                    && exists
-                {
-                    fs::remove_dir_all(&branch_path)?;
-                }
-            }
-            json_to_file(&modpack, directory.join(MODPACK_CONFIG_FILE_NAME))?;
-        }
-
-        Ok(())
     }
 
     fn create_default_branch_config(branch_config_path: &PathBuf) -> Result<BranchConfig> {
