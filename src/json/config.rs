@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
+use clap::Parser;
 
 /// Pack format version. Can be used for checking if the user uses the right packrinth
 /// version for their project.
@@ -38,22 +39,25 @@ pub struct Modpack { // TODO add field for directory, but don't put it in the fi
     pub summary: String,
     pub author: String,
     pub branches: Vec<String>,
-    pub projects: HashMap<String, Option<ProjectSettings>>, // TODO check if option here can be removed
+    pub projects: HashMap<String, ProjectSettings>, // TODO check if option here can be removed
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectSettings {
     // HashMap<Minecraft version, Project version id>
+    #[serde(flatten)]
     pub version_overrides: Option<HashMap<String, String>>,
 
     #[serde(flatten)]
     pub include_or_exclude: Option<IncludeOrExclude>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[derive(Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum IncludeOrExclude {
+    #[serde(rename = "include")]
     Include(Vec<String>),
+
+    #[serde(rename = "exclude")]
     Exclude(Vec<String>),
 }
 
@@ -209,19 +213,28 @@ impl Modpack {
         Ok(serde_json::from_str(&fs::read_to_string(config_path)?)?)
     }
 
-    pub fn add_all(&mut self, directory: &Path, projects: &[String], version_overrides: Option<HashMap<String, String>>, include_or_exclude: Option<IncludeOrExclude>) -> Result<()> {
+    pub fn add_projects(&mut self, directory: &Path, projects: &[String], version_overrides: Option<HashMap<String, String>>, include_or_exclude: Option<IncludeOrExclude>) -> Result<()> {
         for project in projects {
             self.projects.insert(
                 String::from(project),
                 if include_or_exclude.clone().is_some() {
-                    Some(ProjectSettings {
+                    ProjectSettings {
                         version_overrides: None,
                         include_or_exclude: include_or_exclude.clone(),
-                    })
+                    }
                 } else {
-                    None
+                    ProjectSettings{version_overrides:None, include_or_exclude:None }
                 },
             );
+        }
+
+        let config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
+        json_to_file(self, config_path)
+    }
+
+    pub fn remove_projects(&mut self, directory: &Path, projects: &[String]) -> Result<()> {
+        for project in projects {
+            self.projects.remove(&String::from(project));
         }
 
         let config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
@@ -306,45 +319,19 @@ impl Branch {
         }
     }
 
-    pub fn remove_all(directory: &Path, modpack: &mut Modpack, names: &Vec<String>) -> Result<()> {
-        println!(
-            "These branches in directory {} will be removed:",
-            directory.display()
-        );
-        for name in names {
-            println!("  - {}", name);
-        }
-        println!(
-            "Please keep in mind that all the content of the branches will be removed, including overrides."
-        );
-        println!();
+    pub fn remove_all(directory: &Path, modpack: &mut Modpack, branch_names: &Vec<String>) -> Result<()> {
+        for branch_name in branch_names {
+            let branch_path = directory.join(branch_name);
 
-        let confirmation = Confirm::new()
-            .with_prompt("Do you want to continue?")
-            .wait_for_newline(true)
-            .default(false)
-            .interact()
-            .expect("Error while interacting with confirmation");
-
-        if confirmation {
-            println!();
-            for name in names {
-                let branch_path = directory.join(name);
-
-                if modpack.branches.contains(name) {
-                    modpack.branches.retain(|x| x != name);
-                    if let Ok(exists) = fs::exists(&branch_path)
-                        && exists
-                    {
-                        fs::remove_dir_all(&branch_path)?;
-                    }
+            if modpack.branches.contains(branch_name) {
+                modpack.branches.retain(|x| x != branch_name);
+                if let Ok(exists) = fs::exists(&branch_path)
+                    && exists
+                {
+                    fs::remove_dir_all(&branch_path)?;
                 }
-                json_to_file(&modpack, directory.join(MODPACK_CONFIG_FILE_NAME))?;
-
-                println!("Removed {}", branch_path.display());
             }
-        } else {
-            println!("Aborted action");
+            json_to_file(&modpack, directory.join(MODPACK_CONFIG_FILE_NAME))?;
         }
 
         Ok(())

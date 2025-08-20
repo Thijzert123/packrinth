@@ -5,6 +5,7 @@ use anyhow::{Context, Result, bail};
 use clap::Parser;
 use std::collections::HashMap;
 use std::path::Path;
+use dialoguer::Confirm;
 
 #[derive(Debug, Parser)]
 pub struct ProjectArgs {
@@ -34,11 +35,11 @@ struct ListProjectsArgs;
 struct AddProjectsArgs {
     projects: Vec<String>,
 
-    #[clap(short, long, conflicts_with("excludes"))]
-    includes: Option<Vec<String>>,
+    #[clap(short, long, group = "include_or_exclude")]
+    include: Option<Vec<String>>,
 
-    #[clap(short, long, conflicts_with = "includes")]
-    excludes: Option<Vec<String>>,
+    #[clap(short, long, group = "include_or_exclude")]
+    exclude: Option<Vec<String>>,
 }
 
 #[derive(Parser, Debug)]
@@ -109,7 +110,7 @@ impl ProjectArgs {
                 ProjectSubCommand::Remove(args) => args.run(directory, modpack, config_args),
             }
         } else if let Some(project_names) = &self.projects {
-            let project_map = project_names.iter().map(|x| (x.clone(), None)).collect();
+            let project_map = project_names.iter().map(|x| (x.clone(), ProjectSettings { version_overrides: None, include_or_exclude: None })).collect();
             ListProjectsArgs::list(&project_map)
         } else {
             ListProjectsArgs::run(&ListProjectsArgs {}, directory, modpack, config_args)
@@ -122,7 +123,7 @@ impl ListProjectsArgs {
         Self::list(&modpack.projects)
     }
 
-    pub fn list(projects: &HashMap<String, Option<ProjectSettings>>) -> Result<()> {
+    pub fn list(projects: &HashMap<String, ProjectSettings>) -> Result<()> {
         if projects.is_empty() {
             println!("There are no projects added to this modpack yet.");
             return Ok(());
@@ -132,15 +133,15 @@ impl ListProjectsArgs {
         while let Some(project) = iter.next() {
             println!("{}", project.0);
 
-            if let Some(project_settings) = project.1 {
-                if let Some(overrides) = &project_settings.version_overrides {
+            // if let Some(project_settings) = project.1 {
+                if let Some(overrides) = &project.1.version_overrides {
                     println!("  - Overrides:");
                     for version_override in overrides {
                         println!("    - {}: {}", version_override.0, version_override.1);
                     }
                 }
 
-                if let Some(include_or_exclude) = &project_settings.include_or_exclude {
+                if let Some(include_or_exclude) = &project.1.include_or_exclude {
                     match include_or_exclude {
                         IncludeOrExclude::Include(includes) => {
                             println!("  - Includes: {}", includes.join(", "))
@@ -150,7 +151,7 @@ impl ListProjectsArgs {
                         }
                     }
                 }
-            }
+            // }
 
             // Print new line between projects, but not at the very end.
             if iter.peek().is_some() {
@@ -164,31 +165,13 @@ impl ListProjectsArgs {
 
 impl AddProjectsArgs {
     pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
-        let include_or_exclude = if let Some(include) = self.includes.clone() {
+        let include_or_exclude = if let Some(include) = self.include.clone() {
             Some(IncludeOrExclude::Include(include))
         } else {
-            self.excludes.clone().map(IncludeOrExclude::Exclude)
+            self.exclude.clone().map(IncludeOrExclude::Exclude)
         };
-        // let project_settings = if include_or_exclude.is_some() {Some(ProjectSettings {
-        //     version_overrides: None,
-        //     include_or_exclude,
-        // })} else {None};
 
-        modpack.add_all(directory, &self.projects, None, include_or_exclude)?;
-
-        // for project in &self.projects {
-        //     modpack.projects.insert(
-        //         String::from(project),
-        //         if include_or_exclude.clone().is_some() {
-        //             Some(ProjectSettings {
-        //                 version_overrides: None,
-        //                 include_or_exclude: include_or_exclude.clone(),
-        //             })
-        //         } else {
-        //             None
-        //         },
-        //     );
-        // }
+        modpack.add_projects(directory, &self.projects, None, include_or_exclude)?;
 
         Ok(())
     }
@@ -202,7 +185,7 @@ impl OverrideProjectArgs {
 
 impl RemoveProjectsArgs {
     pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
-        Ok(())
+        modpack.remove_projects(directory, &self.projects)
     }
 }
 
@@ -306,6 +289,38 @@ impl AddBranchesArgs {
 
 impl RemoveBranchesArgs {
     pub fn run(&self, directory: &Path, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
-        Branch::remove_all(directory, modpack, &self.branches)
+        println!(
+            "These branches in directory {} will be removed:",
+            directory.display()
+        );
+        for branch in &self.branches {
+            println!("  - {}", branch);
+        }
+        println!(
+            "Please keep in mind that all the content of the branches will be removed, including overrides."
+        );
+        println!();
+
+        let confirmation = Confirm::new()
+            .with_prompt("Do you want to continue?")
+            .wait_for_newline(true)
+            .default(false)
+            .interact()
+            .expect("Error while interacting with confirmation");
+        println!();
+
+        if confirmation {
+            Branch::remove_all(directory, modpack, &self.branches)?; // TODO evaluate all ? for better error handling. Skipping a failed branch removal is better than stopping the program entirely
+            if self.branches.len() == 1 {
+                println!("Removed {} branch", self.branches.len());
+            } else {
+                println!("Removed {} branches", self.branches.len());
+            }
+
+            Ok(())
+        } else {
+            println!("Aborted action");
+            Ok(())
+        }
     }
 }
