@@ -4,7 +4,7 @@ use anyhow::{Context, Result, bail};
 use dialoguer::Confirm;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
 
