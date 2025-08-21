@@ -44,13 +44,33 @@ struct AddProjectsArgs {
 
 #[derive(Parser, Debug)]
 struct OverrideProjectArgs {
+    #[clap(subcommand)]
+    command: OverrideSubCommand,
+}
+
+#[derive(Parser, Debug)]
+enum OverrideSubCommand {
+    Add(AddOverrideArgs),
+    Remove(RemoveOverrideArgs),
+}
+
+#[derive(Parser, Debug)]
+struct AddOverrideArgs {
     project: String,
 
-    #[clap(short, long)]
     minecraft_version: String,
 
-    #[clap(short, long)]
     project_version_id: String,
+}
+
+#[derive(Parser, Debug)]
+struct RemoveOverrideArgs {
+    project: String,
+
+    minecraft_version: Option<String>,
+
+    #[clap(short, long)]
+    all: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -184,8 +204,33 @@ impl AddProjectsArgs {
 }
 
 impl OverrideProjectArgs {
+    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
+        match &self.command {
+            OverrideSubCommand::Add(args) => args.run(modpack, config_args),
+            OverrideSubCommand::Remove(args) => args.run(modpack, config_args),
+        }
+    }
+}
+
+impl AddOverrideArgs {
     pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
-        Ok(())
+        modpack.add_project_override(
+            &self.project,
+            &self.minecraft_version,
+            &self.project_version_id,
+        )
+    }
+}
+
+impl RemoveOverrideArgs {
+    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+        if self.all {
+            modpack.remove_all_project_overrides(&self.project)
+        } else if let Some(minecraft_version) = &self.minecraft_version {
+            modpack.remove_project_override(&self.project, minecraft_version)
+        } else {
+            bail!("Please add a Minecraft version or remove all overrides by adding --all flag")
+        }
     }
 }
 
@@ -311,7 +356,7 @@ impl RemoveBranchesArgs {
         println!();
 
         if confirmation {
-            modpack.remove_branches(&self.branches)?; // TODO evaluate all ? for better error handling. Skipping a failed branch removal is better than stopping the program entirely
+            modpack.remove_branches(&self.branches)?;
             if self.branches.len() == 1 {
                 println!("Removed {} branch", self.branches.len());
             } else {

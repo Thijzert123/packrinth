@@ -212,7 +212,7 @@ impl Modpack {
             modpack_config_path: directory.join(MODPACK_CONFIG_FILE_NAME),
         };
 
-        json_to_file(&modpack, &modpack.modpack_config_path)?;
+        modpack.save()?;
         Ok(modpack)
     }
 
@@ -250,7 +250,71 @@ impl Modpack {
             );
         }
 
-        json_to_file(self, &self.modpack_config_path)
+        self.save()
+    }
+
+    pub fn add_project_override(
+        &mut self,
+        project: &str,
+        minecraft_version: &str,
+        project_version_id: &str,
+    ) -> Result<()> {
+        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
+            project_settings
+        } else {
+            bail!("Project {} isn't added to this modpack", project);
+        };
+
+        if let Some(version_overrides) = &mut project_settings.version_overrides {
+            version_overrides.insert(
+                minecraft_version.to_string(),
+                project_version_id.to_string(),
+            );
+        } else {
+            project_settings.version_overrides = Some(HashMap::from([(
+                minecraft_version.to_string(),
+                project_version_id.to_string(),
+            )]));
+        }
+
+        self.save()
+    }
+
+    pub fn remove_project_override(
+        &mut self,
+        project: &str,
+        minecraft_version: &str,
+    ) -> Result<()> {
+        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
+            project_settings
+        } else {
+            bail!("Project {} isn't added to this modpack", project);
+        };
+
+        if let Some(version_overrides) = &mut project_settings.version_overrides {
+            if let None = version_overrides.remove(minecraft_version) {
+                bail!(
+                    "No override was added for {} and Minecraft version {}",
+                    project,
+                    minecraft_version
+                );
+            }
+        } else {
+            bail!("Project {} doesn't have any overrides", project);
+        }
+
+        self.save()
+    }
+
+    pub fn remove_all_project_overrides(&mut self, project: &str) -> Result<()> {
+        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
+            project_settings
+        } else {
+            bail!("Project {} isn't added to this modpack", project);
+        };
+
+        project_settings.version_overrides = None;
+        self.save()
     }
 
     pub fn remove_projects(&mut self, projects: &[String]) -> Result<()> {
@@ -258,15 +322,15 @@ impl Modpack {
             self.projects.remove(&String::from(project));
         }
 
-        json_to_file(self, &self.modpack_config_path)
+        self.save()
     }
 
-    /// Creates a new branch.
+    /// Creates new branches.
     /// If it already exists, it just returns the existing branch.
     pub fn new_branch(&mut self, name: &String) -> Result<Branch> {
         if !self.branches.contains(name) {
             self.branches.push(name.clone());
-            json_to_file(self, &self.modpack_config_path)?;
+            self.save()?;
         }
         let branch_dir = self.directory.join(name);
         if let Ok(exists) = fs::exists(&branch_dir)
@@ -289,10 +353,14 @@ impl Modpack {
                     fs::remove_dir_all(&branch_path)?;
                 }
             }
-            json_to_file(self, &self.modpack_config_path)?;
+            self.save()?
         }
 
         Ok(())
+    }
+
+    fn save(&self) -> Result<()> {
+        json_to_file(self, &self.modpack_config_path)
     }
 }
 
