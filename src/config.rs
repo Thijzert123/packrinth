@@ -1,9 +1,9 @@
-use crate::json::{json_to_file, modrinth};
+use crate::modrinth;
 use crate::request;
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
-use std::fmt::Display;
+use std::collections::HashMap;
+use std::fmt::{Debug, Display};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -11,23 +11,19 @@ use std::path::{Path, PathBuf};
 /// version for their project.
 pub const CURRENT_PACK_FORMAT: u16 = 1;
 
-// TODO add option to filter featured versions only (https://docs.modrinth.com/api/operations/getprojectversions)
-pub fn newest_version_for_project(
-    project_id: &str,
-    loaders: &Vec<String>,
-    game_versions: &Vec<String>,
-) -> Result<Version, Box<dyn std::error::Error>> {
-    let endpoint = format!(
-        "/project/{project_id}/version?loaders={loaders:?}&game_versions={game_versions:?}"
-    );
-    let api_response = request::get_text(endpoint)?;
-    let modrinth_versions: Vec<modrinth::Version> = serde_json::from_str(&api_response)?;
-
-    // Use the most recent version (index 0)
-    Version::from_modrinth_version(&modrinth_versions[0])
-}
-
 pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
+
+fn json_to_file<T, P>(json_value: &T, file: P) -> Result<()>
+where
+    T: ?Sized + Serialize + Debug,
+    P: AsRef<Path>,
+{
+    let json = serde_json::to_string_pretty(json_value)
+        .with_context(|| format!("Failed to serialize {:?} to JSON", json_value))?;
+    fs::write(&file, json)
+        .with_context(|| format!("Failed write to {}", &file.as_ref().display()))?;
+    Ok(())
+}
 
 /// Config file at the root of the project. File is named <code>modpack.json</code>.
 #[derive(Debug, Serialize, Deserialize)]
@@ -606,6 +602,31 @@ impl Loader {
 }
 
 impl Version {
+    // TODO add option to filter featured versions only (https://docs.modrinth.com/api/operations/getprojectversions)
+    pub fn newest_for_project(
+        project_id: &str,
+        loaders: &Vec<String>,
+        game_versions: &Vec<String>,
+    ) -> Result<Version, Box<dyn std::error::Error>> {
+        let endpoint = format!(
+            "/project/{project_id}/version?loaders={loaders:?}&game_versions={game_versions:?}"
+        );
+        let api_response = request::get_text(endpoint)?;
+        let modrinth_versions: Vec<modrinth::Version> = serde_json::from_str(&api_response)?;
+
+        // Use the most recent version (index 0)
+        Version::from_modrinth_version(&modrinth_versions[0])
+    }
+
+    /// Creates a <code>Version</code> by making requests to the Modrinth API.
+    pub fn from_id<T: ToString>(version_id: T) -> Result<Self, Box<dyn std::error::Error>> {
+        // Request to get general information about the version
+        let modrinth_version_response =
+            request::get_text("/version/".to_string() + &version_id.to_string())?;
+        let modrinth_version: modrinth::Version = serde_json::from_str(&modrinth_version_response)?;
+        Self::from_modrinth_version(&modrinth_version)
+    }
+
     pub fn from_modrinth_version(
         modrinth_version: &modrinth::Version,
     ) -> Result<Self, Box<dyn std::error::Error>> {
@@ -641,14 +662,5 @@ impl Version {
             file_sha512: primary_file_sha512.expect("No primary file found").clone(),
             file_size: *primary_file_size.expect("No primary file found"),
         })
-    }
-
-    /// Creates a <code>Version</code> by making requests to the Modrinth API.
-    pub fn from_id<T: ToString>(version_id: T) -> Result<Self, Box<dyn std::error::Error>> {
-        // Request to get general information about the version
-        let modrinth_version_response =
-            request::get_text("/version/".to_string() + &version_id.to_string())?;
-        let modrinth_version: modrinth::Version = serde_json::from_str(&modrinth_version_response)?;
-        Self::from_modrinth_version(&modrinth_version)
     }
 }

@@ -1,6 +1,6 @@
 //! Structs that are only used for deserializing JSON responses directly from the Modrinth API.
 
-use crate::json::config::Side;
+use crate::config::Side;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]

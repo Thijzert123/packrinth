@@ -1,6 +1,6 @@
 use crate::ConfigArgs;
-use crate::json::config;
-use crate::json::config::{Branch, IncludeOrExclude, Modpack, ProjectSettings};
+use crate::config;
+use crate::config::{Branch, IncludeOrExclude, Modpack, ProjectSettings};
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use dialoguer::Confirm;

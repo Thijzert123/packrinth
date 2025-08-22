@@ -1,9 +1,9 @@
-mod json;
+mod config;
+mod modrinth;
 mod request;
 mod subcommand;
 
-use crate::json::config;
-use crate::json::config::Modpack;
+use crate::config::Modpack;
 use anyhow::{Result, bail};
 use clap::Parser;
 use std::path::{Path, PathBuf};
