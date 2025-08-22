@@ -204,19 +204,8 @@ impl ProjectArgs {
                 ProjectSubCommand::Remove(args) => args.run(modpack, config_args),
             }
         } else if let Some(project_names) = &self.projects {
-            let project_map = project_names
-                .iter()
-                .map(|x| {
-                    (
-                        x.clone(),
-                        ProjectSettings {
-                            version_overrides: None,
-                            include_or_exclude: None,
-                        },
-                    )
-                })
-                .collect();
-            ListProjectsArgs::list(&project_map)
+            modpack.projects.retain(|key, _| project_names.contains(key));
+            ListProjectsArgs::list(&modpack.projects)
         } else {
             ListProjectsArgs::run(&ListProjectsArgs {}, modpack, config_args)
         }
