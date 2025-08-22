@@ -204,7 +204,9 @@ impl ProjectArgs {
                 ProjectSubCommand::Remove(args) => args.run(modpack, config_args),
             }
         } else if let Some(project_names) = &self.projects {
-            modpack.projects.retain(|key, _| project_names.contains(key));
+            modpack
+                .projects
+                .retain(|key, _| project_names.contains(key));
             ListProjectsArgs::list(&modpack.projects)
         } else {
             ListProjectsArgs::run(&ListProjectsArgs {}, modpack, config_args)

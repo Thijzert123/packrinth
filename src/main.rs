@@ -6,7 +6,7 @@ mod subcommand;
 use crate::config::Modpack;
 use anyhow::{Result, bail};
 use clap::Parser;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 fn main() -> Result<()> {
     // Initialize logger so that the user sees the logs in the terminal

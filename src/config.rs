@@ -322,16 +322,24 @@ impl Modpack {
                     includes.push(new_include.clone());
                 }
             } else {
-                bail!("Project {} already has excludes added. You can't have both includes and excludes for one project", project);
+                bail!(
+                    "Project {} already has excludes added. You can't have both includes and excludes for one project",
+                    project
+                );
             }
         } else {
-            project_settings.include_or_exclude = Some(IncludeOrExclude::Include(Vec::from(new_includes)));
+            project_settings.include_or_exclude =
+                Some(IncludeOrExclude::Include(Vec::from(new_includes)));
         }
 
         self.save()
     }
 
-    pub fn remove_project_includes(&mut self, project: &str, includes_to_remove: &[String]) -> Result<()> {
+    pub fn remove_project_includes(
+        &mut self,
+        project: &str,
+        includes_to_remove: &[String],
+    ) -> Result<()> {
         let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
             project_settings
         } else {
@@ -339,7 +347,8 @@ impl Modpack {
         };
 
         if let Some(include_or_exclude) = &mut project_settings.include_or_exclude
-        && let IncludeOrExclude::Include(includes) = include_or_exclude{
+            && let IncludeOrExclude::Include(includes) = include_or_exclude
+        {
             includes.retain(|x| !includes_to_remove.contains(x));
             self.save()
         } else {
@@ -376,16 +385,24 @@ impl Modpack {
                     excludes.push(new_exclude.clone());
                 }
             } else {
-                bail!("Project {} already has includes added. You can't have both includes and excludes for one project", project);
+                bail!(
+                    "Project {} already has includes added. You can't have both includes and excludes for one project",
+                    project
+                );
             }
         } else {
-            project_settings.include_or_exclude = Some(IncludeOrExclude::Exclude(Vec::from(new_excludes)));
+            project_settings.include_or_exclude =
+                Some(IncludeOrExclude::Exclude(Vec::from(new_excludes)));
         }
 
         self.save()
     }
 
-    pub fn remove_project_excludes(&mut self, project: &str, excludes_to_remove: &[String]) -> Result<()> {
+    pub fn remove_project_excludes(
+        &mut self,
+        project: &str,
+        excludes_to_remove: &[String],
+    ) -> Result<()> {
         let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
             project_settings
         } else {
@@ -393,7 +410,8 @@ impl Modpack {
         };
 
         if let Some(include_or_exclude) = &mut project_settings.include_or_exclude
-            && let IncludeOrExclude::Exclude(excludes) = include_or_exclude{
+            && let IncludeOrExclude::Exclude(excludes) = include_or_exclude
+        {
             excludes.retain(|x| !excludes_to_remove.contains(x));
             self.save()
         } else {
