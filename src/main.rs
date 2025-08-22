@@ -1,9 +1,6 @@
-mod config;
-mod modrinth;
-mod request;
 mod subcommand;
 
-use crate::config::Modpack;
+use packrinth::config::{self, Modpack};
 use anyhow::{Result, bail};
 use clap::Parser;
 use std::path::PathBuf;
