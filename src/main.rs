@@ -28,8 +28,13 @@ struct Cli {
 
 #[derive(Parser, Debug)]
 enum SubCommand {
+    /// Add or remove Modrinth projects and tweak them for your branches
     Project(subcommand::ProjectArgs),
+
+    /// Create and remove branches that separate your Modpack for various versions
     Branch(subcommand::BranchArgs),
+
+    /// Update branches with the newest project versions
     Update(subcommand::UpdateArgs),
 }
 

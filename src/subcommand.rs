@@ -12,22 +12,29 @@ pub struct ProjectArgs {
     #[clap(subcommand)]
     command: Option<ProjectSubCommand>,
 
+    /// List information about added projects. If none are specified, all projects will be listed.
     projects: Option<Vec<String>>,
 }
 
 #[derive(Parser, Debug)]
 enum ProjectSubCommand {
+    /// List all projects that are currently added to this modpack
     #[clap(alias = "ls")]
     List(ListProjectsArgs),
 
+    /// Add projects to this modpack
     Add(AddProjectsArgs),
 
+    /// Add a version override to a project in this modpack
     Override(OverrideProjectArgs),
 
+    /// Add an include list to a project in this modpack
     Include(IncludeProjectArgs),
 
+    /// Add an exclude list to a project in this modpack
     Exclude(ExcludeProjectArgs),
 
+    /// Remove projects from this modpack
     #[clap(alias = "rm")]
     Remove(RemoveProjectsArgs),
 }
@@ -37,6 +44,10 @@ struct ListProjectsArgs;
 
 #[derive(Parser, Debug)]
 struct AddProjectsArgs {
+    /// Projects to add
+    ///
+    /// The projects must be from Modrinth. You have to specify either the human-readable
+    /// slug that appears in the URL (fabric-api) or the slug (P7dR8mSH).
     projects: Vec<String>,
 
     #[clap(short, long, group = "include_or_exclude")]
