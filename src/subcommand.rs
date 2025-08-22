@@ -1,6 +1,6 @@
 use crate::ConfigArgs;
-use crate::config;
-use crate::config::{Branch, IncludeOrExclude, Modpack, ProjectSettings};
+use packrinth::config;
+use packrinth::config::{Branch, IncludeOrExclude, Modpack, ProjectSettings};
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use dialoguer::Confirm;
