@@ -24,6 +24,10 @@ enum ProjectSubCommand {
 
     Override(OverrideProjectArgs),
 
+    Include(IncludeProjectArgs),
+
+    Exclude(ExcludeProjectArgs),
+
     #[clap(alias = "rm")]
     Remove(RemoveProjectsArgs),
 }
@@ -68,6 +72,68 @@ struct RemoveOverrideArgs {
     project: String,
 
     minecraft_version: Option<String>,
+
+    #[clap(short, long)]
+    all: bool,
+}
+
+#[derive(Parser, Debug)]
+struct IncludeProjectArgs {
+    #[clap(subcommand)]
+    command: IncludeSubCommand,
+}
+
+#[derive(Parser, Debug)]
+enum IncludeSubCommand {
+    Add(AddIncludesArgs),
+
+    #[clap(alias = "rm")]
+    Remove(RemoveIncludesArgs),
+}
+
+#[derive(Parser, Debug)]
+struct AddIncludesArgs {
+    project: String,
+
+    includes: Vec<String>,
+}
+
+#[derive(Parser, Debug)]
+struct RemoveIncludesArgs {
+    project: String,
+
+    includes: Vec<String>,
+
+    #[clap(short, long)]
+    all: bool,
+}
+
+#[derive(Parser, Debug)]
+struct ExcludeProjectArgs {
+    #[clap(subcommand)]
+    command: ExcludeSubCommand,
+}
+
+#[derive(Parser, Debug)]
+enum ExcludeSubCommand {
+    Add(AddExcludesArgs),
+
+    #[clap(alias = "rm")]
+    Remove(RemoveExcludesArgs),
+}
+
+#[derive(Parser, Debug)]
+struct AddExcludesArgs {
+    project: String,
+
+    excludes: Vec<String>,
+}
+
+#[derive(Parser, Debug)]
+struct RemoveExcludesArgs {
+    project: String,
+
+    excludes: Vec<String>,
 
     #[clap(short, long)]
     all: bool,
@@ -122,6 +188,8 @@ impl ProjectArgs {
                 ProjectSubCommand::List(args) => args.run(modpack, config_args),
                 ProjectSubCommand::Add(args) => args.run(modpack, config_args),
                 ProjectSubCommand::Override(args) => args.run(modpack, config_args),
+                ProjectSubCommand::Include(args) => args.run(modpack, config_args),
+                ProjectSubCommand::Exclude(args) => args.run(modpack, config_args),
                 ProjectSubCommand::Remove(args) => args.run(modpack, config_args),
             }
         } else if let Some(project_names) = &self.projects {
@@ -230,6 +298,56 @@ impl RemoveOverrideArgs {
             modpack.remove_project_override(&self.project, minecraft_version)
         } else {
             bail!("Please add a Minecraft version or remove all overrides by adding --all flag")
+        }
+    }
+}
+
+impl IncludeProjectArgs {
+    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
+        match &self.command {
+            IncludeSubCommand::Add(args) => args.run(modpack, config_args),
+            IncludeSubCommand::Remove(args) => args.run(modpack, config_args),
+        }
+    }
+}
+
+impl AddIncludesArgs {
+    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+        modpack.add_project_includes(&self.project, &self.includes)
+    }
+}
+
+impl RemoveIncludesArgs {
+    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+        if self.all {
+            modpack.remove_all_project_includes(&self.project)
+        } else {
+            modpack.remove_project_includes(&self.project, &self.includes)
+        }
+    }
+}
+
+impl ExcludeProjectArgs {
+    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
+        match &self.command {
+            ExcludeSubCommand::Add(args) => args.run(modpack, config_args),
+            ExcludeSubCommand::Remove(args) => args.run(modpack, config_args),
+        }
+    }
+}
+
+impl AddExcludesArgs {
+    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+        modpack.add_project_excludes(&self.project, &self.excludes)
+    }
+}
+
+impl RemoveExcludesArgs {
+    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+        if self.all {
+            modpack.remove_all_project_excludes(&self.project)
+        } else {
+            modpack.remove_project_excludes(&self.project, &self.excludes)
         }
     }
 }

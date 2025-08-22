@@ -1,10 +1,8 @@
 use crate::json::{json_to_file, modrinth};
 use crate::request;
 use anyhow::{Context, Result, bail};
-use dialoguer::Confirm;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::env::current_dir;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -292,7 +290,7 @@ impl Modpack {
         };
 
         if let Some(version_overrides) = &mut project_settings.version_overrides {
-            if let None = version_overrides.remove(minecraft_version) {
+            if version_overrides.remove(minecraft_version).is_none() {
                 bail!(
                     "No override was added for {} and Minecraft version {}",
                     project,
@@ -307,14 +305,120 @@ impl Modpack {
     }
 
     pub fn remove_all_project_overrides(&mut self, project: &str) -> Result<()> {
+        if let Some(project_settings) = self.projects.get_mut(project) {
+            project_settings.version_overrides = None;
+            self.save()
+        } else {
+            bail!("Project {} isn't added to this modpack", project);
+        }
+    }
+
+    pub fn add_project_includes(&mut self, project: &str, new_includes: &[String]) -> Result<()> {
         let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
             project_settings
         } else {
             bail!("Project {} isn't added to this modpack", project);
         };
 
-        project_settings.version_overrides = None;
+        if let Some(include_or_exclude) = &mut project_settings.include_or_exclude {
+            if let IncludeOrExclude::Include(includes) = include_or_exclude {
+                for new_include in new_includes {
+                    includes.push(new_include.clone());
+                }
+            } else {
+                bail!("Project {} already has excludes added. You can't have both includes and excludes for one project", project);
+            }
+        } else {
+            project_settings.include_or_exclude = Some(IncludeOrExclude::Include(Vec::from(new_includes)));
+        }
+
         self.save()
+    }
+
+    pub fn remove_project_includes(&mut self, project: &str, includes_to_remove: &[String]) -> Result<()> {
+        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
+            project_settings
+        } else {
+            bail!("Project {} isn't added to this modpack", project);
+        };
+
+        if let Some(include_or_exclude) = &mut project_settings.include_or_exclude
+        && let IncludeOrExclude::Include(includes) = include_or_exclude{
+            includes.retain(|x| !includes_to_remove.contains(x));
+            self.save()
+        } else {
+            bail!("Project {} doesn't have any includes added", project);
+        }
+    }
+
+    pub fn remove_all_project_includes(&mut self, project: &str) -> Result<()> {
+        if let Some(project_settings) = self.projects.get_mut(project)
+            && let Some(include_or_exclude) = &project_settings.include_or_exclude
+        {
+            // Safety check to see if the user accidentally typed include instead of exclude
+            if let IncludeOrExclude::Include(_) = include_or_exclude {
+                project_settings.include_or_exclude = None;
+                self.save()
+            } else {
+                bail!("Project {} doesn't have includes added", project);
+            }
+        } else {
+            bail!("Project {} isn't added to this modpack", project);
+        }
+    }
+
+    pub fn add_project_excludes(&mut self, project: &str, new_excludes: &[String]) -> Result<()> {
+        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
+            project_settings
+        } else {
+            bail!("Project {} isn't added to this modpack", project);
+        };
+
+        if let Some(include_or_exclude) = &mut project_settings.include_or_exclude {
+            if let IncludeOrExclude::Exclude(excludes) = include_or_exclude {
+                for new_exclude in new_excludes {
+                    excludes.push(new_exclude.clone());
+                }
+            } else {
+                bail!("Project {} already has includes added. You can't have both includes and excludes for one project", project);
+            }
+        } else {
+            project_settings.include_or_exclude = Some(IncludeOrExclude::Exclude(Vec::from(new_excludes)));
+        }
+
+        self.save()
+    }
+
+    pub fn remove_project_excludes(&mut self, project: &str, excludes_to_remove: &[String]) -> Result<()> {
+        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
+            project_settings
+        } else {
+            bail!("Project {} isn't added to this modpack", project);
+        };
+
+        if let Some(include_or_exclude) = &mut project_settings.include_or_exclude
+            && let IncludeOrExclude::Exclude(excludes) = include_or_exclude{
+            excludes.retain(|x| !excludes_to_remove.contains(x));
+            self.save()
+        } else {
+            bail!("Project {} doesn't have any excludes added", project);
+        }
+    }
+
+    pub fn remove_all_project_excludes(&mut self, project: &str) -> Result<()> {
+        if let Some(project_settings) = self.projects.get_mut(project)
+            && let Some(include_or_exclude) = &project_settings.include_or_exclude
+        {
+            // Safety check to see if the user accidentally typed exclude instead of include
+            if let IncludeOrExclude::Exclude(_) = include_or_exclude {
+                project_settings.include_or_exclude = None;
+                self.save()
+            } else {
+                bail!("Project {} doesn't have excludes added", project);
+            }
+        } else {
+            bail!("Project {} isn't added to this modpack", project);
+        }
     }
 
     pub fn remove_projects(&mut self, projects: &[String]) -> Result<()> {
