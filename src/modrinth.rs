@@ -1,10 +1,10 @@
 //! Structs that are only used for (de)serializing JSONs associated with Modrinth.
 
-use std::path::PathBuf;
-use anyhow::{bail, Result};
-use serde::{Deserialize, Serialize};
-use crate::{request};
 use crate::config::Loader;
+use crate::utils;
+use anyhow::{Result, bail};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Project {
@@ -74,7 +74,7 @@ pub struct MrPack {
     pub version_id: String,
     pub name: String,
     pub files: Vec<File>,
-    pub dependencies: Dependencies
+    pub dependencies: Dependencies,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -98,13 +98,19 @@ pub struct Env {
 #[serde(rename_all = "camelCase")]
 pub struct Dependencies {
     pub minecraft: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub forge: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub neoforge: Option<String>,
 
     #[serde(rename = "fabric-loader")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fabric_loader: Option<String>,
 
     #[serde(rename = "quilt-loader")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub quilt_loader: Option<String>,
 }
 
@@ -118,7 +124,7 @@ impl ProjectType {
             ProjectType::Modpack => bail!("You can't add other modpacks to this modpack"),
 
             ProjectType::ResourcePack => Ok("resourcepack"),
-            ProjectType::Shader => Ok("shader")
+            ProjectType::Shader => Ok("shader"),
         }
     }
 }
@@ -135,7 +141,7 @@ impl File {
         let endpoint = format!(
             "/project/{project_id}/version?loaders={loaders:?}&game_versions={game_versions:?}"
         );
-        let api_response = request::get_text(endpoint)?;
+        let api_response = utils::request_text(endpoint)?;
         let modrinth_versions: Vec<Version> = serde_json::from_str(&api_response)?;
 
         // Use the most recent version (index 0)
@@ -146,7 +152,7 @@ impl File {
     pub fn from_id<T: ToString>(version_id: T) -> Result<Self, Box<dyn std::error::Error>> {
         // Request to get general information about the version
         let modrinth_version_response =
-            request::get_text("/version/".to_string() + &version_id.to_string())?;
+            utils::request_text("/version/".to_string() + &version_id.to_string())?;
         let modrinth_version: Version = serde_json::from_str(&modrinth_version_response)?;
         Self::from_modrinth_version(&modrinth_version)
     }
@@ -156,7 +162,7 @@ impl File {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         // Request to get general information about the project associated with the version
         let modrinth_project_response =
-            request::get_text("/project/".to_string() + &modrinth_version.project_id)?;
+            utils::request_text("/project/".to_string() + &modrinth_version.project_id)?;
         let modrinth_project: Project = serde_json::from_str(&modrinth_project_response)?;
 
         // Get the primary file. Every version should have one.
@@ -176,12 +182,17 @@ impl File {
 
         let path = PathBuf::from(modrinth_project.project_type.directory()?)
             .join(primary_file_name.expect("No primary file found"))
-            .to_str().expect("File name has non-valid UTF-8 characters").to_string();
+            .to_str()
+            .expect("File name has non-valid UTF-8 characters")
+            .to_string();
 
         Ok(Self {
             path,
             hashes: primary_file_hashes.expect("No primary file found").clone(),
-            env: Some(Env { client: modrinth_project.client_side, server: modrinth_project.server_side }),
+            env: Some(Env {
+                client: modrinth_project.client_side,
+                server: modrinth_project.server_side,
+            }),
             downloads: vec![primary_file_url.expect("No primary file found").clone()],
             file_size: *primary_file_size.expect("No primary file found"),
         })

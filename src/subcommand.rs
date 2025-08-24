@@ -1,13 +1,13 @@
 use crate::ConfigArgs;
-use packrinth::config;
-use packrinth::config::{BranchConfig, BranchFiles, IncludeOrExclude, Modpack, ProjectSettings};
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use dialoguer::Confirm;
+use packrinth::config::{BranchConfig, BranchFiles, IncludeOrExclude, Modpack, ProjectSettings};
+use packrinth::modrinth::{Dependencies, File, MrPack};
+use packrinth::{config, utils};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::Path;
-use packrinth::modrinth::File;
 
 #[derive(Debug, Parser)]
 pub struct ProjectArgs {
@@ -192,6 +192,11 @@ struct AddBranchesArgs {
 #[derive(Parser, Debug)]
 struct RemoveBranchesArgs {
     branches: Vec<String>,
+}
+
+#[derive(Parser, Debug)]
+pub struct ExportArgs {
+    branch: String,
 }
 
 impl ProjectArgs {
@@ -382,9 +387,19 @@ impl UpdateArgs {
         branch_files.files = Vec::new();
 
         for project in &modpack.projects {
-            if let Ok(file) = File::newest_for_project(project.0, &branch_config.acceptable_loaders, &branch_config.acceptable_minecraft_versions){
-            branch_files.files.push(file);} else {
-            bail!("Failed to update project {} for branch {}", project.0, branch);}
+            if let Ok(file) = File::newest_for_project(
+                project.0,
+                &branch_config.acceptable_loaders,
+                &branch_config.acceptable_minecraft_versions,
+            ) {
+                branch_files.files.push(file);
+            } else {
+                bail!(
+                    "Failed to update project {} for branch {}",
+                    project.0,
+                    branch
+                );
+            }
         }
 
         branch_files.save(&modpack.directory, branch)
@@ -505,5 +520,13 @@ impl RemoveBranchesArgs {
             println!("Aborted action");
             Ok(())
         }
+    }
+}
+
+impl ExportArgs {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
+        utils::export_to_mrpack(modpack, &self.branch)?;
+
+        Ok(())
     }
 }

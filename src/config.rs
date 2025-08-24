@@ -1,12 +1,12 @@
 use crate::modrinth;
-use crate::request;
+use crate::modrinth::File;
+use crate::utils;
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::fs;
 use std::path::{Path, PathBuf};
-use crate::modrinth::File;
 
 /// Pack format version. Can be used for checking if the user uses the right packrinth
 /// version for their project.
@@ -62,23 +62,6 @@ pub enum IncludeOrExclude {
     Exclude(Vec<String>),
 }
 
-const OVERRIDES_DIR_NAME: &str = "overrides";
-
-/// Information about a single branch, for example the Minecraft version and mod loader.
-/// The configuration consists of two files, one for general information intended for the
-/// user of the program to edit. The other file is filled with all the exact versions
-/// used for the branch. They should only be updated via one of the commands.
-// #[derive(Debug, Serialize, Deserialize)]
-// pub struct Branch {
-//     pub name: String,
-//     pub version: String,
-//     pub main_minecraft_version: String,
-//     pub acceptable_minecraft_versions: Vec<String>,
-//     pub main_mod_loader: MainLoader,
-//     pub acceptable_loaders: Vec<Loader>,
-//     pub files: Vec<File>,
-// }
-
 const BRANCH_CONFIG_FILE_NAME: &str = "branch.json";
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -87,6 +70,7 @@ pub struct BranchConfig {
     pub main_minecraft_version: String,
     pub acceptable_minecraft_versions: Vec<String>,
     pub main_mod_loader: MainLoader,
+    pub loader_version: String,
     pub acceptable_loaders: Vec<Loader>,
 }
 
@@ -102,7 +86,7 @@ pub enum MainLoader {
     #[serde(rename = "fabric")]
     Fabric,
     #[serde(rename = "quilt")]
-    Quilt
+    Quilt,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -520,6 +504,7 @@ impl BranchConfig {
                         main_minecraft_version: branch_config.main_minecraft_version,
                         acceptable_minecraft_versions: branch_config.acceptable_minecraft_versions,
                         main_mod_loader: branch_config.main_mod_loader,
+                        loader_version: branch_config.loader_version,
                         acceptable_loaders: branch_config.acceptable_loaders,
                     })
                 } else {
@@ -532,10 +517,11 @@ impl BranchConfig {
 
     fn create_default_branch_config(branch_config_path: &PathBuf) -> Result<Self> {
         let branch_config = Self {
-            version: "1.0.0-vanilla".to_string(),
+            version: "1.0.0-fabric".to_string(),
             main_minecraft_version: "1.21.8".to_string(),
             acceptable_minecraft_versions: vec!["1.21.7".to_string(), "1.21.8".to_string()],
             main_mod_loader: MainLoader::Fabric,
+            loader_version: "0.17.2".to_string(),
             acceptable_loaders: vec![Loader::Minecraft, Loader::VanillaShader, Loader::Fabric],
         };
         json_to_file(&branch_config, branch_config_path)?;
@@ -545,7 +531,10 @@ impl BranchConfig {
     pub fn print_display(&self, name: &str) {
         println!("Branch {}:", name);
         println!("  - Branch version: {}", self.version);
-        println!("  - Main Minecraft version: {}", self.main_minecraft_version);
+        println!(
+            "  - Main Minecraft version: {}",
+            self.main_minecraft_version
+        );
         println!(
             "  - Acceptable Minecraft versions: {}",
             self.acceptable_minecraft_versions.join(", ")
@@ -566,9 +555,8 @@ impl BranchFiles {
                 if metadata.is_dir() {
                     let branch_files_path = branch_dir.join(BRANCH_FILES_FILE_NAME);
                     let branch_files = match fs::read_to_string(&branch_files_path)
-                        .with_context(|| {
-                            format!("Failed to read {}", &branch_files_path.display())
-                        }) {
+                        .with_context(|| format!("Failed to read {}", &branch_files_path.display()))
+                    {
                         Ok(contents) => {
                             let branch_files: Self = serde_json::from_str(&contents)?;
                             branch_files
@@ -586,7 +574,7 @@ impl BranchFiles {
                     };
                     Ok(Self {
                         info: BRANCH_FILES_INFO.to_string(),
-                        files: branch_files.files
+                        files: branch_files.files,
                     })
                 } else {
                     bail!("Branch dir is not a directory");
@@ -602,7 +590,10 @@ impl BranchFiles {
     }
 
     fn create_default_branch_files(branch_versions_path: &PathBuf) -> Result<Self> {
-        let branch_versions = Self { info: BRANCH_FILES_INFO.to_string(), files: vec![] };
+        let branch_versions = Self {
+            info: BRANCH_FILES_INFO.to_string(),
+            files: vec![],
+        };
         json_to_file(&branch_versions, branch_versions_path)?;
         Ok(branch_versions)
     }

@@ -1,8 +1,8 @@
 mod subcommand;
 
-use packrinth::config::{self, Modpack};
 use anyhow::{Result, bail};
 use clap::Parser;
+use packrinth::config::{self, Modpack};
 use std::path::PathBuf;
 
 fn main() -> Result<()> {
@@ -33,6 +33,9 @@ enum SubCommand {
 
     /// Update branches with the newest project versions
     Update(subcommand::UpdateArgs),
+
+    /// Export a branch to a Modrinth modpack
+    Export(subcommand::ExportArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -80,6 +83,7 @@ impl SubCommand {
             SubCommand::Project(args) => args.run(modpack, config_args),
             SubCommand::Branch(args) => args.run(modpack, config_args),
             SubCommand::Update(args) => args.run(modpack, config_args),
+            SubCommand::Export(args) => args.run(modpack, config_args),
         }
     }
 }
