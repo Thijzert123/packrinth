@@ -73,6 +73,10 @@ pub struct MrPack {
     pub game: String,
     pub version_id: String,
     pub name: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+
     pub files: Vec<File>,
     pub dependencies: Dependencies,
 }
@@ -82,7 +86,10 @@ pub struct MrPack {
 pub struct File {
     pub path: String,
     pub hashes: FileHashes,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub env: Option<Env>,
+
     pub downloads: Vec<String>,
     pub file_size: u64,
 }

@@ -55,6 +55,7 @@ pub fn export_to_mrpack(modpack: &Modpack, branch: &String) -> Result<()> {
         game: GAME.to_string(),
         version_id: branch_config.version.clone(),
         name: modpack.name.clone(),
+        summary: Some(modpack.summary.clone()),
         files: branch_files.files,
         dependencies: create_dependencies(branch_config),
     };
