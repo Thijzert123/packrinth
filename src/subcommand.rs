@@ -1,11 +1,13 @@
 use crate::ConfigArgs;
 use packrinth::config;
-use packrinth::config::{Branch, IncludeOrExclude, Modpack, ProjectSettings};
+use packrinth::config::{BranchConfig, BranchFiles, IncludeOrExclude, Modpack, ProjectSettings};
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use dialoguer::Confirm;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::path::Path;
+use packrinth::modrinth::File;
 
 #[derive(Debug, Parser)]
 pub struct ProjectArgs {
@@ -215,7 +217,7 @@ impl ProjectArgs {
 }
 
 impl ListProjectsArgs {
-    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         Self::list(&modpack.projects)
     }
 
@@ -260,7 +262,7 @@ impl ListProjectsArgs {
 }
 
 impl AddProjectsArgs {
-    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         let include_or_exclude = if let Some(include) = self.include.clone() {
             Some(IncludeOrExclude::Include(include))
         } else {
@@ -283,7 +285,7 @@ impl OverrideProjectArgs {
 }
 
 impl AddOverrideArgs {
-    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         modpack.add_project_override(
             &self.project,
             &self.minecraft_version,
@@ -293,7 +295,7 @@ impl AddOverrideArgs {
 }
 
 impl RemoveOverrideArgs {
-    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         if self.all {
             modpack.remove_all_project_overrides(&self.project)
         } else if let Some(minecraft_version) = &self.minecraft_version {
@@ -314,13 +316,13 @@ impl IncludeProjectArgs {
 }
 
 impl AddIncludesArgs {
-    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         modpack.add_project_includes(&self.project, &self.includes)
     }
 }
 
 impl RemoveIncludesArgs {
-    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         if self.all {
             modpack.remove_all_project_includes(&self.project)
         } else {
@@ -339,13 +341,13 @@ impl ExcludeProjectArgs {
 }
 
 impl AddExcludesArgs {
-    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         modpack.add_project_excludes(&self.project, &self.excludes)
     }
 }
 
 impl RemoveExcludesArgs {
-    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         if self.all {
             modpack.remove_all_project_excludes(&self.project)
         } else {
@@ -355,22 +357,37 @@ impl RemoveExcludesArgs {
 }
 
 impl RemoveProjectsArgs {
-    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         modpack.remove_projects(&self.projects)
     }
 }
 
 impl UpdateArgs {
-    pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<()> {
-        if self.branch.is_none() {
-            for project in &modpack.projects {
-                // let thing = Branch::from_working_dir(modpack, &"test".to_string(), false);
-                // let thing = newest_version_for_project(project.0, vec!["fabric".to_string()], vec!["1.21.1".to_string()]);
-                // println!("{thing:?}")
+    pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<()> {
+        if let Some(branch) = &self.branch {
+            Self::update_branch(modpack, branch)
+        } else {
+            for branch in &modpack.branches {
+                Self::update_branch(modpack, branch)?;
             }
+            Ok(())
+        }
+    }
+
+    fn update_branch(modpack: &Modpack, branch: &String) -> Result<()> {
+        let branch_config = BranchConfig::from_directory(&modpack.directory, branch)?;
+        let mut branch_files = BranchFiles::from_directory(&modpack.directory, branch)?;
+
+        // Remove all entries to ensure that there will be no duplicates if the user changes loaders
+        branch_files.files = Vec::new();
+
+        for project in &modpack.projects {
+            if let Ok(file) = File::newest_for_project(project.0, &branch_config.acceptable_loaders, &branch_config.acceptable_minecraft_versions){
+            branch_files.files.push(file);} else {
+            bail!("Failed to update project {} for branch {}", project.0, branch);}
         }
 
-        Ok(())
+        branch_files.save(&modpack.directory, branch)
     }
 }
 
@@ -391,7 +408,7 @@ impl BranchArgs {
 }
 
 impl ListBranchesArgs {
-    pub fn run(&self, modpack: &Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<()> {
         Self::list(&modpack.directory, &modpack.branches)
     }
 
@@ -403,14 +420,14 @@ impl ListBranchesArgs {
 
         let mut iter = branches.iter().peekable();
         while let Some(branch_name) = iter.next() {
-            match Branch::from_directory(directory, branch_name).with_context(|| {
+            match BranchConfig::from_directory(directory, branch_name).with_context(|| {
                 format!(
                     "Failed to get branch {} in directory {}",
                     branch_name,
                     directory.display()
                 )
             }) {
-                Ok(branch) => println!("{}", branch),
+                Ok(branch) => branch.print_display(branch_name),
                 Err(error) => {
                     if let Some(error) = error.downcast_ref::<std::io::Error>()
                         && error.kind() == std::io::ErrorKind::NotFound
@@ -437,11 +454,11 @@ impl ListBranchesArgs {
 }
 
 impl AddBranchesArgs {
-    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         let mut iter = self.branches.iter().peekable();
         while let Some(branch_name) = iter.next() {
             let new_branch = modpack.new_branch(branch_name)?;
-            println!("{}", &new_branch);
+            new_branch.print_display(branch_name);
 
             // Print new line between branches, but not at the very end.
             if iter.peek().is_some() {
@@ -454,7 +471,7 @@ impl AddBranchesArgs {
 }
 
 impl RemoveBranchesArgs {
-    pub fn run(&self, modpack: &mut Modpack, _: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         println!(
             "These branches in directory {} will be removed:",
             modpack.directory.display()

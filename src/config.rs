@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::fs;
 use std::path::{Path, PathBuf};
+use crate::modrinth::File;
 
 /// Pack format version. Can be used for checking if the user uses the right packrinth
 /// version for their project.
@@ -67,25 +68,43 @@ const OVERRIDES_DIR_NAME: &str = "overrides";
 /// The configuration consists of two files, one for general information intended for the
 /// user of the program to edit. The other file is filled with all the exact versions
 /// used for the branch. They should only be updated via one of the commands.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Branch {
-    pub name: String,
-    pub version: String,
-    pub minecraft_versions: Vec<String>,
-    pub loaders: Vec<Loader>,
-    pub versions: Vec<Version>,
-}
+// #[derive(Debug, Serialize, Deserialize)]
+// pub struct Branch {
+//     pub name: String,
+//     pub version: String,
+//     pub main_minecraft_version: String,
+//     pub acceptable_minecraft_versions: Vec<String>,
+//     pub main_mod_loader: MainLoader,
+//     pub acceptable_loaders: Vec<Loader>,
+//     pub files: Vec<File>,
+// }
 
 const BRANCH_CONFIG_FILE_NAME: &str = "branch.json";
 
 #[derive(Debug, Serialize, Deserialize)]
-struct BranchConfig {
+pub struct BranchConfig {
     pub version: String,
-    pub minecraft_versions: Vec<String>,
-    pub loaders: Vec<Loader>,
+    pub main_minecraft_version: String,
+    pub acceptable_minecraft_versions: Vec<String>,
+    pub main_mod_loader: MainLoader,
+    pub acceptable_loaders: Vec<Loader>,
 }
 
-#[allow(clippy::enum_variant_names)]
+/// Loaders that a launcher has to install with the modpack.
+/// See https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack
+/// at `dependencies` for more information.
+#[derive(Debug, Serialize, Deserialize)]
+pub enum MainLoader {
+    #[serde(rename = "forge")]
+    Forge,
+    #[serde(rename = "neoforge")]
+    NeoForge,
+    #[serde(rename = "fabric")]
+    Fabric,
+    #[serde(rename = "quilt")]
+    Quilt
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Loader {
     // For resource packs and data packs
@@ -153,25 +172,13 @@ pub enum Loader {
     Waterfall,
 }
 
-const BRANCH_VERSIONS_FILE_NAME: &str = ".branch_versions.json";
+const BRANCH_FILES_FILE_NAME: &str = ".branch_files.json";
+const BRANCH_FILES_INFO: &str = "This file is managed by Packrinth and not intended for manual editing. You should, however, add it to your Git repository.";
 
 #[derive(Debug, Serialize, Deserialize)]
-struct BranchVersions {
-    versions: Vec<Version>,
-}
-
-/// A version that is added in a subproject.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Version {
-    pub name: String,
-    pub id: String,
-    pub version: String,
-    pub project_id: String,
-    pub side: Side,
-    pub file_url: String,
-    pub file_name: String,
-    pub file_sha512: String,
-    pub file_size: u64,
+pub struct BranchFiles {
+    info: String,
+    pub files: Vec<File>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -445,7 +452,7 @@ impl Modpack {
 
     /// Creates new branches.
     /// If it already exists, it just returns the existing branch.
-    pub fn new_branch(&mut self, name: &String) -> Result<Branch> {
+    pub fn new_branch(&mut self, name: &String) -> Result<BranchConfig> {
         if !self.branches.contains(name) {
             self.branches.push(name.clone());
             self.save()?;
@@ -456,7 +463,7 @@ impl Modpack {
         {
             fs::create_dir(&branch_dir)?;
         }
-        Branch::from_directory(&self.directory, name)
+        BranchConfig::from_directory(&self.directory, name)
     }
 
     pub fn remove_branches(&mut self, branch_names: &Vec<String>) -> Result<()> {
@@ -482,7 +489,7 @@ impl Modpack {
     }
 }
 
-impl Branch {
+impl BranchConfig {
     pub fn from_directory(directory: &Path, name: &String) -> Result<Self> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir).with_context(|| format!("Branch {} doesn't exist", name)) {
@@ -494,7 +501,7 @@ impl Branch {
                             format!("Failed to read {}", &branch_config_path.display())
                         }) {
                             Ok(contents) => {
-                                let branch_config: BranchConfig = serde_json::from_str(&contents)?;
+                                let branch_config: Self = serde_json::from_str(&contents)?;
                                 branch_config
                             }
                             Err(error) if error.downcast_ref::<std::io::Error>().is_some() => {
@@ -508,32 +515,12 @@ impl Branch {
                             }
                             Err(error) => bail!(error),
                         };
-                    let branch_versions_path = branch_dir.join(BRANCH_VERSIONS_FILE_NAME);
-                    let branch_versions = match fs::read_to_string(&branch_versions_path)
-                        .with_context(|| {
-                            format!("Failed to read {}", &branch_versions_path.display())
-                        }) {
-                        Ok(contents) => {
-                            let branch_versions: BranchVersions = serde_json::from_str(&contents)?;
-                            branch_versions
-                        }
-                        Err(error) if error.downcast_ref::<std::io::Error>().is_some() => {
-                            if error.downcast_ref::<std::io::Error>().unwrap().kind()
-                                == std::io::ErrorKind::NotFound
-                            {
-                                Self::create_default_branch_versions(&branch_versions_path)?
-                            } else {
-                                bail!(error)
-                            }
-                        }
-                        Err(error) => bail!(error),
-                    };
                     Ok(Self {
-                        name: name.clone(),
                         version: branch_config.version,
-                        minecraft_versions: branch_config.minecraft_versions,
-                        loaders: branch_config.loaders,
-                        versions: branch_versions.versions,
+                        main_minecraft_version: branch_config.main_minecraft_version,
+                        acceptable_minecraft_versions: branch_config.acceptable_minecraft_versions,
+                        main_mod_loader: branch_config.main_mod_loader,
+                        acceptable_loaders: branch_config.acceptable_loaders,
                     })
                 } else {
                     bail!("Branch dir is not a directory");
@@ -543,50 +530,113 @@ impl Branch {
         }
     }
 
-    fn create_default_branch_config(branch_config_path: &PathBuf) -> Result<BranchConfig> {
-        let branch_config = BranchConfig {
+    fn create_default_branch_config(branch_config_path: &PathBuf) -> Result<Self> {
+        let branch_config = Self {
             version: "1.0.0-vanilla".to_string(),
-            minecraft_versions: vec!["1.21.7".to_string(), "1.21.8".to_string()],
-            loaders: vec![Loader::Minecraft, Loader::VanillaShader],
+            main_minecraft_version: "1.21.8".to_string(),
+            acceptable_minecraft_versions: vec!["1.21.7".to_string(), "1.21.8".to_string()],
+            main_mod_loader: MainLoader::Fabric,
+            acceptable_loaders: vec![Loader::Minecraft, Loader::VanillaShader, Loader::Fabric],
         };
         json_to_file(&branch_config, branch_config_path)?;
         Ok(branch_config)
     }
 
-    fn create_default_branch_versions(branch_versions_path: &PathBuf) -> Result<BranchVersions> {
-        let branch_versions = BranchVersions { versions: vec![] };
+    pub fn print_display(&self, name: &str) {
+        println!("Branch {}:", name);
+        println!("  - Branch version: {}", self.version);
+        println!("  - Main Minecraft version: {}", self.main_minecraft_version);
+        println!(
+            "  - Acceptable Minecraft versions: {}",
+            self.acceptable_minecraft_versions.join(", ")
+        );
+        println!("  - Main mod loader: {}", self.main_mod_loader.value());
+        println!(
+            "  - Acceptable loaders: {}",
+            Loader::pretty_value_vec(&self.acceptable_loaders).join(", ")
+        );
+    }
+}
+
+impl BranchFiles {
+    pub fn from_directory(directory: &Path, name: &String) -> Result<Self> {
+        let branch_dir = directory.join(name);
+        match fs::metadata(&branch_dir).with_context(|| format!("Branch {} doesn't exist", name)) {
+            Ok(metadata) => {
+                if metadata.is_dir() {
+                    let branch_files_path = branch_dir.join(BRANCH_FILES_FILE_NAME);
+                    let branch_files = match fs::read_to_string(&branch_files_path)
+                        .with_context(|| {
+                            format!("Failed to read {}", &branch_files_path.display())
+                        }) {
+                        Ok(contents) => {
+                            let branch_files: Self = serde_json::from_str(&contents)?;
+                            branch_files
+                        }
+                        Err(error) if error.downcast_ref::<std::io::Error>().is_some() => {
+                            if error.downcast_ref::<std::io::Error>().unwrap().kind()
+                                == std::io::ErrorKind::NotFound
+                            {
+                                Self::create_default_branch_files(&branch_files_path)?
+                            } else {
+                                bail!(error)
+                            }
+                        }
+                        Err(error) => bail!(error),
+                    };
+                    Ok(Self {
+                        info: BRANCH_FILES_INFO.to_string(),
+                        files: branch_files.files
+                    })
+                } else {
+                    bail!("Branch dir is not a directory");
+                }
+            }
+            Err(error) => bail!(error),
+        }
+    }
+
+    pub fn save(&self, directory: &Path, name: &String) -> Result<()> {
+        let branch_files_path = directory.join(name).join(BRANCH_FILES_FILE_NAME);
+        json_to_file(self, branch_files_path)
+    }
+
+    fn create_default_branch_files(branch_versions_path: &PathBuf) -> Result<Self> {
+        let branch_versions = Self { info: BRANCH_FILES_INFO.to_string(), files: vec![] };
         json_to_file(&branch_versions, branch_versions_path)?;
         Ok(branch_versions)
     }
 }
 
-impl Display for Branch {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Branch {}:", self.name)?;
-        writeln!(f, "  - Branch version: {}", self.version)?;
-        writeln!(
-            f,
-            "  - Acceptable Minecraft versions: {}",
-            self.minecraft_versions.join(", ")
-        )?;
-        write!(
-            f,
-            "  - Acceptable loaders: {}",
-            Loader::value_vec(&self.loaders).join(", ")
-        )
+impl MainLoader {
+    const fn value(&self) -> &str {
+        match self {
+            MainLoader::Forge => "Forge",
+            MainLoader::NeoForge => "NeoForge",
+            MainLoader::Fabric => "Fabric",
+            MainLoader::Quilt => "Quilt",
+        }
     }
 }
 
 impl Loader {
-    pub fn value_vec(loaders: &Vec<Self>) -> Vec<&str> {
+    pub fn pretty_value_vec(loaders: &Vec<Self>) -> Vec<&str> {
         let mut values = Vec::new();
         for loader in loaders {
-            values.push(loader.value());
+            values.push(loader.pretty_value());
         }
         values
     }
 
-    fn value(&self) -> &str {
+    pub fn modrinth_value_vec(loaders: &Vec<Self>) -> Vec<&str> {
+        let mut values = Vec::new();
+        for loader in loaders {
+            values.push(loader.modrinth_value());
+        }
+        values
+    }
+
+    const fn pretty_value(&self) -> &str {
         match self {
             Loader::Minecraft => "Minecraft",
             Loader::Fabric => "Fabric",
@@ -617,68 +667,36 @@ impl Loader {
             Loader::Waterfall => "Waterfall",
         }
     }
-}
 
-impl Version {
-    // TODO add option to filter featured versions only (https://docs.modrinth.com/api/operations/getprojectversions)
-    pub fn newest_for_project(
-        project_id: &str,
-        loaders: &Vec<String>,
-        game_versions: &Vec<String>,
-    ) -> Result<Version, Box<dyn std::error::Error>> {
-        let endpoint = format!(
-            "/project/{project_id}/version?loaders={loaders:?}&game_versions={game_versions:?}"
-        );
-        let api_response = request::get_text(endpoint)?;
-        let modrinth_versions: Vec<modrinth::Version> = serde_json::from_str(&api_response)?;
-
-        // Use the most recent version (index 0)
-        Version::from_modrinth_version(&modrinth_versions[0])
-    }
-
-    /// Creates a <code>Version</code> by making requests to the Modrinth API.
-    pub fn from_id<T: ToString>(version_id: T) -> Result<Self, Box<dyn std::error::Error>> {
-        // Request to get general information about the version
-        let modrinth_version_response =
-            request::get_text("/version/".to_string() + &version_id.to_string())?;
-        let modrinth_version: modrinth::Version = serde_json::from_str(&modrinth_version_response)?;
-        Self::from_modrinth_version(&modrinth_version)
-    }
-
-    pub fn from_modrinth_version(
-        modrinth_version: &modrinth::Version,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        // Request to get general information about the project associated with the version
-        let modrinth_project_response =
-            request::get_text("/project/".to_string() + &modrinth_version.project_id)?;
-        let modrinth_project: modrinth::Project = serde_json::from_str(&modrinth_project_response)?;
-
-        // Get the primary file. Every version should have one.
-        // TODO check if every version has a primary file. If it does not, remove expect calls at the bottom of this function
-        let mut primary_file_url = None;
-        let mut primary_file_name = None;
-        let mut primary_file_sha512 = None;
-        let mut primary_file_size = None;
-        for version_file in &modrinth_version.files {
-            if version_file.primary {
-                primary_file_url = Some(&version_file.url);
-                primary_file_name = Some(&version_file.filename);
-                primary_file_sha512 = Some(&version_file.hashes.sha512);
-                primary_file_size = Some(&version_file.size);
-                break;
-            }
+    const fn modrinth_value(&self) -> &str {
+        match self {
+            Loader::Minecraft => "minecraft",
+            Loader::Fabric => "fabric",
+            Loader::Forge => "forge",
+            Loader::NeoForge => "neoforge",
+            Loader::Quilt => "quilt",
+            Loader::Babric => "babric",
+            Loader::BTABabric => "bta-babric",
+            Loader::JavaAgent => "java-agent",
+            Loader::LegacyFabric => "legacy-fabric",
+            Loader::LiteLoader => "liteloader",
+            Loader::RisugamisModLoader => "modloader",
+            Loader::NilLoader => "nilloader",
+            Loader::Ornithe => "ornithe",
+            Loader::Rift => "rift",
+            Loader::Canvas => "canvas",
+            Loader::Iris => "iris",
+            Loader::Optifine => "optifine",
+            Loader::VanillaShader => "vanilla",
+            Loader::Bukkit => "bukkit",
+            Loader::Folia => "folia",
+            Loader::Paper => "paper",
+            Loader::Purpur => "purpur",
+            Loader::Spigot => "spigot",
+            Loader::Sponge => "sponge",
+            Loader::BungeeCord => "bungeecord",
+            Loader::Velocity => "velocity",
+            Loader::Waterfall => "waterfall",
         }
-
-        Ok(Self {
-            name: modrinth_project.title.clone(),
-            id: modrinth_version.id.clone(),
-            version: modrinth_version.version_number.clone(),
-            project_id: modrinth_version.project_id.clone(),
-            side: modrinth_project.side(),
-            file_url: primary_file_url.expect("No primary file found").clone(),
-            file_name: primary_file_name.expect("No primary file found").clone(),
-            file_sha512: primary_file_sha512.expect("No primary file found").clone(),
-            file_size: *primary_file_size.expect("No primary file found"),
-        })
     }
 }

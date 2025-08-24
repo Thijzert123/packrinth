@@ -1,3 +1,3 @@
 pub mod config;
-mod modrinth;
+pub mod modrinth;
 mod request;
