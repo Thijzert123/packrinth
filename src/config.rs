@@ -1,10 +1,8 @@
-use crate::modrinth;
 use crate::modrinth::File;
-use crate::utils;
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::fs;
 use std::path::{Path, PathBuf};
 

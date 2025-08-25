@@ -7,9 +7,9 @@ use packrinth::modrinth::File;
 use packrinth::{config, utils};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
+use std::cmp;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::cmp;
 use std::path::Path;
 
 #[derive(Debug, Parser)]
@@ -418,12 +418,7 @@ impl UpdateArgs {
             progress_bar.inc();
         }
 
-        progress_bar.print_final_info(
-            branch,
-            "updated",
-            Color::LightGreen,
-            Style::Bold,
-        );
+        progress_bar.print_final_info(branch, "updated", Color::LightGreen, Style::Bold);
 
         branch_files.save(&modpack.directory, branch)
     }
