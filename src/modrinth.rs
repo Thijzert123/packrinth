@@ -1,6 +1,6 @@
 //! Structs that are only used for (de)serializing JSONs associated with Modrinth.
 
-use crate::config::Loader;
+use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
 use crate::utils;
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
@@ -123,9 +123,12 @@ pub struct Dependencies {
 }
 
 #[derive(Debug, Error)]
-pub enum ModrinthError {
-    #[error("no versions were available for project {0}")]
-    NoVersionsAvailable(String),
+pub enum FileError {
+    #[error("{0} was skipped")]
+    Skipped(String),
+
+    #[error("{0} not found")]
+    NotFound(String),
 }
 
 impl ProjectType {
@@ -145,26 +148,42 @@ impl ProjectType {
 
 impl File {
     // TODO add option to filter featured versions only (https://docs.modrinth.com/api/operations/getprojectversions)
-    pub fn newest_for_project(
-        project_id: &str,
-        loaders: &Vec<Loader>,
-        game_versions: &Vec<String>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let loaders = Loader::modrinth_value_vec(loaders);
+    pub fn from_project(branch_name: &String, branch_config: &BranchConfig, project_id: &str, project_settings: &ProjectSettings) -> Result<Self, Box<dyn std::error::Error>> {
+        // Handle inclusions and exclusions
+        if let Some(include_or_exclude) = &project_settings.include_or_exclude {
+            match include_or_exclude { // TODO rename all includes to inclusions in project
+                IncludeOrExclude::Include(inclusions) => {
+                    if !inclusions.contains(branch_name) {
+                        return Err(FileError::Skipped(project_id.to_string()).into());
+                    }
+                }
+                IncludeOrExclude::Exclude(exclusions) => {
+                    if exclusions.contains(branch_name) {
+                        return Err(FileError::Skipped(project_id.to_string()).into());
+                    }
+                }
+            }
+        }
 
-        let endpoint = format!(
+        let loaders = Loader::modrinth_value_vec(&branch_config.acceptable_loaders);
+        let game_versions = &branch_config.acceptable_minecraft_versions;
+        let mut api_endpoint = format!(
             "/project/{project_id}/version?loaders={loaders:?}&game_versions={game_versions:?}"
         );
-        let mut api_response = utils::request_text(&endpoint)?;
-        if api_response == "[]" {
-            api_response = "[{\"game_versions\":[\"1.20.5\",\"1.20.6\",\"1.21\",\"1.21.1\",\"1.21.2\",\"1.21.3\",\"1.21.4\",\"1.21.5\",\"1.21.6\",\"1.21.7\",\"1.21.8\"],\"loaders\":[\"fabric\",\"quilt\"],\"id\":\"3siYJiWG\",\"project_id\":\"8qkXwOnk\",\"author_id\":\"i6tWDmU1\",\"featured\":false,\"name\":\"More Chat History 1.3.1 [MC 1.20.5+]\",\"version_number\":\"1.3.1\",\"changelog\":\"Previous: v1.3.0\\n\\nFull changelog: https://github.com/JackFred2/MoreChatHistory/compare/v1.3.0...v1.3.1\\n\",\"changelog_url\":null,\"date_published\":\"2024-04-23T22:42:18.767403Z\",\"downloads\":5838317,\"version_type\":\"release\",\"status\":\"listed\",\"requested_status\":null,\"files\":[{\"hashes\":{\"sha512\":\"31831973dafb0cd4e1ead267b0143aa9ce803d8ebf8fec1dfad884c62ad52cf94da0349b2b0b72d9c0c9a7fb83af75180d85e7ea8a44c459d4d5e960b4e3ea06\",\"sha1\":\"b4337ef9dc0a6cdf31d8f3df68a6542f64f3625e\"},\"url\":\"https://cdn.modrinth.com/data/8qkXwOnk/versions/3siYJiWG/morechathistory-1.3.1.jar\",\"filename\":\"morechathistory-1.3.1.jar\",\"primary\":true,\"size\":3573,\"file_type\":null}],\"dependencies\":[]}]".to_string()
+
+        // Change endpoint to version if an override is provided for this branch
+        if let Some(version_overrides) = &project_settings.version_overrides &&
+            let Some(version_override) = version_overrides.get(branch_name) {
+                api_endpoint = format!("/version/{}", version_override);
         }
+
+        let api_response = utils::request_text(&api_endpoint)?;
         let modrinth_versions: Vec<Version> = serde_json::from_str(&api_response)?;
 
         if let Some(most_recent_version) = modrinth_versions.first() {
             Self::from_modrinth_version(most_recent_version)
         } else {
-            Err(ModrinthError::NoVersionsAvailable(project_id.to_string()).into())
+            Err(FileError::NotFound(project_id.to_string()).into())
         }
     }
 

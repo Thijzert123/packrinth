@@ -3,7 +3,7 @@ use anyhow::{Context, Result, bail};
 use clap::Parser;
 use dialoguer::Confirm;
 use packrinth::config::{BranchConfig, BranchFiles, IncludeOrExclude, Modpack, ProjectSettings};
-use packrinth::modrinth::File;
+use packrinth::modrinth::{File, FileError};
 use packrinth::{config, utils};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
@@ -385,15 +385,15 @@ impl UpdateArgs {
         Ok(())
     }
 
-    fn update_branch(modpack: &Modpack, branch: &String, verbose: bool) -> Result<()> {
-        let branch_config = BranchConfig::from_directory(&modpack.directory, branch)?;
-        let mut branch_files = BranchFiles::from_directory(&modpack.directory, branch)?;
+    fn update_branch(modpack: &Modpack, branch_name: &String, verbose: bool) -> Result<()> {
+        let branch_config = BranchConfig::from_directory(&modpack.directory, branch_name)?;
+        let mut branch_files = BranchFiles::from_directory(&modpack.directory, branch_name)?;
 
         // Remove all entries to ensure that there will be no duplicates if the user changes loaders
         branch_files.files = Vec::new();
 
         let mut progress_bar = ProgressBar::new_with_eta(modpack.projects.len());
-        progress_bar.set_action(branch, Color::Blue, Style::Bold);
+        progress_bar.set_action(branch_name, Color::Blue, Style::Bold);
         if let Some((terminal_size::Width(width), terminal_size::Height(_height))) =
             terminal_size::terminal_size()
         {
@@ -402,25 +402,33 @@ impl UpdateArgs {
         }
 
         for project in &modpack.projects {
-            if let Ok(file) = File::newest_for_project(
-                project.0,
-                &branch_config.acceptable_loaders,
-                &branch_config.acceptable_minecraft_versions,
-            ) {
-                branch_files.files.push(file);
-                if verbose {
-                    progress_bar.print_info("Added", project.0, Color::LightGreen, Style::Normal);
+            let project_id = project.0;
+            let project_settings = project.1;
+            match File::from_project(branch_name, &branch_config, project_id, project_settings) {
+                Ok(file) => {
+                    branch_files.files.push(file);
+
+                    if verbose {
+                        progress_bar.print_info("Added", project_id, Color::LightGreen, Style::Normal);
+                    }
                 }
-            } else if verbose {
-                progress_bar.print_info("Failed", project.0, Color::Red, Style::Bold);
+                Err(error) if error.downcast_ref::<FileError>().is_some() => {
+                    match error.downcast_ref::<FileError>().unwrap() {
+                        FileError::Skipped(_project_id) => if verbose {
+                            progress_bar.print_info("Skipped", project_id, Color::Yellow, Style::Normal);
+                        }
+                        FileError::NotFound(_project_id) => progress_bar.print_info("Not found", project_id, Color::Yellow, Style::Bold),
+                    }
+                }
+                Err(_error) => progress_bar.print_info("Failed", &_error.to_string(), Color::Red, Style::Bold),
             }
 
             progress_bar.inc();
         }
 
-        progress_bar.print_final_info(branch, "updated", Color::LightGreen, Style::Bold);
+        progress_bar.print_final_info(branch_name, "updated", Color::LightGreen, Style::Bold);
 
-        branch_files.save(&modpack.directory, branch)
+        branch_files.save(&modpack.directory, branch_name)
     }
 }
 

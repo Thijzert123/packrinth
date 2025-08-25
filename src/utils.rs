@@ -1,4 +1,4 @@
-use crate::config::{BranchConfig, BranchFiles, MainLoader, Modpack};
+use crate::config::{BranchConfig, BranchFiles, MainLoader, Modpack, ProjectSettings};
 use crate::modrinth::{Dependencies, MrPack};
 use anyhow::Result;
 use reqwest::blocking::Client;
