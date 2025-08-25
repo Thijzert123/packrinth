@@ -163,6 +163,12 @@ struct RemoveProjectsArgs {
 #[derive(Debug, Parser)]
 pub struct UpdateArgs {
     branches: Option<Vec<String>>,
+
+    #[clap(long)]
+    no_alpha: bool,
+
+    #[clap(long)]
+    no_beta: bool,
 }
 
 #[derive(Debug, Parser)]
@@ -374,18 +380,18 @@ impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<()> {
         if let Some(branches) = &self.branches {
             for branch in branches {
-                Self::update_branch(modpack, branch, config_args.verbose)?;
+                Self::update_branch(modpack, branch, self.no_beta, self.no_alpha, config_args.verbose)?;
             }
         } else {
             for branch in &modpack.branches {
-                Self::update_branch(modpack, branch, config_args.verbose)?;
+                Self::update_branch(modpack, branch, self.no_beta, self.no_alpha, config_args.verbose)?;
             }
         }
 
         Ok(())
     }
 
-    fn update_branch(modpack: &Modpack, branch_name: &String, verbose: bool) -> Result<()> {
+    fn update_branch(modpack: &Modpack, branch_name: &String, no_beta: bool, no_alpha: bool, verbose: bool) -> Result<()> {
         let branch_config = BranchConfig::from_directory(&modpack.directory, branch_name)?;
         let mut branch_files = BranchFiles::from_directory(&modpack.directory, branch_name)?;
 
@@ -404,7 +410,7 @@ impl UpdateArgs {
         for project in &modpack.projects {
             let project_id = project.0;
             let project_settings = project.1;
-            match File::from_project(branch_name, &branch_config, project_id, project_settings) {
+            match File::from_project(branch_name, &branch_config, project_id, project_settings, no_beta, no_alpha) {
                 Ok(file) => {
                     branch_files.files.push(file);
 

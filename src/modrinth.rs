@@ -48,7 +48,20 @@ pub struct Version {
     pub id: String,
     pub project_id: String,
     pub version_number: String,
+    pub version_type: VersionType,
     pub files: Vec<VersionFile>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum VersionType {
+    #[serde(rename = "release")]
+    Release,
+
+    #[serde(rename = "beta")]
+    Beta,
+
+    #[serde(rename = "alpha")]
+    Alpha,
 }
 
 /// File in a version.
@@ -147,8 +160,7 @@ impl ProjectType {
 }
 
 impl File {
-    // TODO add option to filter featured versions only (https://docs.modrinth.com/api/operations/getprojectversions)
-    pub fn from_project(branch_name: &String, branch_config: &BranchConfig, project_id: &str, project_settings: &ProjectSettings) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn from_project(branch_name: &String, branch_config: &BranchConfig, project_id: &str, project_settings: &ProjectSettings, no_alpha: bool, no_beta: bool) -> Result<Self, Box<dyn std::error::Error>> {
         // Handle inclusions and exclusions
         if let Some(include_or_exclude) = &project_settings.include_or_exclude {
             match include_or_exclude { // TODO rename all includes to inclusions in project
@@ -180,11 +192,20 @@ impl File {
         let api_response = utils::request_text(&api_endpoint)?;
         let modrinth_versions: Vec<Version> = serde_json::from_str(&api_response)?;
 
-        if let Some(most_recent_version) = modrinth_versions.first() {
-            Self::from_modrinth_version(most_recent_version)
-        } else {
-            Err(FileError::NotFound(project_id.to_string()).into())
+        for modrinth_version in modrinth_versions {
+            match modrinth_version.version_type {
+                VersionType::Release => return Self::from_modrinth_version(&modrinth_version),
+                VersionType::Beta => if !no_beta {
+                    return Self::from_modrinth_version(&modrinth_version);
+                }
+                VersionType::Alpha => if !no_alpha {
+                    return Self::from_modrinth_version(&modrinth_version);
+                }
+            }
         }
+
+        // If no versions were returned in the for loop, return error
+        Err(FileError::NotFound(project_id.to_string()).into())
     }
 
     /// Creates a <code>Version</code> by making requests to the Modrinth API.
