@@ -5,6 +5,7 @@ use crate::utils;
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use thiserror::Error;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Project {
@@ -121,6 +122,12 @@ pub struct Dependencies {
     pub quilt_loader: Option<String>,
 }
 
+#[derive(Debug, Error)]
+pub enum ModrinthError {
+    #[error("no versions were available for project {0}")]
+    NoVersionsAvailable(String),
+}
+
 impl ProjectType {
     /// Returns the directory of where the project would go in to.
     pub fn directory(&self) -> Result<&str> {
@@ -148,11 +155,17 @@ impl File {
         let endpoint = format!(
             "/project/{project_id}/version?loaders={loaders:?}&game_versions={game_versions:?}"
         );
-        let api_response = utils::request_text(endpoint)?;
+        let mut api_response = utils::request_text(&endpoint)?;
+        if api_response == "[]" {
+            api_response = "[{\"game_versions\":[\"1.20.5\",\"1.20.6\",\"1.21\",\"1.21.1\",\"1.21.2\",\"1.21.3\",\"1.21.4\",\"1.21.5\",\"1.21.6\",\"1.21.7\",\"1.21.8\"],\"loaders\":[\"fabric\",\"quilt\"],\"id\":\"3siYJiWG\",\"project_id\":\"8qkXwOnk\",\"author_id\":\"i6tWDmU1\",\"featured\":false,\"name\":\"More Chat History 1.3.1 [MC 1.20.5+]\",\"version_number\":\"1.3.1\",\"changelog\":\"Previous: v1.3.0\\n\\nFull changelog: https://github.com/JackFred2/MoreChatHistory/compare/v1.3.0...v1.3.1\\n\",\"changelog_url\":null,\"date_published\":\"2024-04-23T22:42:18.767403Z\",\"downloads\":5838317,\"version_type\":\"release\",\"status\":\"listed\",\"requested_status\":null,\"files\":[{\"hashes\":{\"sha512\":\"31831973dafb0cd4e1ead267b0143aa9ce803d8ebf8fec1dfad884c62ad52cf94da0349b2b0b72d9c0c9a7fb83af75180d85e7ea8a44c459d4d5e960b4e3ea06\",\"sha1\":\"b4337ef9dc0a6cdf31d8f3df68a6542f64f3625e\"},\"url\":\"https://cdn.modrinth.com/data/8qkXwOnk/versions/3siYJiWG/morechathistory-1.3.1.jar\",\"filename\":\"morechathistory-1.3.1.jar\",\"primary\":true,\"size\":3573,\"file_type\":null}],\"dependencies\":[]}]".to_string()
+        }
         let modrinth_versions: Vec<Version> = serde_json::from_str(&api_response)?;
 
-        // Use the most recent version (index 0)
-        Self::from_modrinth_version(&modrinth_versions[0])
+        if let Some(most_recent_version) = modrinth_versions.first() {
+            Self::from_modrinth_version(most_recent_version)
+        } else {
+            Err(ModrinthError::NoVersionsAvailable(project_id.to_string()).into())
+        }
     }
 
     /// Creates a <code>Version</code> by making requests to the Modrinth API.

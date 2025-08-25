@@ -3,10 +3,13 @@ use anyhow::{Context, Result, bail};
 use clap::Parser;
 use dialoguer::Confirm;
 use packrinth::config::{BranchConfig, BranchFiles, IncludeOrExclude, Modpack, ProjectSettings};
-use packrinth::modrinth::{Dependencies, File, MrPack};
+use packrinth::modrinth::File;
 use packrinth::{config, utils};
+use progress_bar::pb::ProgressBar;
+use progress_bar::{Color, Style};
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::cmp;
 use std::path::Path;
 
 #[derive(Debug, Parser)]
@@ -159,7 +162,7 @@ struct RemoveProjectsArgs {
 
 #[derive(Debug, Parser)]
 pub struct UpdateArgs {
-    branch: Option<String>,
+    branches: Option<Vec<String>>,
 }
 
 #[derive(Debug, Parser)]
@@ -368,23 +371,35 @@ impl RemoveProjectsArgs {
 }
 
 impl UpdateArgs {
-    pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        if let Some(branch) = &self.branch {
-            Self::update_branch(modpack, branch)
+    pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<()> {
+        if let Some(branches) = &self.branches {
+            for branch in branches {
+                Self::update_branch(modpack, branch, config_args.verbose)?;
+            }
         } else {
             for branch in &modpack.branches {
-                Self::update_branch(modpack, branch)?;
+                Self::update_branch(modpack, branch, config_args.verbose)?;
             }
-            Ok(())
         }
+
+        Ok(())
     }
 
-    fn update_branch(modpack: &Modpack, branch: &String) -> Result<()> {
+    fn update_branch(modpack: &Modpack, branch: &String, verbose: bool) -> Result<()> {
         let branch_config = BranchConfig::from_directory(&modpack.directory, branch)?;
         let mut branch_files = BranchFiles::from_directory(&modpack.directory, branch)?;
 
         // Remove all entries to ensure that there will be no duplicates if the user changes loaders
         branch_files.files = Vec::new();
+
+        let mut progress_bar = ProgressBar::new_with_eta(modpack.projects.len());
+        progress_bar.set_action(branch, Color::Blue, Style::Bold);
+        if let Some((terminal_size::Width(width), terminal_size::Height(_height))) =
+            terminal_size::terminal_size()
+        {
+            // Decrease width when the terminal is small. Otherwise, take 50 columns.
+            progress_bar.set_width(cmp::min((width - 45) as usize, 50));
+        }
 
         for project in &modpack.projects {
             if let Ok(file) = File::newest_for_project(
@@ -393,14 +408,22 @@ impl UpdateArgs {
                 &branch_config.acceptable_minecraft_versions,
             ) {
                 branch_files.files.push(file);
-            } else {
-                bail!(
-                    "Failed to update project {} for branch {}",
-                    project.0,
-                    branch
-                );
+                if verbose {
+                    progress_bar.print_info("Added", project.0, Color::LightGreen, Style::Normal);
+                }
+            } else if verbose {
+                progress_bar.print_info("Failed", project.0, Color::Red, Style::Bold);
             }
+
+            progress_bar.inc();
         }
+
+        progress_bar.print_final_info(
+            branch,
+            "updated",
+            Color::LightGreen,
+            Style::Bold,
+        );
 
         branch_files.save(&modpack.directory, branch)
     }
@@ -526,7 +549,11 @@ impl RemoveBranchesArgs {
 impl ExportArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         if let Ok(mrpack_path) = utils::export_to_mrpack(modpack, &self.branch) {
-            println!("Exported branch {} to {}", &self.branch, mrpack_path.display());
+            println!(
+                "Exported branch {} to {}",
+                &self.branch,
+                mrpack_path.display()
+            );
             Ok(())
         } else {
             bail!("Failed to export branch {}", &self.branch);

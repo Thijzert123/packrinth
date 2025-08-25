@@ -6,11 +6,6 @@ use packrinth::config::{self, Modpack};
 use std::path::PathBuf;
 
 fn main() -> Result<()> {
-    // Initialize logger so that the user sees the logs in the terminal
-    simple_logger::init_with_level(log::Level::Debug).unwrap_or_else(|error| {
-        eprintln!("Could not initialize logger: {}", error);
-    });
-
     Cli::parse().run()
 }
 
@@ -47,6 +42,10 @@ struct ConfigArgs {
     /// Set the root directory of the modpack
     #[clap(short, long, global = true)]
     pub directory: Option<PathBuf>,
+
+    /// Output more information about the current process
+    #[clap(short, long, global = true)]
+    pub verbose: bool,
 }
 
 impl Cli {

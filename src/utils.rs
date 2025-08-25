@@ -1,7 +1,6 @@
 use crate::config::{BranchConfig, BranchFiles, MainLoader, Modpack};
 use crate::modrinth::{Dependencies, MrPack};
 use anyhow::Result;
-use log::{debug, trace};
 use reqwest::blocking::Client;
 use std::fs::File;
 use std::io;
@@ -10,7 +9,7 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 use walkdir::WalkDir;
 use zip::ZipWriter;
-use zip::write::{FileOptions, SimpleFileOptions};
+use zip::write::SimpleFileOptions;
 
 const MODRINTH_API_BASE_URL: &str = "https://api.modrinth.com/v2";
 static CLIENT: OnceLock<Client> = OnceLock::new();
@@ -31,9 +30,7 @@ pub fn request_text<T: ToString>(api_endpoint: T) -> Result<String, Box<dyn std:
     });
 
     let full_url = MODRINTH_API_BASE_URL.to_string() + api_endpoint.to_string().as_str();
-    debug!("Making GET request to {}", full_url);
     let text = client.get(&full_url).send()?.text()?;
-    trace!("Got text {} from {}", text, full_url);
     Ok(text)
 }
 
