@@ -525,8 +525,11 @@ impl RemoveBranchesArgs {
 
 impl ExportArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        utils::export_to_mrpack(modpack, &self.branch)?;
-
-        Ok(())
+        if let Ok(mrpack_path) = utils::export_to_mrpack(modpack, &self.branch) {
+            println!("Exported branch {} to {}", &self.branch, mrpack_path.display());
+            Ok(())
+        } else {
+            bail!("Failed to export branch {}", &self.branch);
+        }
     }
 }

@@ -6,6 +6,7 @@ use reqwest::blocking::Client;
 use std::fs::File;
 use std::io;
 use std::io::Write;
+use std::path::PathBuf;
 use std::sync::OnceLock;
 use walkdir::WalkDir;
 use zip::ZipWriter;
@@ -43,7 +44,7 @@ const GAME: &str = "minecraft";
 const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
 const OVERRIDES_DIR_NAME: &str = "overrides";
 
-pub fn export_to_mrpack(modpack: &Modpack, branch: &String) -> Result<()> {
+pub fn export_to_mrpack(modpack: &Modpack, branch: &String) -> Result<PathBuf> {
     let branch_config = BranchConfig::from_directory(&modpack.directory, branch)?;
     let branch_files = BranchFiles::from_directory(&modpack.directory, branch)?;
 
@@ -88,7 +89,7 @@ pub fn export_to_mrpack(modpack: &Modpack, branch: &String) -> Result<()> {
 
     zip.finish()?;
 
-    Ok(())
+    Ok(mrpack_path)
 }
 
 fn create_dependencies(branch_config: BranchConfig) -> Dependencies {
