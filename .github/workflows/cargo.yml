@@ -12,18 +12,11 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
-  cargo-build:
+  cargo:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Cargo Build
-      run: cargo build --verbose
-
-    - uses: actions/checkout@v4
-    - name: Cargo Test
-      run: cargo test --verbose
-
-    - name: Cargo Clippy
-      run: cargo clippy --verbose
+    - name: Cargo
+      run: cargo build --verbose && cargo test --verbose && cargo clippy --verbose
