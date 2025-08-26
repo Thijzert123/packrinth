@@ -22,7 +22,7 @@ where
     P: AsRef<Path>,
 {
     let json = serde_json::to_string_pretty(json_value)
-        .with_context(|| format!("Failed to serialize {:?} to JSON", json_value))?;
+        .with_context(|| format!("Failed to serialize {json_value:?} to JSON"))?;
     fs::write(&file, json)
         .with_context(|| format!("Failed write to {}", &file.as_ref().display()))?;
     Ok(())
@@ -77,7 +77,7 @@ pub struct BranchConfig {
 }
 
 /// Loaders that a launcher has to install with the modpack.
-/// See https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack
+/// See <https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack>
 /// at `dependencies` for more information.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MainLoader {
@@ -253,9 +253,7 @@ impl Modpack {
         minecraft_version: &str,
         project_version_id: &str,
     ) -> Result<()> {
-        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
-            project_settings
-        } else {
+        let Some(project_settings) = self.projects.get_mut(project) else {
             bail!("Project {} isn't added to this modpack", project);
         };
 
@@ -279,9 +277,7 @@ impl Modpack {
         project: &str,
         minecraft_version: &str,
     ) -> Result<()> {
-        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
-            project_settings
-        } else {
+        let Some(project_settings) = self.projects.get_mut(project) else {
             bail!("Project {} isn't added to this modpack", project);
         };
 
@@ -309,10 +305,12 @@ impl Modpack {
         }
     }
 
-    pub fn add_project_inclusions(&mut self, project: &str, new_inclusions: &[String]) -> Result<()> {
-        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
-            project_settings
-        } else {
+    pub fn add_project_inclusions(
+        &mut self,
+        project: &str,
+        new_inclusions: &[String],
+    ) -> Result<()> {
+        let Some(project_settings) = self.projects.get_mut(project) else {
             bail!("Project {} isn't added to this modpack", project);
         };
 
@@ -340,9 +338,7 @@ impl Modpack {
         project: &str,
         inclusions_to_remove: &[String],
     ) -> Result<()> {
-        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
-            project_settings
-        } else {
+        let Some(project_settings) = self.projects.get_mut(project) else {
             bail!("Project {} isn't added to this modpack", project);
         };
 
@@ -372,10 +368,12 @@ impl Modpack {
         }
     }
 
-    pub fn add_project_exclusions(&mut self, project: &str, new_exclusions: &[String]) -> Result<()> {
-        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
-            project_settings
-        } else {
+    pub fn add_project_exclusions(
+        &mut self,
+        project: &str,
+        new_exclusions: &[String],
+    ) -> Result<()> {
+        let Some(project_settings) = self.projects.get_mut(project) else {
             bail!("Project {} isn't added to this modpack", project);
         };
 
@@ -403,9 +401,7 @@ impl Modpack {
         project: &str,
         exclusions_to_remove: &[String],
     ) -> Result<()> {
-        let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
-            project_settings
-        } else {
+        let Some(project_settings) = self.projects.get_mut(project) else {
             bail!("Project {} isn't added to this modpack", project);
         };
 
@@ -471,7 +467,7 @@ impl Modpack {
                     fs::remove_dir_all(&branch_path)?;
                 }
             }
-            self.save()?
+            self.save()?;
         }
 
         Ok(())
@@ -512,7 +508,10 @@ impl Modpack {
             // The actual path on the file system
             let path = entry.path();
             // The path the file will be in the zip (/ being the root of the zip)
-            let zip_path = path.strip_prefix(&branch_dir)?.to_str().unwrap();
+            let zip_path = path
+                .strip_prefix(&branch_dir)?
+                .to_str()
+                .expect("Couldn't strip to zip path");
 
             if path.is_file() {
                 zip.start_file(zip_path, options)?;
@@ -555,7 +554,7 @@ impl Modpack {
 impl BranchConfig {
     pub fn from_directory(directory: &Path, name: &String) -> Result<Self> {
         let branch_dir = directory.join(name);
-        match fs::metadata(&branch_dir).with_context(|| format!("Branch {} doesn't exist", name)) {
+        match fs::metadata(&branch_dir).with_context(|| format!("Branch {name} doesn't exist")) {
             Ok(metadata) => {
                 if metadata.is_dir() {
                     let branch_config_path = branch_dir.join(BRANCH_CONFIG_FILE_NAME);
@@ -567,9 +566,9 @@ impl BranchConfig {
                                 let branch_config: Self = serde_json::from_str(&contents)?;
                                 branch_config
                             }
-                            Err(error) if error.downcast_ref::<std::io::Error>().is_some() => {
-                                if error.downcast_ref::<std::io::Error>().unwrap().kind()
-                                    == std::io::ErrorKind::NotFound
+                            Err(error) if error.downcast_ref::<io::Error>().is_some() => {
+                                if error.downcast_ref::<io::Error>().unwrap().kind()
+                                    == io::ErrorKind::NotFound
                                 {
                                     Self::create_default_branch_config(&branch_config_path)?
                                 } else {
@@ -608,7 +607,7 @@ impl BranchConfig {
     }
 
     pub fn print_display(&self, name: &str) {
-        println!("Branch {}:", name);
+        println!("Branch {name}:");
         println!("  - Branch version: {}", self.version);
         println!(
             "  - Main Minecraft version: {}",
@@ -629,7 +628,7 @@ impl BranchConfig {
 impl BranchFiles {
     pub fn from_directory(directory: &Path, name: &String) -> Result<Self> {
         let branch_dir = directory.join(name);
-        match fs::metadata(&branch_dir).with_context(|| format!("Branch {} doesn't exist", name)) {
+        match fs::metadata(&branch_dir).with_context(|| format!("Branch {name} doesn't exist")) {
             Ok(metadata) => {
                 if metadata.is_dir() {
                     let branch_files_path = branch_dir.join(BRANCH_FILES_FILE_NAME);
@@ -640,9 +639,9 @@ impl BranchFiles {
                             let branch_files: Self = serde_json::from_str(&contents)?;
                             branch_files
                         }
-                        Err(error) if error.downcast_ref::<std::io::Error>().is_some() => {
-                            if error.downcast_ref::<std::io::Error>().unwrap().kind()
-                                == std::io::ErrorKind::NotFound
+                        Err(error) if error.downcast_ref::<io::Error>().is_some() => {
+                            if error.downcast_ref::<io::Error>().unwrap().kind()
+                                == io::ErrorKind::NotFound
                             {
                                 Self::create_default_branch_files(&branch_files_path)?
                             } else {
@@ -690,6 +689,7 @@ impl MainLoader {
 }
 
 impl Loader {
+    #[must_use]
     pub fn pretty_value_vec(loaders: &Vec<Self>) -> Vec<&str> {
         let mut values = Vec::new();
         for loader in loaders {
@@ -698,6 +698,7 @@ impl Loader {
         values
     }
 
+    #[must_use]
     pub fn modrinth_value_vec(loaders: &Vec<Self>) -> Vec<&str> {
         let mut values = Vec::new();
         for loader in loaders {

@@ -52,7 +52,7 @@ struct AddProjectsArgs {
     /// Projects to add
     ///
     /// The projects must be from Modrinth. You have to specify either the human-readable
-    /// slug that appears in the URL (fabric-api) or the slug (P7dR8mSH).
+    /// slug that appears in the URL (fabric-api) or the slug (`P7dR8mSH`).
     projects: Vec<String>,
 
     #[clap(short, long, group = "include_or_exclude")]
@@ -256,10 +256,10 @@ impl ListProjectsArgs {
             if let Some(include_or_exclude) = &project.1.include_or_exclude {
                 match include_or_exclude {
                     IncludeOrExclude::Include(inclusions) => {
-                        println!("  - Inclusions: {}", inclusions.join(", "))
+                        println!("  - Inclusions: {}", inclusions.join(", "));
                     }
                     IncludeOrExclude::Exclude(exclusions) => {
-                        println!("  - Exclusions: {}", exclusions.join(", "))
+                        println!("  - Exclusions: {}", exclusions.join(", "));
                     }
                 }
             }
@@ -422,7 +422,9 @@ impl UpdateArgs {
             terminal_size::terminal_size()
         {
             // Decrease width when the terminal is small. Otherwise, take 50 columns.
-            progress_bar.set_width(cmp::min((width - 45) as usize, 50));
+            // Subtracting results in u16, which is safe to convert to usize.
+            #[allow(clippy::as_conversions)]
+            progress_bar.set_width(cmp::min(width.saturating_sub(45) as usize, 50));
         }
 
         for project in &modpack.projects {
@@ -468,8 +470,8 @@ impl UpdateArgs {
                         ),
                     }
                 }
-                Err(_error) => {
-                    progress_bar.print_info("Failed", &_error.to_string(), Color::Red, Style::Bold)
+                Err(error) => {
+                    progress_bar.print_info("Failed", &error.to_string(), Color::Red, Style::Bold);
                 }
             }
 
@@ -532,7 +534,7 @@ impl ListBranchesArgs {
                         bail!(error);
                     }
                 }
-            };
+            }
 
             // Print new line between branches, but not at the very end.
             if iter.peek().is_some() {
@@ -568,7 +570,7 @@ impl RemoveBranchesArgs {
             modpack.directory.display()
         );
         for branch in &self.branches {
-            println!("  - {}", branch);
+            println!("  - {branch}");
         }
         println!(
             "Please keep in mind that all the content of the branches will be removed, including overrides."

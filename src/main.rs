@@ -1,3 +1,11 @@
+#![warn(
+    clippy::all,
+    clippy::pedantic,
+    clippy::print_stdout,
+    clippy::arithmetic_side_effects,
+    clippy::as_conversions,
+    clippy::integer_division
+)]
 mod subcommand;
 
 use anyhow::{Result, bail};
@@ -55,9 +63,10 @@ impl Cli {
             None => &std::env::current_dir()?,
         };
 
-        let mut modpack = match self.config_args.init {
-            true => Modpack::new(working_dir)?,
-            false => Modpack::from_directory(working_dir)?,
+        let mut modpack = if self.config_args.init {
+            Modpack::new(working_dir)?
+        } else {
+            Modpack::from_directory(working_dir)?
         };
 
         if modpack.pack_format != config::CURRENT_PACK_FORMAT {

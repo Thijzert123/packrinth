@@ -18,7 +18,7 @@ const USER_AGENT: &str = concat!(
     env!("CARGO_PKG_VERSION")
 );
 
-pub fn request_text<T: ToString>(api_endpoint: T) -> Result<String, Box<dyn std::error::Error>> {
+pub fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, Box<dyn std::error::Error>> {
     let client = CLIENT.get_or_init(|| {
         Client::builder()
             .user_agent(USER_AGENT)
@@ -219,7 +219,7 @@ impl File {
         if let Some(version_overrides) = &project_settings.version_overrides
             && let Some(version_override) = version_overrides.get(branch_name)
         {
-            api_endpoint = format!("/version/{}", version_override);
+            api_endpoint = format!("/version/{version_override}");
         }
 
         let api_response = request_text(&api_endpoint)?;
@@ -249,8 +249,8 @@ impl File {
         modrinth_version: &Version,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         // Request to get general information about the project associated with the version
-        let modrinth_project_response =
-            request_text("/project/".to_string() + &modrinth_version.project_id)?;
+        let endpoint = format!("/project/{}", &modrinth_version.project_id);
+        let modrinth_project_response = request_text(&endpoint)?;
         let modrinth_project: Project = serde_json::from_str(&modrinth_project_response)?;
 
         // Get the primary file. Every version should have one.
