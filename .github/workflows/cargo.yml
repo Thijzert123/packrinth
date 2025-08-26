@@ -17,21 +17,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
     - name: Cargo Build
       run: cargo build --verbose
 
-  cargo-test:
-    runs-on: ubuntu-latest
+    - uses: actions/checkout@v4
+    - name: Cargo Test
+      run: cargo test --verbose
 
-    steps:
-      - uses: actions/checkout@v4
-      - name: Cargo Test
-        run: cargo test --verbose
-
-  cargo-clippy:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Cargo Clippy
-        run: cargo clippy --verbose
+    - name: Cargo Clippy
+      run: cargo clippy --verbose
