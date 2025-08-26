@@ -231,10 +231,14 @@ impl ProjectArgs {
 }
 
 impl ListProjectsArgs {
+    // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
+    #[allow(clippy::unused_self)]
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         Self::list(&modpack.projects)
     }
 
+    // Allowing unnecessary return because it makes it clear that using ? in the function is ok.
+    #[allow(clippy::unnecessary_wraps)]
     pub fn list(projects: &HashMap<String, ProjectSettings>) -> Result<()> {
         if projects.is_empty() {
             println!("There are no projects added to this modpack yet.");
@@ -283,7 +287,7 @@ impl AddProjectsArgs {
             self.exclusions.clone().map(IncludeOrExclude::Exclude)
         };
 
-        modpack.add_projects(&self.projects, None, include_or_exclude)?;
+        modpack.add_projects(&self.projects, &None, &include_or_exclude)?;
 
         Ok(())
     }
@@ -501,6 +505,8 @@ impl BranchArgs {
 }
 
 impl ListBranchesArgs {
+    // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
+    #[allow(clippy::unused_self)]
     pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<()> {
         Self::list(&modpack.directory, &modpack.branches)
     }

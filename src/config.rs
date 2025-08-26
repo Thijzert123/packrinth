@@ -224,8 +224,8 @@ impl Modpack {
     pub fn add_projects(
         &mut self,
         projects: &[String],
-        version_overrides: Option<HashMap<String, String>>,
-        include_or_exclude: Option<IncludeOrExclude>,
+        version_overrides: &Option<HashMap<String, String>>,
+        include_or_exclude: &Option<IncludeOrExclude>,
     ) -> Result<()> {
         for project in projects {
             self.projects.insert(
