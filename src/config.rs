@@ -179,7 +179,7 @@ const MODRINTH_PACK_FORMAT: u16 = 1;
 /// The game to put in the mrpack.
 const GAME: &str = "minecraft";
 const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
-const OVERRIDES_DIR_NAME: &str = "overrides";
+const OVERRIDE_DIRS: [&str; 3] = ["overrides", "server-overrides", "client-overrides"];
 
 impl Modpack {
     pub fn new(directory: &Path) -> Result<Self> {
@@ -497,29 +497,31 @@ impl Modpack {
         let mrpack_json = serde_json::to_string_pretty(&mrpack)?;
         let options = SimpleFileOptions::default();
 
-        let mut zip = ZipWriter::new(std::fs::File::create(&mrpack_path)?);
+        let mut zip = ZipWriter::new(fs::File::create(&mrpack_path)?);
         zip.start_file(MRPACK_CONFIG_FILE_NAME, options)?;
         zip.write_all(mrpack_json.as_bytes())?;
 
         let branch_dir = self.directory.join(branch);
-        // Loop every file/dir in the overrides dir
-        for entry in WalkDir::new(branch_dir.join(OVERRIDES_DIR_NAME)) {
-            let entry = entry?;
-            // The actual path on the file system
-            let path = entry.path();
-            // The path the file will be in the zip (/ being the root of the zip)
-            let zip_path = path
-                .strip_prefix(&branch_dir)?
-                .to_str()
-                .expect("Couldn't strip to zip path");
+        // Loop every file/dir in the override dirs
+        for override_dir in OVERRIDE_DIRS {
+            for entry in WalkDir::new(branch_dir.join(override_dir)) {
+                let entry = entry?;
+                // The actual path on the file system
+                let path = entry.path();
+                // The path the file will be in the zip (/ being the root of the zip)
+                let zip_path = path
+                    .strip_prefix(&branch_dir)?
+                    .to_str()
+                    .expect("Couldn't strip to zip path");
 
-            if path.is_file() {
-                zip.start_file(zip_path, options)?;
-                let mut buffer = Vec::new();
-                io::copy(&mut fs::File::open(path)?, &mut buffer)?;
-                zip.write_all(&buffer)?;
-            } else if path.is_dir() {
-                zip.add_directory(zip_path, options)?;
+                if path.is_file() {
+                    zip.start_file(zip_path, options)?;
+                    let mut buffer = Vec::new();
+                    io::copy(&mut fs::File::open(path)?, &mut buffer)?;
+                    zip.write_all(&buffer)?;
+                } else if path.is_dir() {
+                    zip.add_directory(zip_path, options)?;
+                }
             }
         }
 
