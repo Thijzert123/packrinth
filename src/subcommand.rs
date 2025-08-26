@@ -56,10 +56,10 @@ struct AddProjectsArgs {
     projects: Vec<String>,
 
     #[clap(short, long, group = "include_or_exclude")]
-    include: Option<Vec<String>>,
+    inclusions: Option<Vec<String>>,
 
     #[clap(short, long, group = "include_or_exclude")]
-    exclude: Option<Vec<String>>,
+    exclusions: Option<Vec<String>>,
 }
 
 #[derive(Parser, Debug)]
@@ -101,24 +101,24 @@ struct IncludeProjectArgs {
 
 #[derive(Parser, Debug)]
 enum IncludeSubCommand {
-    Add(AddIncludesArgs),
+    Add(AddInclusionsArgs),
 
     #[clap(alias = "rm")]
-    Remove(RemoveIncludesArgs),
+    Remove(RemoveInclusionsArgs),
 }
 
 #[derive(Parser, Debug)]
-struct AddIncludesArgs {
+struct AddInclusionsArgs {
     project: String,
 
-    includes: Vec<String>,
+    inclusions: Vec<String>,
 }
 
 #[derive(Parser, Debug)]
-struct RemoveIncludesArgs {
+struct RemoveInclusionsArgs {
     project: String,
 
-    includes: Vec<String>,
+    inclusions: Vec<String>,
 
     #[clap(short, long)]
     all: bool,
@@ -132,24 +132,24 @@ struct ExcludeProjectArgs {
 
 #[derive(Parser, Debug)]
 enum ExcludeSubCommand {
-    Add(AddExcludesArgs),
+    Add(AddExclusionsArgs),
 
     #[clap(alias = "rm")]
-    Remove(RemoveExcludesArgs),
+    Remove(RemoveExclusionsArgs),
 }
 
 #[derive(Parser, Debug)]
-struct AddExcludesArgs {
+struct AddExclusionsArgs {
     project: String,
 
-    excludes: Vec<String>,
+    exclusions: Vec<String>,
 }
 
 #[derive(Parser, Debug)]
-struct RemoveExcludesArgs {
+struct RemoveExclusionsArgs {
     project: String,
 
-    excludes: Vec<String>,
+    exclusions: Vec<String>,
 
     #[clap(short, long)]
     all: bool,
@@ -255,11 +255,11 @@ impl ListProjectsArgs {
 
             if let Some(include_or_exclude) = &project.1.include_or_exclude {
                 match include_or_exclude {
-                    IncludeOrExclude::Include(includes) => {
-                        println!("  - Includes: {}", includes.join(", "))
+                    IncludeOrExclude::Include(inclusions) => {
+                        println!("  - Inclusions: {}", inclusions.join(", "))
                     }
-                    IncludeOrExclude::Exclude(excludes) => {
-                        println!("  - Excludes: {}", excludes.join(", "))
+                    IncludeOrExclude::Exclude(exclusions) => {
+                        println!("  - Exclusions: {}", exclusions.join(", "))
                     }
                 }
             }
@@ -277,10 +277,10 @@ impl ListProjectsArgs {
 
 impl AddProjectsArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        let include_or_exclude = if let Some(include) = self.include.clone() {
+        let include_or_exclude = if let Some(include) = self.inclusions.clone() {
             Some(IncludeOrExclude::Include(include))
         } else {
-            self.exclude.clone().map(IncludeOrExclude::Exclude)
+            self.exclusions.clone().map(IncludeOrExclude::Exclude)
         };
 
         modpack.add_projects(&self.projects, None, include_or_exclude)?;
@@ -329,18 +329,18 @@ impl IncludeProjectArgs {
     }
 }
 
-impl AddIncludesArgs {
+impl AddInclusionsArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        modpack.add_project_includes(&self.project, &self.includes)
+        modpack.add_project_inclusions(&self.project, &self.inclusions)
     }
 }
 
-impl RemoveIncludesArgs {
+impl RemoveInclusionsArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         if self.all {
-            modpack.remove_all_project_includes(&self.project)
+            modpack.remove_all_project_inclusions(&self.project)
         } else {
-            modpack.remove_project_includes(&self.project, &self.includes)
+            modpack.remove_project_inclusions(&self.project, &self.inclusions)
         }
     }
 }
@@ -354,18 +354,18 @@ impl ExcludeProjectArgs {
     }
 }
 
-impl AddExcludesArgs {
+impl AddExclusionsArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        modpack.add_project_excludes(&self.project, &self.excludes)
+        modpack.add_project_exclusions(&self.project, &self.exclusions)
     }
 }
 
-impl RemoveExcludesArgs {
+impl RemoveExclusionsArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
         if self.all {
-            modpack.remove_all_project_excludes(&self.project)
+            modpack.remove_all_project_exclusions(&self.project)
         } else {
-            modpack.remove_project_excludes(&self.project, &self.excludes)
+            modpack.remove_project_exclusions(&self.project, &self.exclusions)
         }
     }
 }

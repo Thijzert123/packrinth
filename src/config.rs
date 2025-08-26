@@ -309,7 +309,7 @@ impl Modpack {
         }
     }
 
-    pub fn add_project_includes(&mut self, project: &str, new_includes: &[String]) -> Result<()> {
+    pub fn add_project_inclusions(&mut self, project: &str, new_inclusions: &[String]) -> Result<()> {
         let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
             project_settings
         } else {
@@ -317,28 +317,28 @@ impl Modpack {
         };
 
         if let Some(include_or_exclude) = &mut project_settings.include_or_exclude {
-            if let IncludeOrExclude::Include(includes) = include_or_exclude {
-                for new_include in new_includes {
-                    includes.push(new_include.clone());
+            if let IncludeOrExclude::Include(inclusions) = include_or_exclude {
+                for new_include in new_inclusions {
+                    inclusions.push(new_include.clone());
                 }
             } else {
                 bail!(
-                    "Project {} already has excludes added. You can't have both includes and excludes for one project",
+                    "Project {} already has exclusions added. You can't have both inclusions and exclusions for one project",
                     project
                 );
             }
         } else {
             project_settings.include_or_exclude =
-                Some(IncludeOrExclude::Include(Vec::from(new_includes)));
+                Some(IncludeOrExclude::Include(Vec::from(new_inclusions)));
         }
 
         self.save()
     }
 
-    pub fn remove_project_includes(
+    pub fn remove_project_inclusions(
         &mut self,
         project: &str,
-        includes_to_remove: &[String],
+        inclusions_to_remove: &[String],
     ) -> Result<()> {
         let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
             project_settings
@@ -347,16 +347,16 @@ impl Modpack {
         };
 
         if let Some(include_or_exclude) = &mut project_settings.include_or_exclude
-            && let IncludeOrExclude::Include(includes) = include_or_exclude
+            && let IncludeOrExclude::Include(inclusions) = include_or_exclude
         {
-            includes.retain(|x| !includes_to_remove.contains(x));
+            inclusions.retain(|x| !inclusions_to_remove.contains(x));
             self.save()
         } else {
-            bail!("Project {} doesn't have any includes added", project);
+            bail!("Project {} doesn't have any inclusions added", project);
         }
     }
 
-    pub fn remove_all_project_includes(&mut self, project: &str) -> Result<()> {
+    pub fn remove_all_project_inclusions(&mut self, project: &str) -> Result<()> {
         if let Some(project_settings) = self.projects.get_mut(project)
             && let Some(include_or_exclude) = &project_settings.include_or_exclude
         {
@@ -365,14 +365,14 @@ impl Modpack {
                 project_settings.include_or_exclude = None;
                 self.save()
             } else {
-                bail!("Project {} doesn't have includes added", project);
+                bail!("Project {} doesn't have inclusions added", project);
             }
         } else {
             bail!("Project {} isn't added to this modpack", project);
         }
     }
 
-    pub fn add_project_excludes(&mut self, project: &str, new_excludes: &[String]) -> Result<()> {
+    pub fn add_project_exclusions(&mut self, project: &str, new_exclusions: &[String]) -> Result<()> {
         let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
             project_settings
         } else {
@@ -380,28 +380,28 @@ impl Modpack {
         };
 
         if let Some(include_or_exclude) = &mut project_settings.include_or_exclude {
-            if let IncludeOrExclude::Exclude(excludes) = include_or_exclude {
-                for new_exclude in new_excludes {
-                    excludes.push(new_exclude.clone());
+            if let IncludeOrExclude::Exclude(exclusions) = include_or_exclude {
+                for new_exclude in new_exclusions {
+                    exclusions.push(new_exclude.clone());
                 }
             } else {
                 bail!(
-                    "Project {} already has includes added. You can't have both includes and excludes for one project",
+                    "Project {} already has inclusions added. You can't have both inclusions and exclusions for one project",
                     project
                 );
             }
         } else {
             project_settings.include_or_exclude =
-                Some(IncludeOrExclude::Exclude(Vec::from(new_excludes)));
+                Some(IncludeOrExclude::Exclude(Vec::from(new_exclusions)));
         }
 
         self.save()
     }
 
-    pub fn remove_project_excludes(
+    pub fn remove_project_exclusions(
         &mut self,
         project: &str,
-        excludes_to_remove: &[String],
+        exclusions_to_remove: &[String],
     ) -> Result<()> {
         let project_settings = if let Some(project_settings) = self.projects.get_mut(project) {
             project_settings
@@ -410,16 +410,16 @@ impl Modpack {
         };
 
         if let Some(include_or_exclude) = &mut project_settings.include_or_exclude
-            && let IncludeOrExclude::Exclude(excludes) = include_or_exclude
+            && let IncludeOrExclude::Exclude(exclusions) = include_or_exclude
         {
-            excludes.retain(|x| !excludes_to_remove.contains(x));
+            exclusions.retain(|x| !exclusions_to_remove.contains(x));
             self.save()
         } else {
-            bail!("Project {} doesn't have any excludes added", project);
+            bail!("Project {} doesn't have any exclusions added", project);
         }
     }
 
-    pub fn remove_all_project_excludes(&mut self, project: &str) -> Result<()> {
+    pub fn remove_all_project_exclusions(&mut self, project: &str) -> Result<()> {
         if let Some(project_settings) = self.projects.get_mut(project)
             && let Some(include_or_exclude) = &project_settings.include_or_exclude
         {
@@ -428,7 +428,7 @@ impl Modpack {
                 project_settings.include_or_exclude = None;
                 self.save()
             } else {
-                bail!("Project {} doesn't have excludes added", project);
+                bail!("Project {} doesn't have exclusions added", project);
             }
         } else {
             bail!("Project {} isn't added to this modpack", project);
