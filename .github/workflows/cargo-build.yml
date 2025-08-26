@@ -1,4 +1,4 @@
-name: Rust
+name: Carbo Build
 
 on:
   push:
@@ -10,11 +10,11 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  cargo-build:
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build
+    - name: Run
       run: cargo build --verbose
