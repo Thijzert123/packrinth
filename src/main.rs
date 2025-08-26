@@ -13,7 +13,7 @@ fn main() -> Result<()> {
 #[derive(Parser, Debug)]
 struct Cli {
     #[clap(subcommand)]
-    subcommand: Option<SubCommand>,
+    subcommand: SubCommand,
 
     #[clap(flatten)]
     config_args: ConfigArgs,
@@ -21,6 +21,9 @@ struct Cli {
 
 #[derive(Parser, Debug)]
 enum SubCommand {
+    /// Initialize a new modpack project
+    Init,
+
     /// Add or remove Modrinth projects and tweak them for your branches
     Project(subcommand::ProjectArgs),
 
@@ -36,10 +39,6 @@ enum SubCommand {
 
 #[derive(Parser, Debug)]
 struct ConfigArgs {
-    /// Initialize a new modpack if one doesn't exist
-    #[clap(long, global = true)]
-    pub init: bool,
-
     /// Set the root directory of the modpack
     #[clap(short, long, global = true)]
     pub directory: Option<PathBuf>,
@@ -51,13 +50,21 @@ struct ConfigArgs {
 
 impl Cli {
     fn run(&mut self) -> Result<()> {
-        let working_dir = match &self.config_args.directory {
+        self.subcommand.run(&self.config_args)
+    }
+}
+
+impl SubCommand {
+    fn run(&self, config_args: &ConfigArgs) -> Result<()> {
+        let working_dir = match &config_args.directory {
             Some(dir) => dir,
             None => &std::env::current_dir()?,
         };
 
-        let mut modpack = if self.config_args.init {
-            Modpack::new(working_dir)?
+        let mut modpack = if let Self::Init = self {
+            let modpack = Modpack::new(working_dir)?;
+            println!("Created new modpack instance in {}", working_dir.display());
+            modpack
         } else {
             Modpack::from_directory(working_dir)?
         };
@@ -70,21 +77,12 @@ impl Cli {
             );
         }
 
-        if let Some(command) = &self.subcommand {
-            return command.run(&mut modpack, &self.config_args);
-        }
-
-        Ok(())
-    }
-}
-
-impl SubCommand {
-    fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
         match self {
-            SubCommand::Project(args) => args.run(modpack, config_args),
-            SubCommand::Branch(args) => args.run(modpack, config_args),
-            SubCommand::Update(args) => args.run(modpack, config_args),
-            SubCommand::Export(args) => args.run(modpack, config_args),
+            SubCommand::Init => Ok(()),
+            SubCommand::Project(args) => args.run(&mut modpack, config_args),
+            SubCommand::Branch(args) => args.run(&mut modpack, config_args),
+            SubCommand::Update(args) => args.run(&modpack, config_args),
+            SubCommand::Export(args) => args.run(&mut modpack, config_args),
         }
     }
 }
