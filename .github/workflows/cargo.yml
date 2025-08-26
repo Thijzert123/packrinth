@@ -1,0 +1,37 @@
+name: Cargo
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+  # Make sure CI fails on all warnings, including Clippy lints
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  cargo-build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Cargo Build
+      run: cargo build --verbose
+
+  cargo-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cargo Test
+        run: cargo test --verbose
+
+  cargo-clippy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cargo Clippy
+        run: cargo clippy --verbose
