@@ -1,10 +1,14 @@
-use crate::modrinth::File;
+use crate::modrinth::{Dependencies, File, MrPack};
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::{fs, io};
+use walkdir::WalkDir;
+use zip::ZipWriter;
+use zip::write::SimpleFileOptions;
 
 /// Pack format version. Can be used for checking if the user uses the right packrinth
 /// version for their project.
@@ -169,6 +173,13 @@ pub enum Side {
     Client,
     Both,
 }
+
+/// The current most recent pack format of a .mrpack file.
+const MODRINTH_PACK_FORMAT: u16 = 1;
+/// The game to put in the mrpack.
+const GAME: &str = "minecraft";
+const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
+const OVERRIDES_DIR_NAME: &str = "overrides";
 
 impl Modpack {
     pub fn new(directory: &Path) -> Result<Self> {
@@ -468,6 +479,76 @@ impl Modpack {
 
     fn save(&self) -> Result<()> {
         json_to_file(self, &self.modpack_config_path)
+    }
+
+    pub fn export(&self, branch: &String) -> Result<PathBuf> {
+        let branch_config = BranchConfig::from_directory(&self.directory, branch)?;
+        let branch_files = BranchFiles::from_directory(&self.directory, branch)?;
+
+        let mrpack_file_name = format!("{}_{}.mrpack", self.name, branch_config.version);
+        let mrpack_path = self.directory.join(&mrpack_file_name);
+
+        let mrpack = MrPack {
+            format_version: MODRINTH_PACK_FORMAT,
+            game: GAME.to_string(),
+            version_id: branch_config.version.clone(),
+            name: self.name.clone(),
+            summary: Some(self.summary.clone()),
+            files: branch_files.files,
+            dependencies: Self::create_dependencies(branch_config),
+        };
+
+        let mrpack_json = serde_json::to_string_pretty(&mrpack)?;
+        let options = SimpleFileOptions::default();
+
+        let mut zip = ZipWriter::new(std::fs::File::create(&mrpack_path)?);
+        zip.start_file(MRPACK_CONFIG_FILE_NAME, options)?;
+        zip.write_all(mrpack_json.as_bytes())?;
+
+        let branch_dir = self.directory.join(branch);
+        // Loop every file/dir in the overrides dir
+        for entry in WalkDir::new(branch_dir.join(OVERRIDES_DIR_NAME)) {
+            let entry = entry?;
+            // The actual path on the file system
+            let path = entry.path();
+            // The path the file will be in the zip (/ being the root of the zip)
+            let zip_path = path.strip_prefix(&branch_dir)?.to_str().unwrap();
+
+            if path.is_file() {
+                zip.start_file(zip_path, options)?;
+                let mut buffer = Vec::new();
+                io::copy(&mut fs::File::open(path)?, &mut buffer)?;
+                zip.write_all(&buffer)?;
+            } else if path.is_dir() {
+                zip.add_directory(zip_path, options)?;
+            }
+        }
+
+        zip.finish()?;
+
+        Ok(mrpack_path)
+    }
+
+    fn create_dependencies(branch_config: BranchConfig) -> Dependencies {
+        let mut forge = None;
+        let mut neoforge = None;
+        let mut fabric_loader = None;
+        let mut quilt_loader = None;
+
+        match branch_config.main_mod_loader {
+            MainLoader::Forge => forge = Some(branch_config.loader_version),
+            MainLoader::NeoForge => neoforge = Some(branch_config.loader_version),
+            MainLoader::Fabric => fabric_loader = Some(branch_config.loader_version),
+            MainLoader::Quilt => quilt_loader = Some(branch_config.loader_version),
+        }
+
+        Dependencies {
+            minecraft: branch_config.main_minecraft_version,
+            forge,
+            neoforge,
+            fabric_loader,
+            quilt_loader,
+        }
     }
 }
 

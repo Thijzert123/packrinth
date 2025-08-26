@@ -2,9 +2,9 @@ use crate::ConfigArgs;
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use dialoguer::Confirm;
+use packrinth::config;
 use packrinth::config::{BranchConfig, BranchFiles, IncludeOrExclude, Modpack, ProjectSettings};
 use packrinth::modrinth::{File, FileError};
-use packrinth::{config, utils};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::cmp;
@@ -380,18 +380,36 @@ impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<()> {
         if let Some(branches) = &self.branches {
             for branch in branches {
-                Self::update_branch(modpack, branch, self.no_beta, self.no_alpha, config_args.verbose)?;
+                Self::update_branch(
+                    modpack,
+                    branch,
+                    self.no_beta,
+                    self.no_alpha,
+                    config_args.verbose,
+                )?;
             }
         } else {
             for branch in &modpack.branches {
-                Self::update_branch(modpack, branch, self.no_beta, self.no_alpha, config_args.verbose)?;
+                Self::update_branch(
+                    modpack,
+                    branch,
+                    self.no_beta,
+                    self.no_alpha,
+                    config_args.verbose,
+                )?;
             }
         }
 
         Ok(())
     }
 
-    fn update_branch(modpack: &Modpack, branch_name: &String, no_beta: bool, no_alpha: bool, verbose: bool) -> Result<()> {
+    fn update_branch(
+        modpack: &Modpack,
+        branch_name: &String,
+        no_beta: bool,
+        no_alpha: bool,
+        verbose: bool,
+    ) -> Result<()> {
         let branch_config = BranchConfig::from_directory(&modpack.directory, branch_name)?;
         let mut branch_files = BranchFiles::from_directory(&modpack.directory, branch_name)?;
 
@@ -410,23 +428,49 @@ impl UpdateArgs {
         for project in &modpack.projects {
             let project_id = project.0;
             let project_settings = project.1;
-            match File::from_project(branch_name, &branch_config, project_id, project_settings, no_beta, no_alpha) {
+            match File::from_project(
+                branch_name,
+                &branch_config,
+                project_id,
+                project_settings,
+                no_beta,
+                no_alpha,
+            ) {
                 Ok(file) => {
                     branch_files.files.push(file);
 
                     if verbose {
-                        progress_bar.print_info("Added", project_id, Color::LightGreen, Style::Normal);
+                        progress_bar.print_info(
+                            "Added",
+                            project_id,
+                            Color::LightGreen,
+                            Style::Normal,
+                        );
                     }
                 }
                 Err(error) if error.downcast_ref::<FileError>().is_some() => {
                     match error.downcast_ref::<FileError>().unwrap() {
-                        FileError::Skipped(_project_id) => if verbose {
-                            progress_bar.print_info("Skipped", project_id, Color::Yellow, Style::Normal);
+                        FileError::Skipped(_project_id) => {
+                            if verbose {
+                                progress_bar.print_info(
+                                    "Skipped",
+                                    project_id,
+                                    Color::Yellow,
+                                    Style::Normal,
+                                );
+                            }
                         }
-                        FileError::NotFound(_project_id) => progress_bar.print_info("Not found", project_id, Color::Yellow, Style::Bold),
+                        FileError::NotFound(_project_id) => progress_bar.print_info(
+                            "Not found",
+                            project_id,
+                            Color::Yellow,
+                            Style::Bold,
+                        ),
                     }
                 }
-                Err(_error) => progress_bar.print_info("Failed", &_error.to_string(), Color::Red, Style::Bold),
+                Err(_error) => {
+                    progress_bar.print_info("Failed", &_error.to_string(), Color::Red, Style::Bold)
+                }
             }
 
             progress_bar.inc();
@@ -557,7 +601,7 @@ impl RemoveBranchesArgs {
 
 impl ExportArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        if let Ok(mrpack_path) = utils::export_to_mrpack(modpack, &self.branch) {
+        if let Ok(mrpack_path) = modpack.export(&self.branch) {
             println!(
                 "Exported branch {} to {}",
                 &self.branch,

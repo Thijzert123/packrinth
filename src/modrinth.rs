@@ -1,11 +1,35 @@
 //! Structs that are only used for (de)serializing JSONs associated with Modrinth.
 
 use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
-use crate::utils;
 use anyhow::{Result, bail};
+use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::OnceLock;
 use thiserror::Error;
+
+const MODRINTH_API_BASE_URL: &str = "https://api.modrinth.com/v2";
+static CLIENT: OnceLock<Client> = OnceLock::new();
+const USER_AGENT: &str = concat!(
+    "Thijzert123",
+    "/",
+    "packrinth",
+    "/",
+    env!("CARGO_PKG_VERSION")
+);
+
+pub fn request_text<T: ToString>(api_endpoint: T) -> Result<String, Box<dyn std::error::Error>> {
+    let client = CLIENT.get_or_init(|| {
+        Client::builder()
+            .user_agent(USER_AGENT)
+            .build()
+            .expect("Failed to build client")
+    });
+
+    let full_url = MODRINTH_API_BASE_URL.to_string() + api_endpoint.to_string().as_str();
+    let text = client.get(&full_url).send()?.text()?;
+    Ok(text)
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Project {
@@ -160,10 +184,18 @@ impl ProjectType {
 }
 
 impl File {
-    pub fn from_project(branch_name: &String, branch_config: &BranchConfig, project_id: &str, project_settings: &ProjectSettings, no_alpha: bool, no_beta: bool) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn from_project(
+        branch_name: &String,
+        branch_config: &BranchConfig,
+        project_id: &str,
+        project_settings: &ProjectSettings,
+        no_alpha: bool,
+        no_beta: bool,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         // Handle inclusions and exclusions
         if let Some(include_or_exclude) = &project_settings.include_or_exclude {
-            match include_or_exclude { // TODO rename all includes to inclusions in project
+            match include_or_exclude {
+                // TODO rename all includes to inclusions in project
                 IncludeOrExclude::Include(inclusions) => {
                     if !inclusions.contains(branch_name) {
                         return Err(FileError::Skipped(project_id.to_string()).into());
@@ -184,22 +216,27 @@ impl File {
         );
 
         // Change endpoint to version if an override is provided for this branch
-        if let Some(version_overrides) = &project_settings.version_overrides &&
-            let Some(version_override) = version_overrides.get(branch_name) {
-                api_endpoint = format!("/version/{}", version_override);
+        if let Some(version_overrides) = &project_settings.version_overrides
+            && let Some(version_override) = version_overrides.get(branch_name)
+        {
+            api_endpoint = format!("/version/{}", version_override);
         }
 
-        let api_response = utils::request_text(&api_endpoint)?;
+        let api_response = request_text(&api_endpoint)?;
         let modrinth_versions: Vec<Version> = serde_json::from_str(&api_response)?;
 
         for modrinth_version in modrinth_versions {
             match modrinth_version.version_type {
                 VersionType::Release => return Self::from_modrinth_version(&modrinth_version),
-                VersionType::Beta => if !no_beta {
-                    return Self::from_modrinth_version(&modrinth_version);
+                VersionType::Beta => {
+                    if !no_beta {
+                        return Self::from_modrinth_version(&modrinth_version);
+                    }
                 }
-                VersionType::Alpha => if !no_alpha {
-                    return Self::from_modrinth_version(&modrinth_version);
+                VersionType::Alpha => {
+                    if !no_alpha {
+                        return Self::from_modrinth_version(&modrinth_version);
+                    }
                 }
             }
         }
@@ -208,21 +245,12 @@ impl File {
         Err(FileError::NotFound(project_id.to_string()).into())
     }
 
-    /// Creates a <code>Version</code> by making requests to the Modrinth API.
-    pub fn from_id<T: ToString>(version_id: T) -> Result<Self, Box<dyn std::error::Error>> {
-        // Request to get general information about the version
-        let modrinth_version_response =
-            utils::request_text("/version/".to_string() + &version_id.to_string())?;
-        let modrinth_version: Version = serde_json::from_str(&modrinth_version_response)?;
-        Self::from_modrinth_version(&modrinth_version)
-    }
-
-    pub fn from_modrinth_version(
+    fn from_modrinth_version(
         modrinth_version: &Version,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         // Request to get general information about the project associated with the version
         let modrinth_project_response =
-            utils::request_text("/project/".to_string() + &modrinth_version.project_id)?;
+            request_text("/project/".to_string() + &modrinth_version.project_id)?;
         let modrinth_project: Project = serde_json::from_str(&modrinth_project_response)?;
 
         // Get the primary file. Every version should have one.
