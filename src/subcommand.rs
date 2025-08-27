@@ -337,7 +337,7 @@ impl RemoveOverrideArgs {
 
             match modpack.save() {
                 Ok(()) => {
-                    print_success(format!("removed {} override for {}", self.project, branch))
+                    print_success(format!("removed {} override for {}", self.project, branch));
                 }
                 Err(error) => print_error(error.message_and_tip()),
             }
