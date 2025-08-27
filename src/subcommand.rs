@@ -284,7 +284,7 @@ impl AddProjectsArgs {
 
         modpack.add_projects(&self.projects, &None, &include_or_exclude);
         match modpack.save() {
-            Ok(_) => print_success(format!("added {}", self.projects.join(", "))),
+            Ok(()) => print_success(format!("added {}", self.projects.join(", "))),
             Err(error) => print_error(error.message_and_tip()),
         }
     }
@@ -310,7 +310,7 @@ impl AddOverrideArgs {
             return;
         }
         match modpack.save() {
-            Ok(_) => print_success(format!("added override for {}, branch {} and version ID {}", self.project, self.branch, self.project_version_id)),
+            Ok(()) => print_success(format!("added override for {}, branch {} and version ID {}", self.project, self.branch, self.project_version_id)),
             Err(error) => print_error(error.message_and_tip()),
         }
     }
@@ -325,7 +325,7 @@ impl RemoveOverrideArgs {
             }
 
             match modpack.save() {
-                Ok(_) => print_success(format!("removed all overrides for {}", self.project)),
+                Ok(()) => print_success(format!("removed all overrides for {}", self.project)),
                 Err(error) => print_error(error.message_and_tip()),
             }
         } else if let Some(branch) = &self.branch {
@@ -335,7 +335,7 @@ impl RemoveOverrideArgs {
             }
 
             match modpack.save() {
-                Ok(_) => print_success(format!("removed {} override for {}", self.project, branch)),
+                Ok(()) => print_success(format!("removed {} override for {}", self.project, branch)),
                 Err(error) => print_error(error.message_and_tip()),
             }
         } else {
@@ -361,7 +361,7 @@ impl AddInclusionsArgs {
         }
 
         match modpack.save() {
-            Ok(_) => print_success(format!("added {} inclusions for {}", self.inclusions.join(", "), self.project)),
+            Ok(()) => print_success(format!("added {} inclusions for {}", self.inclusions.join(", "), self.project)),
             Err(error) => print_error(error.message_and_tip()),
         }
     }
@@ -376,7 +376,7 @@ impl RemoveInclusionsArgs {
             }
 
             match modpack.save() {
-                Ok(_) => print_success(format!("removed all inclusions for {}", self.project)),
+                Ok(()) => print_success(format!("removed all inclusions for {}", self.project)),
                 Err(error) => print_error(error.message_and_tip()),
             }
         } else if let Some(inclusions) = &self.inclusions {
@@ -386,7 +386,7 @@ impl RemoveInclusionsArgs {
             }
 
             match modpack.save() {
-                Ok(_) => print_success(format!("removed {} inclusions for {}", inclusions.join(", "), self.project)),
+                Ok(()) => print_success(format!("removed {} inclusions for {}", inclusions.join(", "), self.project)),
                 Err(error) => print_error(error.message_and_tip()),
             }
         } else {
@@ -412,7 +412,7 @@ impl AddExclusionsArgs {
         }
 
         match modpack.save() {
-            Ok(_) => print_success(format!("added {} exclusions for {}", self.exclusions.join(", "), self.project)),
+            Ok(()) => print_success(format!("added {} exclusions for {}", self.exclusions.join(", "), self.project)),
             Err(error) => print_error(error.message_and_tip()),
         }
     }
@@ -427,7 +427,7 @@ impl RemoveExclusionsArgs {
             }
 
             match modpack.save() {
-                Ok(_) => print_success(format!("removed all exclusions for {}", self.project)),
+                Ok(()) => print_success(format!("removed all exclusions for {}", self.project)),
                 Err(error) => print_error(error.message_and_tip()),
             }
         } else if let Some(exclusions) = &self.exclusions {
@@ -437,7 +437,7 @@ impl RemoveExclusionsArgs {
             }
 
             match modpack.save() {
-                Ok(_) => print_success(format!("removed {} exclusions for {}", exclusions.join(", "), self.project)),
+                Ok(()) => print_success(format!("removed {} exclusions for {}", exclusions.join(", "), self.project)),
                 Err(error) => print_error(error.message_and_tip()),
             }
         }
@@ -449,7 +449,7 @@ impl RemoveProjectsArgs {
         modpack.remove_projects(&self.projects);
 
         match modpack.save() {
-            Ok(_) => print_success(format!("removed {}", self.projects.join(", "))),
+            Ok(()) => print_success(format!("removed {}", self.projects.join(", "))),
             Err(error) => print_error(error.message_and_tip()),
         }
     }
@@ -471,7 +471,7 @@ impl UpdateArgs {
                 }
             }
 
-            print_success(format!("updated {}", branches.join(", ")))
+            print_success(format!("updated {}", branches.join(", ")));
         } else {
             for branch in &modpack.branches {
                 if let Err(error) = Self::update_branch(
@@ -486,7 +486,7 @@ impl UpdateArgs {
                 }
             }
 
-            print_success(format!("updated {}", modpack.branches.join(", ")))
+            print_success(format!("updated {}", modpack.branches.join(", ")));
         }
     }
 
@@ -578,9 +578,9 @@ impl BranchArgs {
                 BranchSubCommand::Remove(args) => args.run(modpack, config_args),
             }
         } else if let Some(branch_names) = &self.branches {
-            ListBranchesArgs::list(&modpack.directory, branch_names)
+            ListBranchesArgs::list(&modpack.directory, branch_names);
         } else {
-            ListBranchesArgs::run(&ListBranchesArgs {}, modpack, config_args)
+            ListBranchesArgs::run(&ListBranchesArgs {}, modpack, config_args);
         }
     }
 }
@@ -589,7 +589,7 @@ impl ListBranchesArgs {
     // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
     #[allow(clippy::unused_self)]
     pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) {
-        Self::list(&modpack.directory, &modpack.branches)
+        Self::list(&modpack.directory, &modpack.branches);
     }
 
     pub fn list(directory: &Path, branches: &[String]) {
@@ -632,11 +632,11 @@ impl AddBranchesArgs {
                     print_error(error.message_and_tip());
                     return;
                 }
-            };
+            }
         }
 
         match modpack.save() {
-            Ok(_) => print_success(format!("added branches {}", self.branches.join(", "))),
+            Ok(()) => print_success(format!("added branches {}", self.branches.join(", "))),
             Err(error) => print_error(error.message_and_tip()),
         }
     }

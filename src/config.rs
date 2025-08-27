@@ -440,11 +440,9 @@ impl Modpack {
         let branch_dir = self.directory.join(name);
         if let Ok(exists) = fs::exists(&branch_dir)
             && !exists
-        {
-            if let Err(_error) = fs::create_dir(&branch_dir) {
+            && let Err(_error) = fs::create_dir(&branch_dir) {
                 return Err(PackrinthError::FailedToCreateDir(branch_dir.display().to_string()));
             }
-        }
         BranchConfig::from_directory(&self.directory, name)
     }
 
@@ -535,7 +533,7 @@ impl Modpack {
                         continue;
                     }
                     let mut buffer = Vec::new();
-                    let mut original_file = match fs::File::open(&path) {
+                    let mut original_file = match fs::File::open(path) {
                         Ok(file) => file,
                         Err(_error) => {
                             result = Err(PackrinthError::FailedToCreateFile(path.display().to_string()));
@@ -549,11 +547,10 @@ impl Modpack {
                     if let Err(_error) = zip.write_all(&buffer) {
                         result = Err(PackrinthError::FailedToWriteToZip(String::from_utf8_lossy(&buffer).to_string()));
                     }
-                } else if path.is_dir() {
-                    if let Err(_error) = zip.add_directory(zip_path, options) {
+                } else if path.is_dir()
+                    && let Err(_error) = zip.add_directory(zip_path, options) {
                         result = Err(PackrinthError::FailedToAddZipDir(zip_path.to_string()));
                     }
-                }
             }
         }
 
@@ -562,7 +559,7 @@ impl Modpack {
         }
 
         match result {
-            Ok(_) => Ok(mrpack_path),
+            Ok(()) => Ok(mrpack_path),
             Err(error) => Err(error),
         }
     }

@@ -11,6 +11,8 @@ fn main() {
     Cli::parse().run();
 }
 
+// All tuples are being made on-the-fly, so adding & would just add more unnecessary syntax
+#[allow(clippy::needless_pass_by_value)]
 pub fn print_error<T: Display, U: Display>(error: (T, U)) {
     const ERROR_STYLE: Style = Style::new().bold().red();
     const TIP_STYLE: Style = Style::new().green();
@@ -20,6 +22,8 @@ pub fn print_error<T: Display, U: Display>(error: (T, U)) {
     eprintln!("  {}: {}", TIP_STYLE.apply_to("tip"), error.1);
 }
 
+// All tuples are being made on-the-fly, so adding & would just add more unnecessary syntax
+#[allow(clippy::needless_pass_by_value)]
 pub fn single_line_error<T: ToString, U: ToString>(error: (T, U)) -> String {
     let mut single_line_error = error.0.to_string();
     single_line_error.push_str(": ");
