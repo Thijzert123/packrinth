@@ -1,11 +1,11 @@
 #![warn(clippy::pedantic)]
 mod subcommand;
 
-use std::fmt::Display;
 use clap::Parser;
-use packrinth::config::{self, Modpack};
-use std::path::PathBuf;
 use console::Style;
+use packrinth::config::{self, Modpack};
+use std::fmt::Display;
+use std::path::PathBuf;
 
 fn main() {
     Cli::parse().run();
@@ -88,9 +88,12 @@ impl SubCommand {
             None => match std::env::current_dir() {
                 Ok(current_dir) => &current_dir.clone(),
                 Err(_error) => {
-                    print_error(("couldn't get current directory", "the current directory may not exist or you have insufficient permissions to access the current directory"));
+                    print_error((
+                        "couldn't get current directory",
+                        "the current directory may not exist or you have insufficient permissions to access the current directory",
+                    ));
                     return;
-                },
+                }
             },
         };
 
@@ -104,7 +107,10 @@ impl SubCommand {
             };
 
             match modpack.save() {
-                Ok(()) => print_success(format!("created new modpack instance in directory {}", current_dir.display())),
+                Ok(()) => print_success(format!(
+                    "created new modpack instance in directory {}",
+                    current_dir.display()
+                )),
                 Err(error) => print_error(error.message_and_tip()),
             }
 
@@ -120,7 +126,16 @@ impl SubCommand {
         };
 
         if modpack.pack_format != config::CURRENT_PACK_FORMAT {
-            print_error((format!("pack format {} is not supported by this Packrinth version", modpack.pack_format), format!("please use a configuration with pack format {}", config::CURRENT_PACK_FORMAT)));
+            print_error((
+                format!(
+                    "pack format {} is not supported by this Packrinth version",
+                    modpack.pack_format
+                ),
+                format!(
+                    "please use a configuration with pack format {}",
+                    config::CURRENT_PACK_FORMAT
+                ),
+            ));
             return;
         }
 

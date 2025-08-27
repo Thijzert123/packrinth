@@ -1,9 +1,9 @@
-use crate::{print_error, print_success, single_line_error, ConfigArgs};
+use crate::{ConfigArgs, print_error, print_success, single_line_error};
 use clap::Parser;
 use dialoguer::Confirm;
-use packrinth::{config, PackrinthError};
 use packrinth::config::{BranchConfig, BranchFiles, IncludeOrExclude, Modpack, ProjectSettings};
 use packrinth::modrinth::{File, FileResult};
+use packrinth::{PackrinthError, config};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::cmp;
@@ -301,16 +301,17 @@ impl OverrideProjectArgs {
 
 impl AddOverrideArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
-        if let Err(error) = modpack.add_project_override(
-            &self.project,
-            &self.branch,
-            &self.project_version_id,
-        ) {
+        if let Err(error) =
+            modpack.add_project_override(&self.project, &self.branch, &self.project_version_id)
+        {
             print_error(error.message_and_tip());
             return;
         }
         match modpack.save() {
-            Ok(()) => print_success(format!("added override for {}, branch {} and version ID {}", self.project, self.branch, self.project_version_id)),
+            Ok(()) => print_success(format!(
+                "added override for {}, branch {} and version ID {}",
+                self.project, self.branch, self.project_version_id
+            )),
             Err(error) => print_error(error.message_and_tip()),
         }
     }
@@ -335,11 +336,16 @@ impl RemoveOverrideArgs {
             }
 
             match modpack.save() {
-                Ok(()) => print_success(format!("removed {} override for {}", self.project, branch)),
+                Ok(()) => {
+                    print_success(format!("removed {} override for {}", self.project, branch))
+                }
                 Err(error) => print_error(error.message_and_tip()),
             }
         } else {
-            print_error(("no branch specified", "specify a branch or remove all with the --all flag"));
+            print_error((
+                "no branch specified",
+                "specify a branch or remove all with the --all flag",
+            ));
         }
     }
 }
@@ -361,7 +367,11 @@ impl AddInclusionsArgs {
         }
 
         match modpack.save() {
-            Ok(()) => print_success(format!("added {} inclusions for {}", self.inclusions.join(", "), self.project)),
+            Ok(()) => print_success(format!(
+                "added {} inclusions for {}",
+                self.inclusions.join(", "),
+                self.project
+            )),
             Err(error) => print_error(error.message_and_tip()),
         }
     }
@@ -386,11 +396,18 @@ impl RemoveInclusionsArgs {
             }
 
             match modpack.save() {
-                Ok(()) => print_success(format!("removed {} inclusions for {}", inclusions.join(", "), self.project)),
+                Ok(()) => print_success(format!(
+                    "removed {} inclusions for {}",
+                    inclusions.join(", "),
+                    self.project
+                )),
                 Err(error) => print_error(error.message_and_tip()),
             }
         } else {
-            print_error(("no inclusions specified", "specify inclusions or remove all with the --all flag"));
+            print_error((
+                "no inclusions specified",
+                "specify inclusions or remove all with the --all flag",
+            ));
         }
     }
 }
@@ -412,7 +429,11 @@ impl AddExclusionsArgs {
         }
 
         match modpack.save() {
-            Ok(()) => print_success(format!("added {} exclusions for {}", self.exclusions.join(", "), self.project)),
+            Ok(()) => print_success(format!(
+                "added {} exclusions for {}",
+                self.exclusions.join(", "),
+                self.project
+            )),
             Err(error) => print_error(error.message_and_tip()),
         }
     }
@@ -437,7 +458,11 @@ impl RemoveExclusionsArgs {
             }
 
             match modpack.save() {
-                Ok(()) => print_success(format!("removed {} exclusions for {}", exclusions.join(", "), self.project)),
+                Ok(()) => print_success(format!(
+                    "removed {} exclusions for {}",
+                    exclusions.join(", "),
+                    self.project
+                )),
                 Err(error) => print_error(error.message_and_tip()),
             }
         }
@@ -548,15 +573,15 @@ impl UpdateArgs {
                     }
                 }
                 FileResult::NotFound(project_id) => {
-                    progress_bar.print_info(
-                        "Not found",
-                        &project_id,
-                        Color::Yellow,
-                        Style::Bold,
-                    );
+                    progress_bar.print_info("Not found", &project_id, Color::Yellow, Style::Bold);
                 }
                 FileResult::Err(error) => {
-                    progress_bar.print_info("Failed", &single_line_error(error.message_and_tip()), Color::Red, Style::Bold);
+                    progress_bar.print_info(
+                        "Failed",
+                        &single_line_error(error.message_and_tip()),
+                        Color::Red,
+                        Style::Bold,
+                    );
                 }
             }
 
@@ -676,7 +701,11 @@ impl RemoveBranchesArgs {
 impl ExportArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
         match modpack.export(&self.branch) {
-            Ok(modpack_path) => print_success(format!("exported {} to {}", self.branch, modpack_path.display())),
+            Ok(modpack_path) => print_success(format!(
+                "exported {} to {}",
+                self.branch,
+                modpack_path.display()
+            )),
             Err(error) => print_error(error.message_and_tip()),
         }
     }

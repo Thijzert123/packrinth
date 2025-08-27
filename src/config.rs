@@ -1,3 +1,4 @@
+use crate::PackrinthError;
 use crate::modrinth::{Dependencies, File, MrPack};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -8,7 +9,6 @@ use std::{fs, io};
 use walkdir::WalkDir;
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
-use crate::PackrinthError;
 
 /// Pack format version. Can be used for checking if the user uses the right packrinth
 /// version for their project.
@@ -26,7 +26,9 @@ where
         Err(_error) => return Err(PackrinthError::FailedToSerialize),
     };
     if let Err(_error) = fs::write(&file, json) {
-        return Err(PackrinthError::FailedToWriteFile(file.as_ref().display().to_string()));
+        return Err(PackrinthError::FailedToWriteFile(
+            file.as_ref().display().to_string(),
+        ));
     }
     Ok(())
 }
@@ -192,9 +194,13 @@ impl Modpack {
                     return Err(PackrinthError::PathIsFile(directory.display().to_string()));
                 }
             }
-            Err(_error) => if let Err(_error) = fs::create_dir_all(directory) {
-                return Err(PackrinthError::FailedToCreateDir(directory.display().to_string()));
-            },
+            Err(_error) => {
+                if let Err(_error) = fs::create_dir_all(directory) {
+                    return Err(PackrinthError::FailedToCreateDir(
+                        directory.display().to_string(),
+                    ));
+                }
+            }
         }
 
         let modpack = Self {
@@ -214,11 +220,19 @@ impl Modpack {
     pub fn from_directory(directory: &Path) -> Result<Self, PackrinthError> {
         let modpack_config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
 
-        let Ok(config) = fs::read_to_string(&modpack_config_path) else { return Err(PackrinthError::FailedToReadToString(modpack_config_path.display().to_string())) };
+        let Ok(config) = fs::read_to_string(&modpack_config_path) else {
+            return Err(PackrinthError::FailedToReadToString(
+                modpack_config_path.display().to_string(),
+            ));
+        };
 
         let mut modpack: Modpack = match serde_json::from_str(&config) {
             Ok(modpack) => modpack,
-            Err(_) => return Err(PackrinthError::InvalidConfigJson(modpack_config_path.display().to_string())),
+            Err(_) => {
+                return Err(PackrinthError::InvalidConfigJson(
+                    modpack_config_path.display().to_string(),
+                ));
+            }
         };
 
         modpack.directory = PathBuf::from(directory);
@@ -262,10 +276,7 @@ impl Modpack {
         };
 
         if let Some(version_overrides) = &mut project_settings.version_overrides {
-            version_overrides.insert(
-                branch.to_string(),
-                project_version_id.to_string(),
-            );
+            version_overrides.insert(branch.to_string(), project_version_id.to_string());
         } else {
             project_settings.version_overrides = Some(HashMap::from([(
                 branch.to_string(),
@@ -287,7 +298,10 @@ impl Modpack {
 
         if let Some(version_overrides) = &mut project_settings.version_overrides {
             if version_overrides.remove(branch).is_none() {
-                Err(PackrinthError::OverrideDoesNotExist(project.to_string(), branch.to_string()))
+                Err(PackrinthError::OverrideDoesNotExist(
+                    project.to_string(),
+                    branch.to_string(),
+                ))
             } else {
                 Ok(())
             }
@@ -320,7 +334,9 @@ impl Modpack {
                     inclusions.push(new_include.clone());
                 }
             } else {
-                return Err(PackrinthError::ProjectAlreadyHasExclusions(project.to_string()));
+                return Err(PackrinthError::ProjectAlreadyHasExclusions(
+                    project.to_string(),
+                ));
             }
         } else {
             project_settings.include_or_exclude =
@@ -380,7 +396,9 @@ impl Modpack {
                     exclusions.push(new_exclude.clone());
                 }
             } else {
-                return Err(PackrinthError::ProjectAlreadyHasInclusions(project.to_string()));
+                return Err(PackrinthError::ProjectAlreadyHasInclusions(
+                    project.to_string(),
+                ));
             }
         } else {
             project_settings.include_or_exclude =
@@ -440,9 +458,12 @@ impl Modpack {
         let branch_dir = self.directory.join(name);
         if let Ok(exists) = fs::exists(&branch_dir)
             && !exists
-            && let Err(_error) = fs::create_dir(&branch_dir) {
-                return Err(PackrinthError::FailedToCreateDir(branch_dir.display().to_string()));
-            }
+            && let Err(_error) = fs::create_dir(&branch_dir)
+        {
+            return Err(PackrinthError::FailedToCreateDir(
+                branch_dir.display().to_string(),
+            ));
+        }
         BranchConfig::from_directory(&self.directory, name)
     }
 
@@ -495,7 +516,9 @@ impl Modpack {
 
         let mut zip = ZipWriter::new(zip_file);
         if let Err(_error) = zip.start_file(MRPACK_CONFIG_FILE_NAME, options) {
-            return Err(PackrinthError::FailedToStartZipFile(MRPACK_CONFIG_FILE_NAME.to_string()));
+            return Err(PackrinthError::FailedToStartZipFile(
+                MRPACK_CONFIG_FILE_NAME.to_string(),
+            ));
         }
         if let Err(_error) = zip.write_all(mrpack_json.as_bytes()) {
             return Err(PackrinthError::FailedToWriteToZip(mrpack_json));
@@ -514,16 +537,19 @@ impl Modpack {
                     Err(_error) => {
                         result = Err(PackrinthError::FailedToGetWalkDirEntry);
                         continue;
-                    },
+                    }
                 };
                 // The actual path on the file system
                 let path = entry.path();
                 // The path the file will be in the zip (/ being the root of the zip)
                 let zip_path = if let Ok(stripped_path) = path.strip_prefix(&branch_dir)
-                    && let Some(zip_path) = stripped_path.to_str() {
+                    && let Some(zip_path) = stripped_path.to_str()
+                {
                     zip_path
                 } else {
-                    result = Err(PackrinthError::FailedToStripPath(path.display().to_string()));
+                    result = Err(PackrinthError::FailedToStripPath(
+                        path.display().to_string(),
+                    ));
                     continue;
                 };
 
@@ -536,7 +562,9 @@ impl Modpack {
                     let mut original_file = match fs::File::open(path) {
                         Ok(file) => file,
                         Err(_error) => {
-                            result = Err(PackrinthError::FailedToCreateFile(path.display().to_string()));
+                            result = Err(PackrinthError::FailedToCreateFile(
+                                path.display().to_string(),
+                            ));
                             continue;
                         }
                     };
@@ -545,12 +573,15 @@ impl Modpack {
                         continue;
                     }
                     if let Err(_error) = zip.write_all(&buffer) {
-                        result = Err(PackrinthError::FailedToWriteToZip(String::from_utf8_lossy(&buffer).to_string()));
+                        result = Err(PackrinthError::FailedToWriteToZip(
+                            String::from_utf8_lossy(&buffer).to_string(),
+                        ));
                     }
                 } else if path.is_dir()
-                    && let Err(_error) = zip.add_directory(zip_path, options) {
-                        result = Err(PackrinthError::FailedToAddZipDir(zip_path.to_string()));
-                    }
+                    && let Err(_error) = zip.add_directory(zip_path, options)
+                {
+                    result = Err(PackrinthError::FailedToAddZipDir(zip_path.to_string()));
+                }
             }
         }
 
@@ -594,24 +625,28 @@ impl BranchConfig {
             Ok(metadata) => {
                 if metadata.is_dir() {
                     let branch_config_path = branch_dir.join(BRANCH_CONFIG_FILE_NAME);
-                    let branch_config =
-                        match fs::read_to_string(&branch_config_path) {
-                            Ok(contents) => {
-                                let branch_config: Self = match serde_json::from_str(&contents) {
-                                    Ok(contents) => contents,
-                                    Err(_error) => return Err(PackrinthError::InvalidConfigJson(branch_config_path.display().to_string())),
-                                };
-                                branch_config
-                            }
-                            Err(error) => {
-                                if error.kind() == io::ErrorKind::NotFound
-                                {
-                                    Self::create_default_branch_config(&branch_config_path)?
-                                } else {
-                                    return Err(PackrinthError::FailedToReadToString(branch_config_path.display().to_string()))
+                    let branch_config = match fs::read_to_string(&branch_config_path) {
+                        Ok(contents) => {
+                            let branch_config: Self = match serde_json::from_str(&contents) {
+                                Ok(contents) => contents,
+                                Err(_error) => {
+                                    return Err(PackrinthError::InvalidConfigJson(
+                                        branch_config_path.display().to_string(),
+                                    ));
                                 }
+                            };
+                            branch_config
+                        }
+                        Err(error) => {
+                            if error.kind() == io::ErrorKind::NotFound {
+                                Self::create_default_branch_config(&branch_config_path)?
+                            } else {
+                                return Err(PackrinthError::FailedToReadToString(
+                                    branch_config_path.display().to_string(),
+                                ));
                             }
-                        };
+                        }
+                    };
                     Ok(Self {
                         version: branch_config.version,
                         main_minecraft_version: branch_config.main_minecraft_version,
@@ -621,7 +656,9 @@ impl BranchConfig {
                         acceptable_loaders: branch_config.acceptable_loaders,
                     })
                 } else {
-                    Err(PackrinthError::DirectoryExpected(branch_dir.display().to_string()))
+                    Err(PackrinthError::DirectoryExpected(
+                        branch_dir.display().to_string(),
+                    ))
                 }
             }
             Err(_error) => Err(PackrinthError::BranchDoesNotExist(name.clone())),
@@ -667,21 +704,25 @@ impl BranchFiles {
             Ok(metadata) => {
                 if metadata.is_dir() {
                     let branch_files_path = branch_dir.join(BRANCH_FILES_FILE_NAME);
-                    let branch_files = match fs::read_to_string(&branch_files_path)
-                    {
+                    let branch_files = match fs::read_to_string(&branch_files_path) {
                         Ok(contents) => {
                             let branch_files: Self = match serde_json::from_str(&contents) {
                                 Ok(contents) => contents,
-                                Err(_error) => return Err(PackrinthError::InvalidConfigJson(branch_files_path.display().to_string())),
+                                Err(_error) => {
+                                    return Err(PackrinthError::InvalidConfigJson(
+                                        branch_files_path.display().to_string(),
+                                    ));
+                                }
                             };
                             branch_files
                         }
                         Err(error) => {
-                            if error.kind() == io::ErrorKind::NotFound
-                            {
+                            if error.kind() == io::ErrorKind::NotFound {
                                 Self::create_default_branch_files(&branch_files_path)?
                             } else {
-                                return Err(PackrinthError::FailedToReadToString(branch_files_path.display().to_string()))
+                                return Err(PackrinthError::FailedToReadToString(
+                                    branch_files_path.display().to_string(),
+                                ));
                             }
                         }
                     };
@@ -690,7 +731,9 @@ impl BranchFiles {
                         files: branch_files.files,
                     })
                 } else {
-                    Err(PackrinthError::DirectoryExpected(branch_dir.display().to_string()))
+                    Err(PackrinthError::DirectoryExpected(
+                        branch_dir.display().to_string(),
+                    ))
                 }
             }
             Err(_error) => Err(PackrinthError::BranchDoesNotExist(name.clone())),

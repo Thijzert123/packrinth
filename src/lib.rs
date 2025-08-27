@@ -5,24 +5,24 @@ pub mod modrinth;
 
 #[derive(Debug)]
 pub enum PackrinthError {
-    PathIsFile(String), // path
-    FailedToCreateDir(String), // dir to create
-    FailedToReadToString(String), // path to read
-    InvalidConfigJson(String), // config path
+    PathIsFile(String),                  // path
+    FailedToCreateDir(String),           // dir to create
+    FailedToReadToString(String),        // path to read
+    InvalidConfigJson(String),           // config path
     InvalidModrinthResponseJson(String), // modrinth endpoint
     FailedToSerialize,
-    ProjectIsNotAdded(String), // project
+    ProjectIsNotAdded(String),            // project
     OverrideDoesNotExist(String, String), // project, branch
-    NoOverridesForProject(String), // project
-    NoExclusionsForProject(String), // project
-    NoInclusionsForProject(String), // project
-    ProjectAlreadyHasExclusions(String), // project
-    ProjectAlreadyHasInclusions(String), // project
-    FailedToWriteFile(String), // path to write to
-    FailedToCreateFile(String), // file to create
-    DirectoryExpected(String), // path that should have been a dir
-    FailedToStartZipFile(String), // file to start
-    FailedToWriteToZip(String), // what to write
+    NoOverridesForProject(String),        // project
+    NoExclusionsForProject(String),       // project
+    NoInclusionsForProject(String),       // project
+    ProjectAlreadyHasExclusions(String),  // project
+    ProjectAlreadyHasInclusions(String),  // project
+    FailedToWriteFile(String),            // path to write to
+    FailedToCreateFile(String),           // file to create
+    DirectoryExpected(String),            // path that should have been a dir
+    FailedToStartZipFile(String),         // file to start
+    FailedToWriteToZip(String),           // what to write
     FailedToGetWalkDirEntry,
     FailedToStripPath(String), // original path that had to be stripped
     FailedToCopyIntoBuffer,
@@ -31,13 +31,14 @@ pub enum PackrinthError {
     BranchDoesNotExist(String), // branch
     AttemptedToAddOtherModpack,
     NoModrinthFilesFoundForProject(String), // project
-    RequestFailed(String), // url
+    RequestFailed(String),                  // url
 }
 
 impl PackrinthError {
     #[must_use]
     pub fn message_and_tip(&self) -> (String, String) {
-        let file_an_issue: String = "file an issue at https://github.com/Thijzert123/packrinth/issues".to_string();
+        let file_an_issue: String =
+            "file an issue at https://github.com/Thijzert123/packrinth/issues".to_string();
         match self {
             PackrinthError::PathIsFile(path) => (format!("path {path} is a file"), "remove the file or change the target directory".to_string()),
             PackrinthError::FailedToCreateDir(dir_to_create) => (format!("failed to create directory {dir_to_create}"), "check if you have sufficient permissions and if the path already exists".to_string()),

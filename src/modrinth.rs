@@ -1,11 +1,11 @@
 //! Structs that are only used for (de)serializing JSONs associated with Modrinth.
 
+use crate::PackrinthError;
 use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use crate::PackrinthError;
 
 const MODRINTH_API_BASE_URL: &str = "https://api.modrinth.com/v2";
 static CLIENT: OnceLock<Client> = OnceLock::new();
@@ -28,7 +28,8 @@ fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError>
     let full_url = MODRINTH_API_BASE_URL.to_string() + api_endpoint.to_string().as_str();
 
     if let Ok(response) = client.get(&full_url).send()
-    && let Ok(text) = response.text() {
+        && let Ok(text) = response.text()
+    {
         Ok(text)
     } else {
         Err(PackrinthError::RequestFailed(full_url))
@@ -231,7 +232,9 @@ impl File {
         };
         let modrinth_versions: Vec<Version> = match serde_json::from_str(&api_response) {
             Ok(versions) => versions,
-            Err(_error) => return FileResult::Err(PackrinthError::InvalidModrinthResponseJson(api_endpoint)),
+            Err(_error) => {
+                return FileResult::Err(PackrinthError::InvalidModrinthResponseJson(api_endpoint));
+            }
         };
 
         for modrinth_version in modrinth_versions {
@@ -254,9 +257,7 @@ impl File {
         FileResult::NotFound(project_id.to_string())
     }
 
-    fn from_modrinth_version(
-        modrinth_version: &Version,
-    ) -> FileResult {
+    fn from_modrinth_version(modrinth_version: &Version) -> FileResult {
         // Request to get general information about the project associated with the version
         let api_endpoint = format!("/project/{}", &modrinth_version.project_id);
         let modrinth_project_response = match request_text(&api_endpoint) {
@@ -265,7 +266,9 @@ impl File {
         };
         let modrinth_project: Project = match serde_json::from_str(&modrinth_project_response) {
             Ok(versions) => versions,
-            Err(_error) => return FileResult::Err(PackrinthError::InvalidModrinthResponseJson(api_endpoint)),
+            Err(_error) => {
+                return FileResult::Err(PackrinthError::InvalidModrinthResponseJson(api_endpoint));
+            }
         };
 
         // Get the primary file. Every version should have one.
