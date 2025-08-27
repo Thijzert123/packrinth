@@ -94,19 +94,28 @@ impl SubCommand {
             },
         };
 
-        let mut modpack = if let Self::Init = self {
-            match Modpack::new(current_dir) {
-                Ok(_modpack) => print_success(format!("created new modpack instance in directory {}", current_dir.display())),
-                Err(error) => print_error(error.message_and_tip()),
-            }
-            return;
-        } else {
-            match Modpack::from_directory(current_dir) {
+        if let Self::Init = self {
+            let modpack = match Modpack::new(current_dir) {
                 Ok(modpack) => modpack,
                 Err(error) => {
                     print_error(error.message_and_tip());
                     return;
                 }
+            };
+
+            match modpack.save() {
+                Ok(()) => print_success(format!("created new modpack instance in directory {}", current_dir.display())),
+                Err(error) => print_error(error.message_and_tip()),
+            }
+
+            return;
+        }
+
+        let mut modpack = match Modpack::from_directory(current_dir) {
+            Ok(modpack) => modpack,
+            Err(error) => {
+                print_error(error.message_and_tip());
+                return;
             }
         };
 
