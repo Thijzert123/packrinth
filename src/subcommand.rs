@@ -1,10 +1,9 @@
-use crate::ConfigArgs;
-use anyhow::{Context, Result, bail};
+use crate::{print_error, print_success, single_line_error, ConfigArgs};
 use clap::Parser;
 use dialoguer::Confirm;
-use packrinth::config;
+use packrinth::{config, PackrinthError};
 use packrinth::config::{BranchConfig, BranchFiles, IncludeOrExclude, Modpack, ProjectSettings};
-use packrinth::modrinth::{File, FileError};
+use packrinth::modrinth::{File, FileResult};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::cmp;
@@ -78,7 +77,7 @@ enum OverrideSubCommand {
 struct AddOverrideArgs {
     project: String,
 
-    minecraft_version: String,
+    branch: String,
 
     project_version_id: String,
 }
@@ -87,7 +86,7 @@ struct AddOverrideArgs {
 struct RemoveOverrideArgs {
     project: String,
 
-    minecraft_version: Option<String>,
+    branch: Option<String>,
 
     #[clap(short, long)]
     all: bool,
@@ -118,7 +117,7 @@ struct AddInclusionsArgs {
 struct RemoveInclusionsArgs {
     project: String,
 
-    inclusions: Vec<String>,
+    inclusions: Option<Vec<String>>,
 
     #[clap(short, long)]
     all: bool,
@@ -149,7 +148,7 @@ struct AddExclusionsArgs {
 struct RemoveExclusionsArgs {
     project: String,
 
-    exclusions: Vec<String>,
+    exclusions: Option<Vec<String>>,
 
     #[clap(short, long)]
     all: bool,
@@ -209,7 +208,7 @@ pub struct ExportArgs {
 }
 
 impl ProjectArgs {
-    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) {
         if let Some(command) = &self.command {
             match command {
                 ProjectSubCommand::List(args) => args.run(modpack, config_args),
@@ -223,9 +222,9 @@ impl ProjectArgs {
             modpack
                 .projects
                 .retain(|key, _| project_names.contains(key));
-            ListProjectsArgs::list(&modpack.projects)
+            ListProjectsArgs::list(&modpack.projects);
         } else {
-            ListProjectsArgs::run(&ListProjectsArgs {}, modpack, config_args)
+            ListProjectsArgs::run(&ListProjectsArgs {}, modpack, config_args);
         }
     }
 }
@@ -233,23 +232,22 @@ impl ProjectArgs {
 impl ListProjectsArgs {
     // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
     #[allow(clippy::unused_self)]
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        Self::list(&modpack.projects)
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
+        Self::list(&modpack.projects);
     }
 
     // Allowing unnecessary return because it makes it clear that using ? in the function is ok.
     #[allow(clippy::unnecessary_wraps)]
-    pub fn list(projects: &HashMap<String, ProjectSettings>) -> Result<()> {
+    pub fn list(projects: &HashMap<String, ProjectSettings>) {
         if projects.is_empty() {
             println!("There are no projects added to this modpack yet.");
-            return Ok(());
+            return;
         }
 
         let mut iter = projects.iter().peekable();
         while let Some(project) = iter.next() {
             println!("{}", project.0);
 
-            // if let Some(project_settings) = project.1 {
             if let Some(overrides) = &project.1.version_overrides {
                 println!("  - Overrides:");
                 for version_override in overrides {
@@ -267,34 +265,33 @@ impl ListProjectsArgs {
                     }
                 }
             }
-            // }
 
             // Print new line between projects, but not at the very end.
             if iter.peek().is_some() {
                 println!();
             }
         }
-
-        Ok(())
     }
 }
 
 impl AddProjectsArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
         let include_or_exclude = if let Some(include) = self.inclusions.clone() {
             Some(IncludeOrExclude::Include(include))
         } else {
             self.exclusions.clone().map(IncludeOrExclude::Exclude)
         };
 
-        modpack.add_projects(&self.projects, &None, &include_or_exclude)?;
-
-        Ok(())
+        modpack.add_projects(&self.projects, &None, &include_or_exclude);
+        match modpack.save() {
+            Ok(_) => print_success(format!("added {}", self.projects.join(", "))),
+            Err(error) => print_error(error.message_and_tip()),
+        }
     }
 }
 
 impl OverrideProjectArgs {
-    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) {
         match &self.command {
             OverrideSubCommand::Add(args) => args.run(modpack, config_args),
             OverrideSubCommand::Remove(args) => args.run(modpack, config_args),
@@ -303,29 +300,52 @@ impl OverrideProjectArgs {
 }
 
 impl AddOverrideArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        modpack.add_project_override(
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
+        if let Err(error) = modpack.add_project_override(
             &self.project,
-            &self.minecraft_version,
+            &self.branch,
             &self.project_version_id,
-        )
+        ) {
+            print_error(error.message_and_tip());
+            return;
+        }
+        match modpack.save() {
+            Ok(_) => print_success(format!("added override for {}, branch {} and version ID {}", self.project, self.branch, self.project_version_id)),
+            Err(error) => print_error(error.message_and_tip()),
+        }
     }
 }
 
 impl RemoveOverrideArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
         if self.all {
-            modpack.remove_all_project_overrides(&self.project)
-        } else if let Some(minecraft_version) = &self.minecraft_version {
-            modpack.remove_project_override(&self.project, minecraft_version)
+            if let Err(error) = modpack.remove_all_project_overrides(&self.project) {
+                print_error(error.message_and_tip());
+                return;
+            }
+
+            match modpack.save() {
+                Ok(_) => print_success(format!("removed all overrides for {}", self.project)),
+                Err(error) => print_error(error.message_and_tip()),
+            }
+        } else if let Some(branch) = &self.branch {
+            if let Err(error) = modpack.remove_project_override(branch, &self.project) {
+                print_error(error.message_and_tip());
+                return;
+            }
+
+            match modpack.save() {
+                Ok(_) => print_success(format!("removed {} override for {}", self.project, branch)),
+                Err(error) => print_error(error.message_and_tip()),
+            }
         } else {
-            bail!("Please add a Minecraft version or remove all overrides by adding --all flag")
+            print_error(("no branch specified", "specify a branch or remove all with the --all flag"));
         }
     }
 }
 
 impl IncludeProjectArgs {
-    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) {
         match &self.command {
             IncludeSubCommand::Add(args) => args.run(modpack, config_args),
             IncludeSubCommand::Remove(args) => args.run(modpack, config_args),
@@ -334,23 +354,49 @@ impl IncludeProjectArgs {
 }
 
 impl AddInclusionsArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        modpack.add_project_inclusions(&self.project, &self.inclusions)
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
+        if let Err(error) = modpack.add_project_inclusions(&self.project, &self.inclusions) {
+            print_error(error.message_and_tip());
+            return;
+        }
+
+        match modpack.save() {
+            Ok(_) => print_success(format!("added {} inclusions for {}", self.inclusions.join(", "), self.project)),
+            Err(error) => print_error(error.message_and_tip()),
+        }
     }
 }
 
 impl RemoveInclusionsArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
         if self.all {
-            modpack.remove_all_project_inclusions(&self.project)
+            if let Err(error) = modpack.remove_all_project_inclusions(&self.project) {
+                print_error(error.message_and_tip());
+                return;
+            }
+
+            match modpack.save() {
+                Ok(_) => print_success(format!("removed all inclusions for {}", self.project)),
+                Err(error) => print_error(error.message_and_tip()),
+            }
+        } else if let Some(inclusions) = &self.inclusions {
+            if let Err(error) = modpack.remove_project_inclusions(&self.project, inclusions) {
+                print_error(error.message_and_tip());
+                return;
+            }
+
+            match modpack.save() {
+                Ok(_) => print_success(format!("removed {} inclusions for {}", inclusions.join(", "), self.project)),
+                Err(error) => print_error(error.message_and_tip()),
+            }
         } else {
-            modpack.remove_project_inclusions(&self.project, &self.inclusions)
+            print_error(("no inclusions specified", "specify inclusions or remove all with the --all flag"));
         }
     }
 }
 
 impl ExcludeProjectArgs {
-    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) {
         match &self.command {
             ExcludeSubCommand::Add(args) => args.run(modpack, config_args),
             ExcludeSubCommand::Remove(args) => args.run(modpack, config_args),
@@ -359,52 +405,89 @@ impl ExcludeProjectArgs {
 }
 
 impl AddExclusionsArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        modpack.add_project_exclusions(&self.project, &self.exclusions)
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
+        if let Err(error) = modpack.add_project_exclusions(&self.project, &self.exclusions) {
+            print_error(error.message_and_tip());
+            return;
+        }
+
+        match modpack.save() {
+            Ok(_) => print_success(format!("added {} exclusions for {}", self.exclusions.join(", "), self.project)),
+            Err(error) => print_error(error.message_and_tip()),
+        }
     }
 }
 
 impl RemoveExclusionsArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
         if self.all {
-            modpack.remove_all_project_exclusions(&self.project)
-        } else {
-            modpack.remove_project_exclusions(&self.project, &self.exclusions)
+            if let Err(error) = modpack.remove_all_project_exclusions(&self.project) {
+                print_error(error.message_and_tip());
+                return;
+            }
+
+            match modpack.save() {
+                Ok(_) => print_success(format!("removed all exclusions for {}", self.project)),
+                Err(error) => print_error(error.message_and_tip()),
+            }
+        } else if let Some(exclusions) = &self.exclusions {
+            if let Err(error) = modpack.remove_project_exclusions(&self.project, exclusions) {
+                print_error(error.message_and_tip());
+                return;
+            }
+
+            match modpack.save() {
+                Ok(_) => print_success(format!("removed {} exclusions for {}", exclusions.join(", "), self.project)),
+                Err(error) => print_error(error.message_and_tip()),
+            }
         }
     }
 }
 
 impl RemoveProjectsArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        modpack.remove_projects(&self.projects)
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
+        modpack.remove_projects(&self.projects);
+
+        match modpack.save() {
+            Ok(_) => print_success(format!("removed {}", self.projects.join(", "))),
+            Err(error) => print_error(error.message_and_tip()),
+        }
     }
 }
 
 impl UpdateArgs {
-    pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) {
         if let Some(branches) = &self.branches {
             for branch in branches {
-                Self::update_branch(
+                if let Err(error) = Self::update_branch(
                     modpack,
                     branch,
                     self.no_beta,
                     self.no_alpha,
                     config_args.verbose,
-                )?;
+                ) {
+                    print_error(error.message_and_tip());
+                    return;
+                }
             }
+
+            print_success(format!("updated {}", branches.join(", ")))
         } else {
             for branch in &modpack.branches {
-                Self::update_branch(
+                if let Err(error) = Self::update_branch(
                     modpack,
                     branch,
                     self.no_beta,
                     self.no_alpha,
                     config_args.verbose,
-                )?;
+                ) {
+                    print_error(error.message_and_tip());
+                    return;
+                }
             }
-        }
 
-        Ok(())
+            print_success(format!("updated {}", modpack.branches.join(", ")))
+        }
     }
 
     fn update_branch(
@@ -413,7 +496,7 @@ impl UpdateArgs {
         no_beta: bool,
         no_alpha: bool,
         verbose: bool,
-    ) -> Result<()> {
+    ) -> Result<(), PackrinthError> {
         let branch_config = BranchConfig::from_directory(&modpack.directory, branch_name)?;
         let mut branch_files = BranchFiles::from_directory(&modpack.directory, branch_name)?;
 
@@ -442,7 +525,7 @@ impl UpdateArgs {
                 no_beta,
                 no_alpha,
             ) {
-                Ok(file) => {
+                FileResult::Ok(file) => {
                     branch_files.files.push(file);
 
                     if verbose {
@@ -454,28 +537,26 @@ impl UpdateArgs {
                         );
                     }
                 }
-                Err(error) if error.downcast_ref::<FileError>().is_some() => {
-                    match error.downcast_ref::<FileError>().unwrap() {
-                        FileError::Skipped(_project_id) => {
-                            if verbose {
-                                progress_bar.print_info(
-                                    "Skipped",
-                                    project_id,
-                                    Color::Yellow,
-                                    Style::Normal,
-                                );
-                            }
-                        }
-                        FileError::NotFound(_project_id) => progress_bar.print_info(
-                            "Not found",
-                            project_id,
+                FileResult::Skipped(project_id) => {
+                    if verbose {
+                        progress_bar.print_info(
+                            "Skipped",
+                            &project_id,
                             Color::Yellow,
-                            Style::Bold,
-                        ),
+                            Style::Normal,
+                        );
                     }
                 }
-                Err(error) => {
-                    progress_bar.print_info("Failed", &error.to_string(), Color::Red, Style::Bold);
+                FileResult::NotFound(project_id) => {
+                    progress_bar.print_info(
+                        "Not found",
+                        &project_id,
+                        Color::Yellow,
+                        Style::Bold,
+                    );
+                }
+                FileResult::Err(error) => {
+                    progress_bar.print_info("Failed", &single_line_error(error.message_and_tip()), Color::Red, Style::Bold);
                 }
             }
 
@@ -489,7 +570,7 @@ impl UpdateArgs {
 }
 
 impl BranchArgs {
-    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) {
         if let Some(command) = &self.command {
             match command {
                 BranchSubCommand::List(args) => args.run(modpack, config_args),
@@ -507,37 +588,29 @@ impl BranchArgs {
 impl ListBranchesArgs {
     // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
     #[allow(clippy::unused_self)]
-    pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) {
         Self::list(&modpack.directory, &modpack.branches)
     }
 
-    pub fn list(directory: &Path, branches: &[String]) -> Result<()> {
+    pub fn list(directory: &Path, branches: &[String]) {
         if branches.is_empty() {
             println!("There are no branches added to this modpack yet.");
-            return Ok(());
+            return;
         }
 
         let mut iter = branches.iter().peekable();
         while let Some(branch_name) = iter.next() {
-            match BranchConfig::from_directory(directory, branch_name).with_context(|| {
-                format!(
-                    "Failed to get branch {} in directory {}",
-                    branch_name,
-                    directory.display()
-                )
-            }) {
+            match BranchConfig::from_directory(directory, branch_name) {
                 Ok(branch) => branch.print_display(branch_name),
                 Err(error) => {
-                    if let Some(error) = error.downcast_ref::<std::io::Error>()
-                        && error.kind() == std::io::ErrorKind::NotFound
-                    {
-                        eprintln!(
+                    if let PackrinthError::BranchDoesNotExist(_branch_name) = error {
+                        println!(
                             "Branch {} is declared in the modpack config file ({}), but it doesn't exist. Please consider removing it from the configuration or re-adding the branch.",
                             branch_name,
                             config::MODPACK_CONFIG_FILE_NAME
                         );
                     } else {
-                        bail!(error);
+                        print_error(error.message_and_tip());
                     }
                 }
             }
@@ -547,30 +620,30 @@ impl ListBranchesArgs {
                 println!();
             }
         }
-
-        Ok(())
     }
 }
 
 impl AddBranchesArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        let mut iter = self.branches.iter().peekable();
-        while let Some(branch_name) = iter.next() {
-            let new_branch = modpack.new_branch(branch_name)?;
-            new_branch.print_display(branch_name);
-
-            // Print new line between branches, but not at the very end.
-            if iter.peek().is_some() {
-                println!();
-            }
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
+        for branch_name in &self.branches {
+            match modpack.new_branch(branch_name) {
+                Ok(_branch) => (),
+                Err(error) => {
+                    print_error(error.message_and_tip());
+                    return;
+                }
+            };
         }
 
-        Ok(())
+        match modpack.save() {
+            Ok(_) => print_success(format!("added branches {}", self.branches.join(", "))),
+            Err(error) => print_error(error.message_and_tip()),
+        }
     }
 }
 
 impl RemoveBranchesArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
         println!(
             "These branches in directory {} will be removed:",
             modpack.directory.display()
@@ -592,32 +665,19 @@ impl RemoveBranchesArgs {
         println!();
 
         if confirmation {
-            modpack.remove_branches(&self.branches)?;
-            if self.branches.len() == 1 {
-                println!("Removed {} branch", self.branches.len());
-            } else {
-                println!("Removed {} branches", self.branches.len());
-            }
-
-            Ok(())
+            modpack.remove_branches(&self.branches);
+            print_success(format!("removed {}", self.branches.join(", ")));
         } else {
             println!("Aborted action");
-            Ok(())
         }
     }
 }
 
 impl ExportArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<()> {
-        if let Ok(mrpack_path) = modpack.export(&self.branch) {
-            println!(
-                "Exported branch {} to {}",
-                &self.branch,
-                mrpack_path.display()
-            );
-            Ok(())
-        } else {
-            bail!("Failed to export branch {}", &self.branch);
+    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
+        match modpack.export(&self.branch) {
+            Ok(modpack_path) => print_success(format!("exported {} to {}", self.branch, modpack_path.display())),
+            Err(error) => print_error(error.message_and_tip()),
         }
     }
 }

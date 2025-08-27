@@ -1,13 +1,36 @@
 #![warn(clippy::pedantic)]
 mod subcommand;
 
-use anyhow::{Result, bail};
+use std::fmt::Display;
 use clap::Parser;
 use packrinth::config::{self, Modpack};
 use std::path::PathBuf;
+use console::Style;
 
-fn main() -> Result<()> {
-    Cli::parse().run()
+fn main() {
+    Cli::parse().run();
+}
+
+pub fn print_error<T: Display, U: Display>(error: (T, U)) {
+    const ERROR_STYLE: Style = Style::new().bold().red();
+    const TIP_STYLE: Style = Style::new().green();
+
+    eprintln!("{}: {}", ERROR_STYLE.apply_to("error"), error.0);
+    eprintln!();
+    eprintln!("  {}: {}", TIP_STYLE.apply_to("tip"), error.1);
+}
+
+pub fn single_line_error<T: ToString, U: ToString>(error: (T, U)) -> String {
+    let mut single_line_error = error.0.to_string();
+    single_line_error.push_str(": ");
+    single_line_error.push_str(&error.1.to_string());
+    single_line_error
+}
+
+pub fn print_success<T: Display>(message: T) {
+    const SUCCESS_STYLE: Style = Style::new().bold().green();
+
+    println!("{}: {}", SUCCESS_STYLE.apply_to("success"), message);
 }
 
 #[derive(Parser, Debug)]
@@ -49,36 +72,47 @@ struct ConfigArgs {
 }
 
 impl Cli {
-    fn run(&mut self) -> Result<()> {
-        self.subcommand.run(&self.config_args)
+    fn run(&mut self) {
+        self.subcommand.run(&self.config_args);
     }
 }
 
 impl SubCommand {
-    fn run(&self, config_args: &ConfigArgs) -> Result<()> {
-        let working_dir = match &config_args.directory {
+    fn run(&self, config_args: &ConfigArgs) {
+        let current_dir = match &config_args.directory {
             Some(dir) => dir,
-            None => &std::env::current_dir()?,
+            None => match std::env::current_dir() {
+                Ok(current_dir) => &current_dir.clone(),
+                Err(_error) => {
+                    print_error(("couldn't get current directory", "the current directory may not exist or you have insufficient permissions to access the current directory"));
+                    return;
+                },
+            },
         };
 
         let mut modpack = if let Self::Init = self {
-            let modpack = Modpack::new(working_dir)?;
-            println!("Created new modpack instance in {}", working_dir.display());
-            modpack
+            match Modpack::new(current_dir) {
+                Ok(_modpack) => print_success(format!("created new modpack instance in directory {}", current_dir.display())),
+                Err(error) => print_error(error.message_and_tip()),
+            }
+            return;
         } else {
-            Modpack::from_directory(working_dir)?
+            match Modpack::from_directory(current_dir) {
+                Ok(modpack) => modpack,
+                Err(error) => {
+                    print_error(error.message_and_tip());
+                    return;
+                }
+            }
         };
 
         if modpack.pack_format != config::CURRENT_PACK_FORMAT {
-            bail!(
-                "Pack format {} is not supported by this Packrinth version. Please use a configuration with pack format {}.",
-                modpack.pack_format,
-                config::CURRENT_PACK_FORMAT
-            );
+            print_error((format!("pack format {} is not supported by this Packrinth version", modpack.pack_format), format!("please use a configuration with pack format {}", config::CURRENT_PACK_FORMAT)));
+            return;
         }
 
         match self {
-            SubCommand::Init => Ok(()),
+            SubCommand::Init => (),
             SubCommand::Project(args) => args.run(&mut modpack, config_args),
             SubCommand::Branch(args) => args.run(&mut modpack, config_args),
             SubCommand::Update(args) => args.run(&modpack, config_args),

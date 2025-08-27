@@ -1,12 +1,11 @@
 //! Structs that are only used for (de)serializing JSONs associated with Modrinth.
 
 use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
-use anyhow::{Result, bail};
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use thiserror::Error;
+use crate::PackrinthError;
 
 const MODRINTH_API_BASE_URL: &str = "https://api.modrinth.com/v2";
 static CLIENT: OnceLock<Client> = OnceLock::new();
@@ -18,7 +17,7 @@ const USER_AGENT: &str = concat!(
     env!("CARGO_PKG_VERSION")
 );
 
-pub fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, Box<dyn std::error::Error>> {
+fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError> {
     let client = CLIENT.get_or_init(|| {
         Client::builder()
             .user_agent(USER_AGENT)
@@ -27,8 +26,13 @@ pub fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, Box<dyn std
     });
 
     let full_url = MODRINTH_API_BASE_URL.to_string() + api_endpoint.to_string().as_str();
-    let text = client.get(&full_url).send()?.text()?;
-    Ok(text)
+
+    if let Ok(response) = client.get(&full_url).send()
+    && let Ok(text) = response.text() {
+        Ok(text)
+    } else {
+        Err(PackrinthError::RequestFailed(full_url))
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -159,23 +163,22 @@ pub struct Dependencies {
     pub quilt_loader: Option<String>,
 }
 
-#[derive(Debug, Error)]
-pub enum FileError {
-    #[error("{0} was skipped")]
+#[derive(Debug)]
+pub enum FileResult {
+    Ok(File),
     Skipped(String),
-
-    #[error("{0} not found")]
     NotFound(String),
+    Err(PackrinthError),
 }
 
 impl ProjectType {
     /// Returns the directory of where the project would go in to.
-    pub fn directory(&self) -> Result<&str> {
+    pub fn directory(&self) -> Result<&str, PackrinthError> {
         match self {
             ProjectType::Mod => Ok("mods"),
 
             // This happens when you add a modpack as project.
-            ProjectType::Modpack => bail!("You can't add other modpacks to this modpack"),
+            ProjectType::Modpack => Err(PackrinthError::AttemptedToAddOtherModpack),
 
             ProjectType::ResourcePack => Ok("resourcepack"),
             ProjectType::Shader => Ok("shader"),
@@ -184,6 +187,7 @@ impl ProjectType {
 }
 
 impl File {
+    #[must_use]
     pub fn from_project(
         branch_name: &String,
         branch_config: &BranchConfig,
@@ -191,19 +195,18 @@ impl File {
         project_settings: &ProjectSettings,
         no_alpha: bool,
         no_beta: bool,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    ) -> FileResult {
         // Handle inclusions and exclusions
         if let Some(include_or_exclude) = &project_settings.include_or_exclude {
             match include_or_exclude {
-                // TODO rename all includes to inclusions in project
                 IncludeOrExclude::Include(inclusions) => {
                     if !inclusions.contains(branch_name) {
-                        return Err(FileError::Skipped(project_id.to_string()).into());
+                        return FileResult::Skipped(project_id.to_string());
                     }
                 }
                 IncludeOrExclude::Exclude(exclusions) => {
                     if exclusions.contains(branch_name) {
-                        return Err(FileError::Skipped(project_id.to_string()).into());
+                        return FileResult::Skipped(project_id.to_string());
                     }
                 }
             }
@@ -222,8 +225,14 @@ impl File {
             api_endpoint = format!("/version/{version_override}");
         }
 
-        let api_response = request_text(&api_endpoint)?;
-        let modrinth_versions: Vec<Version> = serde_json::from_str(&api_response)?;
+        let api_response = match request_text(&api_endpoint) {
+            Ok(response) => response,
+            Err(error) => return FileResult::Err(error),
+        };
+        let modrinth_versions: Vec<Version> = match serde_json::from_str(&api_response) {
+            Ok(versions) => versions,
+            Err(_error) => return FileResult::Err(PackrinthError::InvalidModrinthResponseJson(api_endpoint)),
+        };
 
         for modrinth_version in modrinth_versions {
             match modrinth_version.version_type {
@@ -241,17 +250,23 @@ impl File {
             }
         }
 
-        // If no versions were returned in the for loop, return error
-        Err(FileError::NotFound(project_id.to_string()).into())
+        // If no versions were returned in the for loop.
+        FileResult::NotFound(project_id.to_string())
     }
 
     fn from_modrinth_version(
         modrinth_version: &Version,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    ) -> FileResult {
         // Request to get general information about the project associated with the version
-        let endpoint = format!("/project/{}", &modrinth_version.project_id);
-        let modrinth_project_response = request_text(&endpoint)?;
-        let modrinth_project: Project = serde_json::from_str(&modrinth_project_response)?;
+        let api_endpoint = format!("/project/{}", &modrinth_version.project_id);
+        let modrinth_project_response = match request_text(&api_endpoint) {
+            Ok(response) => response,
+            Err(error) => return FileResult::Err(error),
+        };
+        let modrinth_project: Project = match serde_json::from_str(&modrinth_project_response) {
+            Ok(versions) => versions,
+            Err(_error) => return FileResult::Err(PackrinthError::InvalidModrinthResponseJson(api_endpoint)),
+        };
 
         // Get the primary file. Every version should have one.
         let mut primary_file_url = None;
@@ -268,13 +283,18 @@ impl File {
             }
         }
 
-        let path = PathBuf::from(modrinth_project.project_type.directory()?)
+        let directory = match modrinth_project.project_type.directory() {
+            Ok(directory) => directory,
+            Err(error) => return FileResult::Err(error),
+        };
+
+        let path = PathBuf::from(directory)
             .join(primary_file_name.expect("No primary file found"))
             .to_str()
             .expect("File name has non-valid UTF-8 characters")
             .to_string();
 
-        Ok(Self {
+        FileResult::Ok(Self {
             path,
             hashes: primary_file_hashes.expect("No primary file found").clone(),
             env: Some(Env {
