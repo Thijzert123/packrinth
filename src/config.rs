@@ -173,7 +173,7 @@ pub struct BranchFiles {
     pub files: Vec<File>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Hash, Eq, PartialEq, Clone)]
 pub struct BranchFilesProject {
     pub name: String,
     pub id: String,

@@ -781,10 +781,7 @@ impl ProjectDocArgs {
                     let mut branch_map = HashMap::new();
                     branch_map.insert(branch.clone(), Some(()));
                     project_map.insert(
-                        BranchFilesProject {
-                            name: project.name.clone(),
-                            id: project.id.clone(),
-                        },
+                        project.clone(),
                         branch_map,
                     );
                 }
@@ -825,7 +822,8 @@ impl Display for DocMarkdownTable<'_> {
         // Sort by key (human name of project)
         sorted_project_map.sort_by(|a, b| a.0.name.cmp(&b.0.name));
 
-        for project in sorted_project_map {
+        let mut iter = sorted_project_map.iter().peekable();
+        while let Some(project) = iter.next() {
             let mut project_url = "https://modrinth.com/project/".to_string();
             project_url.push_str(&project.0.id);
             write!(f, "|[{}]({})|", project.0.name, project_url)?;
@@ -841,7 +839,11 @@ impl Display for DocMarkdownTable<'_> {
                 };
                 write!(f, "{icon}|")?;
             }
-            writeln!(f)?;
+
+            // Print newline except for the last time of this loop.
+            if iter.peek().is_some() {
+                writeln!(f)?;
+            }
         }
 
         Ok(())
