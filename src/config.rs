@@ -1,11 +1,11 @@
 use crate::PackrinthError;
 use crate::modrinth::{Dependencies, File, MrPack};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
-use indexmap::IndexMap;
 use walkdir::WalkDir;
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
@@ -34,7 +34,9 @@ where
 }
 
 fn serde_json_to_string_pretty<T>(value: &T) -> Result<String, serde_json::Error>
-where T: ?Sized + Serialize {
+where
+    T: ?Sized + Serialize,
+{
     let mut buf = Vec::new();
     let formatter = serde_json::ser::PrettyFormatter::with_indent(b"\t");
     let mut ser = serde_json::Serializer::with_formatter(&mut buf, formatter);
@@ -245,9 +247,10 @@ impl Modpack {
 
         let mut modpack: Modpack = match serde_json::from_str(&config) {
             Ok(modpack) => modpack,
-            Err(_) => {
-                return Err(PackrinthError::InvalidConfigJson(
+            Err(error) => {
+                return Err(PackrinthError::FailedToParseConfigJson(
                     modpack_config_path.display().to_string(),
+                    format!("{error}"),
                 ));
             }
         };
@@ -648,9 +651,10 @@ impl BranchConfig {
                         Ok(contents) => {
                             let branch_config: Self = match serde_json::from_str(&contents) {
                                 Ok(contents) => contents,
-                                Err(_error) => {
-                                    return Err(PackrinthError::InvalidConfigJson(
+                                Err(error) => {
+                                    return Err(PackrinthError::FailedToParseConfigJson(
                                         branch_config_path.display().to_string(),
+                                        format!("{error}"),
                                     ));
                                 }
                             };
@@ -718,7 +722,10 @@ impl BranchConfig {
 
 impl BranchFiles {
     /// Allow creating a new empty config file if the existing config was invalid.
-    pub fn from_directory_allow_new(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
+    pub fn from_directory_allow_new(
+        directory: &Path,
+        name: &String,
+    ) -> Result<Self, PackrinthError> {
         Self::create_self_instance(directory, name, true)
     }
 
@@ -731,7 +738,11 @@ impl BranchFiles {
         json_to_file(self, branch_files_path)
     }
 
-    fn create_self_instance(directory: &Path, name: &String, allow_new: bool) -> Result<Self, PackrinthError> {
+    fn create_self_instance(
+        directory: &Path,
+        name: &String,
+        allow_new: bool,
+    ) -> Result<Self, PackrinthError> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
             Ok(metadata) => {
@@ -741,12 +752,13 @@ impl BranchFiles {
                         Ok(contents) => {
                             let branch_files: Self = match serde_json::from_str(&contents) {
                                 Ok(contents) => contents,
-                                Err(_error) => {
+                                Err(error) => {
                                     if allow_new {
                                         Self::create_default_branch_files(&branch_files_path)?
                                     } else {
-                                        return Err(PackrinthError::InvalidConfigJson(
+                                        return Err(PackrinthError::FailedToParseConfigJson(
                                             branch_files_path.display().to_string(),
+                                            format!("{error}"),
                                         ));
                                     }
                                 }

@@ -1,6 +1,7 @@
 use crate::{ConfigArgs, print_error, print_success, single_line_error};
 use clap::Parser;
 use dialoguer::Confirm;
+use indexmap::IndexMap;
 use packrinth::config::{
     BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack, ProjectSettings,
 };
@@ -12,7 +13,6 @@ use std::cmp;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
-use indexmap::IndexMap;
 
 #[derive(Debug, Parser)]
 pub struct ProjectArgs {
@@ -547,7 +547,8 @@ impl UpdateArgs {
         verbose: bool,
     ) -> Result<(), PackrinthError> {
         let branch_config = BranchConfig::from_directory(&modpack.directory, branch_name)?;
-        let mut branch_files = BranchFiles::from_directory_allow_new(&modpack.directory, branch_name)?;
+        let mut branch_files =
+            BranchFiles::from_directory_allow_new(&modpack.directory, branch_name)?;
 
         // Remove all entries to ensure that there will be no duplicates if the user changes loaders
         branch_files.files = Vec::new();
@@ -582,12 +583,7 @@ impl UpdateArgs {
                     branch_files.files.push(file);
 
                     if verbose {
-                        progress_bar.print_info(
-                            "added",
-                            project_id,
-                            Color::Green,
-                            Style::Normal,
-                        );
+                        progress_bar.print_info("added", project_id, Color::Green, Style::Normal);
                     }
                 }
                 FileResult::Skipped(project_id) => {
@@ -782,10 +778,7 @@ impl ProjectDocArgs {
                 } else {
                     let mut branch_map = HashMap::new();
                     branch_map.insert(branch.clone(), Some(()));
-                    project_map.insert(
-                        project.clone(),
-                        branch_map,
-                    );
+                    project_map.insert(project.clone(), branch_map);
                 }
             }
         }

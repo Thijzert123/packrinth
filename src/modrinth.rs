@@ -236,8 +236,11 @@ impl File {
         };
         let modrinth_versions: Vec<Version> = match serde_json::from_str(&api_response) {
             Ok(versions) => versions,
-            Err(_error) => {
-                return FileResult::Err(PackrinthError::InvalidModrinthResponseJson(api_endpoint));
+            Err(error) => {
+                return FileResult::Err(PackrinthError::FailedToParseModrinthResponseJson(
+                    api_endpoint,
+                    format!("{error}"),
+                ));
             }
         };
 
@@ -270,8 +273,11 @@ impl File {
         };
         let modrinth_project: Project = match serde_json::from_str(&modrinth_project_response) {
             Ok(versions) => versions,
-            Err(_error) => {
-                return FileResult::Err(PackrinthError::InvalidModrinthResponseJson(api_endpoint));
+            Err(error) => {
+                return FileResult::Err(PackrinthError::FailedToParseModrinthResponseJson(
+                    api_endpoint,
+                    format!("{error}"),
+                ));
             }
         };
 

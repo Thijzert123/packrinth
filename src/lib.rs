@@ -5,33 +5,33 @@ pub mod modrinth;
 
 #[derive(Debug)]
 pub enum PackrinthError {
-    PathIsFile(String),                  // path
-    FailedToCreateDir(String),           // dir to create
-    FailedToReadToString(String),        // path to read
-    InvalidConfigJson(String),           // config path
-    InvalidModrinthResponseJson(String), // modrinth endpoint
-    FailedToSerialize,
-    ProjectIsNotAdded(String),            // project
-    OverrideDoesNotExist(String, String), // project, branch
-    NoOverridesForProject(String),        // project
-    NoExclusionsForProject(String),       // project
-    NoInclusionsForProject(String),       // project
-    ProjectAlreadyHasExclusions(String),  // project
-    ProjectAlreadyHasInclusions(String),  // project
-    FailedToWriteFile(String),            // path to write to
-    FailedToCreateFile(String),           // file to create
-    DirectoryExpected(String),            // path that should have been a dir
-    FailedToStartZipFile(String),         // file to start
-    FailedToWriteToZip(String),           // what to write
-    FailedToGetWalkDirEntry,
-    FailedToStripPath(String), // original path that had to be stripped
-    FailedToCopyIntoBuffer,
-    FailedToAddZipDir(String), // zip path to add (is a dir)
-    FailedToFinishZip,
-    BranchDoesNotExist(String), // branch
-    AttemptedToAddOtherModpack,
-    NoModrinthFilesFoundForProject(String), // project
-    RequestFailed(String),                  // url
+    PathIsFile(String),                                // path
+    FailedToCreateDir(String),                         // dir to create
+    FailedToReadToString(String),                      // path to read
+    FailedToParseConfigJson(String, String),           // config path, error message
+    FailedToParseModrinthResponseJson(String, String), // modrinth endpoint, error message
+    FailedToSerialize,                                 //
+    ProjectIsNotAdded(String),                         // project
+    OverrideDoesNotExist(String, String),              // project, branch
+    NoOverridesForProject(String),                     // project
+    NoExclusionsForProject(String),                    // project
+    NoInclusionsForProject(String),                    // project
+    ProjectAlreadyHasExclusions(String),               // project
+    ProjectAlreadyHasInclusions(String),               // project
+    FailedToWriteFile(String),                         // path to write to
+    FailedToCreateFile(String),                        // file to create
+    DirectoryExpected(String),                         // path that should have been a dir
+    FailedToStartZipFile(String),                      // file to start
+    FailedToWriteToZip(String),                        // what to write
+    FailedToGetWalkDirEntry,                           //
+    FailedToStripPath(String),                         // original path that had to be stripped
+    FailedToCopyIntoBuffer,                            //
+    FailedToAddZipDir(String),                         // zip path to add (is a dir)
+    FailedToFinishZip,                                 //
+    BranchDoesNotExist(String),                        // branch
+    AttemptedToAddOtherModpack,                        //
+    NoModrinthFilesFoundForProject(String),            // project
+    RequestFailed(String),                             // url
 }
 
 impl PackrinthError {
@@ -43,8 +43,8 @@ impl PackrinthError {
             PackrinthError::PathIsFile(path) => (format!("path {path} is a file"), "remove the file or change the target directory".to_string()),
             PackrinthError::FailedToCreateDir(dir_to_create) => (format!("failed to create directory {dir_to_create}"), "check if you have sufficient permissions and if the path already exists".to_string()),
             PackrinthError::FailedToReadToString(path_to_read) => (format!("failed to read file {path_to_read}"), "check if you have sufficient permissions and if the file exists".to_string()),
-            PackrinthError::InvalidConfigJson(config_path) => (format!("config file {config_path} is invalid"), "fix it according to JSON standards".to_string()),
-            PackrinthError::InvalidModrinthResponseJson(modrinth_endpoint) => (format!("modrinth response from endpoint {modrinth_endpoint} is invalid"), file_an_issue),
+            PackrinthError::FailedToParseConfigJson(config_path, error_message) => (format!("config file {config_path} is invalid: {error_message}"), "fix it according to JSON standards".to_string()),
+            PackrinthError::FailedToParseModrinthResponseJson(modrinth_endpoint, error_message) => (format!("modrinth response from endpoint {modrinth_endpoint} is invalid: {error_message}"), file_an_issue),
             PackrinthError::FailedToSerialize => ("failed to serialize to a JSON".to_string(), file_an_issue),
             PackrinthError::ProjectIsNotAdded(project) => (format!("project {project} is not added to this modpack"), "add it with subcommand: project add".to_string()),
             PackrinthError::OverrideDoesNotExist(project, branch) => (format!("{project} does not have an override for branch {branch}"), "add one with subcommand: project override add".to_string()),
