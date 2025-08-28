@@ -21,7 +21,7 @@ where
     T: ?Sized + Serialize + Debug,
     P: AsRef<Path>,
 {
-    let json = match serde_json::to_string_pretty(json_value) {
+    let json = match serde_json_to_string_pretty(json_value) {
         Ok(json) => json,
         Err(_error) => return Err(PackrinthError::FailedToSerialize),
     };
@@ -31,6 +31,16 @@ where
         ));
     }
     Ok(())
+}
+
+fn serde_json_to_string_pretty<T>(value: &T) -> Result<String, serde_json::Error>
+where T: ?Sized + Serialize {
+    let mut buf = Vec::new();
+    let formatter = serde_json::ser::PrettyFormatter::with_indent(b"\t");
+    let mut ser = serde_json::Serializer::with_formatter(&mut buf, formatter);
+    value.serialize(&mut ser)?;
+
+    Ok(String::from_utf8_lossy(&buf).to_string())
 }
 
 /// Config file at the root of the project. File is named <code>modpack.json</code>.
@@ -511,7 +521,7 @@ impl Modpack {
             dependencies: Self::create_dependencies(branch_config),
         };
 
-        let mrpack_json = match serde_json::to_string_pretty(&mrpack) {
+        let mrpack_json = match serde_json_to_string_pretty(&mrpack) {
             Ok(mrpack_json) => mrpack_json,
             Err(_error) => return Err(PackrinthError::FailedToSerialize),
         };
@@ -705,7 +715,21 @@ impl BranchConfig {
 }
 
 impl BranchFiles {
+    /// Allow creating a new empty config file if the existing config was invalid.
+    pub fn from_directory_allow_new(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
+        Self::create_self_instance(directory, name, true)
+    }
+
     pub fn from_directory(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
+        Self::create_self_instance(directory, name, false)
+    }
+
+    pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
+        let branch_files_path = directory.join(name).join(BRANCH_FILES_FILE_NAME);
+        json_to_file(self, branch_files_path)
+    }
+
+    fn create_self_instance(directory: &Path, name: &String, allow_new: bool) -> Result<Self, PackrinthError> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
             Ok(metadata) => {
@@ -716,9 +740,13 @@ impl BranchFiles {
                             let branch_files: Self = match serde_json::from_str(&contents) {
                                 Ok(contents) => contents,
                                 Err(_error) => {
-                                    return Err(PackrinthError::InvalidConfigJson(
-                                        branch_files_path.display().to_string(),
-                                    ));
+                                    if allow_new {
+                                        Self::create_default_branch_files(&branch_files_path)?
+                                    } else {
+                                        return Err(PackrinthError::InvalidConfigJson(
+                                            branch_files_path.display().to_string(),
+                                        ));
+                                    }
                                 }
                             };
                             branch_files
@@ -746,11 +774,6 @@ impl BranchFiles {
             }
             Err(_error) => Err(PackrinthError::BranchDoesNotExist(name.clone())),
         }
-    }
-
-    pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
-        let branch_files_path = directory.join(name).join(BRANCH_FILES_FILE_NAME);
-        json_to_file(self, branch_files_path)
     }
 
     fn create_default_branch_files(branch_versions_path: &PathBuf) -> Result<Self, PackrinthError> {

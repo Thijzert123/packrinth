@@ -34,7 +34,7 @@ pub fn single_line_error<T: ToString, U: ToString>(error: (T, U)) -> String {
 pub fn print_success<T: Display>(message: T) {
     const SUCCESS_STYLE: Style = Style::new().bold().green();
 
-    println!("{}: {}", SUCCESS_STYLE.apply_to("success"), message);
+    println!("{} {}", SUCCESS_STYLE.apply_to("success:"), message);
 }
 
 #[derive(Parser, Debug)]

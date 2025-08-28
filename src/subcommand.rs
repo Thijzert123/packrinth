@@ -533,6 +533,7 @@ impl UpdateArgs {
                 }
             }
 
+            println!();
             print_success(format!("updated {}", modpack.branches.join(", ")));
         }
     }
@@ -545,7 +546,7 @@ impl UpdateArgs {
         verbose: bool,
     ) -> Result<(), PackrinthError> {
         let branch_config = BranchConfig::from_directory(&modpack.directory, branch_name)?;
-        let mut branch_files = BranchFiles::from_directory(&modpack.directory, branch_name)?;
+        let mut branch_files = BranchFiles::from_directory_allow_new(&modpack.directory, branch_name)?;
 
         // Remove all entries to ensure that there will be no duplicates if the user changes loaders
         branch_files.files = Vec::new();
@@ -581,9 +582,9 @@ impl UpdateArgs {
 
                     if verbose {
                         progress_bar.print_info(
-                            "Added",
+                            "added",
                             project_id,
-                            Color::LightGreen,
+                            Color::Green,
                             Style::Normal,
                         );
                     }
@@ -591,7 +592,7 @@ impl UpdateArgs {
                 FileResult::Skipped(project_id) => {
                     if verbose {
                         progress_bar.print_info(
-                            "Skipped",
+                            "skipped",
                             &project_id,
                             Color::Yellow,
                             Style::Normal,
@@ -601,7 +602,7 @@ impl UpdateArgs {
                 FileResult::NotFound(project_id) => {
                     if verbose {
                         progress_bar.print_info(
-                            "Not found",
+                            "not found",
                             &project_id,
                             Color::Yellow,
                             Style::Bold,
@@ -610,7 +611,7 @@ impl UpdateArgs {
                 }
                 FileResult::Err(error) => {
                     progress_bar.print_info(
-                        "Failed",
+                        "failed",
                         &single_line_error(error.message_and_tip()),
                         Color::Red,
                         Style::Bold,
@@ -621,7 +622,7 @@ impl UpdateArgs {
             progress_bar.inc();
         }
 
-        progress_bar.print_final_info(branch_name, "updated", Color::LightGreen, Style::Bold);
+        progress_bar.finalize();
 
         branch_files.save(&modpack.directory, branch_name)
     }
@@ -807,7 +808,7 @@ impl ProjectDocArgs {
         println!("{table}");
     }
 }
-// TODO if .branch_files.json is invalid while updating, remove it and generate again
+
 impl Display for DocMarkdownTable<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         // Write column names
