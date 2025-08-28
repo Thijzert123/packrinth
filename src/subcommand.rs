@@ -1,7 +1,9 @@
 use crate::{ConfigArgs, print_error, print_success, single_line_error};
 use clap::Parser;
 use dialoguer::Confirm;
-use packrinth::config::{BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack, ProjectSettings};
+use packrinth::config::{
+    BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack, ProjectSettings,
+};
 use packrinth::modrinth::{File, FileResult};
 use packrinth::{PackrinthError, config};
 use progress_bar::pb::ProgressBar;
@@ -224,7 +226,7 @@ struct ProjectDocArgs;
 #[derive(Debug)]
 struct DocMarkdownTable<'a> {
     column_names: Vec<&'a str>,
-    project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>
+    project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
 }
 
 impl ProjectArgs {
@@ -751,14 +753,17 @@ impl DocArgs {
 }
 
 impl ProjectDocArgs {
+    // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
+    #[allow(clippy::unused_self)]
     pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) {
         let mut column_names = vec!["Name"];
         // project, map: branch, whether it has the project
-        let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> = HashMap::new();
+        let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> =
+            HashMap::new();
 
         for branch in &modpack.branches {
-            column_names.push(&branch);
-            let branch_files = match BranchFiles::from_directory(&modpack.directory, &branch) {
+            column_names.push(branch);
+            let branch_files = match BranchFiles::from_directory(&modpack.directory, branch) {
                 Ok(branch_files) => branch_files,
                 Err(error) => {
                     print_error(error.message_and_tip());
@@ -768,12 +773,20 @@ impl ProjectDocArgs {
 
             for project in &branch_files.projects {
                 // Vector in hashmap that shows which branches are compatible with a project.
-                if let Some(branch_map) = project_map.get_mut(&project) { if let None = branch_map.get(branch) {
-                    branch_map.insert(branch.clone(), Some(()));
-                } } else {
+                if let Some(branch_map) = project_map.get_mut(project) {
+                    if branch_map.get(branch).is_none() {
+                        branch_map.insert(branch.clone(), Some(()));
+                    }
+                } else {
                     let mut branch_map = HashMap::new();
                     branch_map.insert(branch.clone(), Some(()));
-                    project_map.insert(BranchFilesProject { name: project.name.clone(), id: project.id.clone() }, branch_map);
+                    project_map.insert(
+                        BranchFilesProject {
+                            name: project.name.clone(),
+                            id: project.id.clone(),
+                        },
+                        branch_map,
+                    );
                 }
             }
         }
@@ -786,7 +799,10 @@ impl ProjectDocArgs {
             }
         }
 
-        let table = DocMarkdownTable { column_names, project_map };
+        let table = DocMarkdownTable {
+            column_names,
+            project_map,
+        };
 
         println!("{table}");
     }

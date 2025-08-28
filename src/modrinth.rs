@@ -289,6 +289,18 @@ impl File {
                 break;
             }
         }
+        if primary_file_url.is_none() {
+            primary_file_url = Some(&modrinth_version.files[0].url);
+        }
+        if primary_file_name.is_none() {
+            primary_file_name = Some(&modrinth_version.files[0].filename);
+        }
+        if primary_file_hashes.is_none() {
+            primary_file_hashes = Some(&modrinth_version.files[0].hashes);
+        }
+        if primary_file_size.is_none() {
+            primary_file_size = Some(&modrinth_version.files[0].size);
+        }
 
         let directory = match modrinth_project.project_type.directory() {
             Ok(directory) => directory,
@@ -296,7 +308,7 @@ impl File {
         };
 
         let path = PathBuf::from(directory)
-            .join(primary_file_name.expect("No primary file found"))
+            .join(primary_file_name.expect("No Modrinth file found"))
             .to_str()
             .expect("File name has non-valid UTF-8 characters")
             .to_string();
@@ -304,13 +316,13 @@ impl File {
         FileResult::Ok(Self {
             project_name: modrinth_project.title,
             path,
-            hashes: primary_file_hashes.expect("No primary file found").clone(),
+            hashes: primary_file_hashes.expect("No Modrinth file found").clone(),
             env: Some(Env {
                 client: modrinth_project.client_side,
                 server: modrinth_project.server_side,
             }),
-            downloads: vec![primary_file_url.expect("No primary file found").clone()],
-            file_size: *primary_file_size.expect("No primary file found"),
+            downloads: vec![primary_file_url.expect("No Modrinth file found").clone()],
+            file_size: *primary_file_size.expect("No Modrinth file found"),
         })
     }
 }
