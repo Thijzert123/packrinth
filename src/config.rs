@@ -721,10 +721,7 @@ impl BranchConfig {
 }
 
 impl BranchFiles {
-    pub fn from_directory(
-        directory: &Path,
-        name: &String,
-    ) -> Result<Self, PackrinthError> {
+    pub fn from_directory(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
             Ok(metadata) => {
@@ -735,10 +732,10 @@ impl BranchFiles {
                             let branch_files: Self = match serde_json::from_str(&contents) {
                                 Ok(contents) => contents,
                                 Err(error) => {
-                                        return Err(PackrinthError::FailedToParseConfigJson(
-                                            branch_files_path.display().to_string(),
-                                            format!("{error}"),
-                                        ));
+                                    return Err(PackrinthError::FailedToParseConfigJson(
+                                        branch_files_path.display().to_string(),
+                                        format!("{error}"),
+                                    ));
                                 }
                             };
                             branch_files
