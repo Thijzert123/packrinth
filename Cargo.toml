@@ -14,3 +14,4 @@ walkdir = "2.5.0"
 progress_bar = "1.2.1"
 terminal_size = "0.4.3"
 console = "0.16.0"
+indexmap = { version = "2.11.0", features = ["serde"] }

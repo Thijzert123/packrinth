@@ -12,6 +12,7 @@ use std::cmp;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
+use indexmap::IndexMap;
 
 #[derive(Debug, Parser)]
 pub struct ProjectArgs {
@@ -260,7 +261,7 @@ impl ListProjectsArgs {
 
     // Allowing unnecessary return because it makes it clear that using ? in the function is ok.
     #[allow(clippy::unnecessary_wraps)]
-    pub fn list(projects: &HashMap<String, ProjectSettings>) {
+    pub fn list(projects: &IndexMap<String, ProjectSettings>) {
         if projects.is_empty() {
             println!("There are no projects added to this modpack yet.");
             return;

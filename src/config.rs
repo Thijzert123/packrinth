@@ -1,11 +1,11 @@
 use crate::PackrinthError;
 use crate::modrinth::{Dependencies, File, MrPack};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
+use indexmap::IndexMap;
 use walkdir::WalkDir;
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
@@ -51,7 +51,7 @@ pub struct Modpack {
     pub summary: String,
     pub author: String,
     pub branches: Vec<String>,
-    pub projects: HashMap<String, ProjectSettings>,
+    pub projects: IndexMap<String, ProjectSettings>,
 
     #[serde(skip)]
     pub directory: PathBuf,
@@ -62,9 +62,9 @@ pub struct Modpack {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectSettings {
-    // HashMap<Branch, Project version id>
+    // IndexMap<Branch, Project version id>
     #[serde(flatten)]
-    pub version_overrides: Option<HashMap<String, String>>,
+    pub version_overrides: Option<IndexMap<String, String>>,
 
     #[serde(flatten)]
     pub include_or_exclude: Option<IncludeOrExclude>,
@@ -226,7 +226,7 @@ impl Modpack {
             summary: "Short summary for this modpack".to_string(),
             author: "John Doe".to_string(),
             branches: Vec::new(),
-            projects: HashMap::new(),
+            projects: IndexMap::new(),
             directory: PathBuf::from(directory),
             modpack_config_path: directory.join(MODPACK_CONFIG_FILE_NAME),
         };
@@ -261,7 +261,7 @@ impl Modpack {
     pub fn add_projects(
         &mut self,
         projects: &[String],
-        version_overrides: &Option<HashMap<String, String>>,
+        version_overrides: &Option<IndexMap<String, String>>,
         include_or_exclude: &Option<IncludeOrExclude>,
     ) {
         for project in projects {
@@ -295,7 +295,7 @@ impl Modpack {
         if let Some(version_overrides) = &mut project_settings.version_overrides {
             version_overrides.insert(branch.to_string(), project_version_id.to_string());
         } else {
-            project_settings.version_overrides = Some(HashMap::from([(
+            project_settings.version_overrides = Some(IndexMap::from([(
                 branch.to_string(),
                 project_version_id.to_string(),
             )]));
@@ -314,7 +314,8 @@ impl Modpack {
         };
 
         if let Some(version_overrides) = &mut project_settings.version_overrides {
-            if version_overrides.remove(branch).is_none() {
+            // shift_remove to show Git that one line was removed
+            if version_overrides.shift_remove(branch).is_none() {
                 Err(PackrinthError::OverrideDoesNotExist(
                     project.to_string(),
                     branch.to_string(),
@@ -462,7 +463,8 @@ impl Modpack {
 
     pub fn remove_projects(&mut self, projects: &[String]) {
         for project in projects {
-            self.projects.remove(&String::from(project));
+            // shift_remove to show Git that one line was removed
+            self.projects.shift_remove(&String::from(project));
         }
     }
 
