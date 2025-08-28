@@ -801,6 +801,9 @@ impl ProjectDocArgs {
             project_map,
         };
 
+        println!("# {} _by {}_", modpack.name, modpack.author);
+        println!("{}", modpack.summary);
+        println!("## What is included?");
         println!("{table}");
     }
 }
