@@ -548,7 +548,10 @@ impl UpdateArgs {
     ) -> Result<(), PackrinthError> {
         let branch_config = BranchConfig::from_directory(&modpack.directory, branch_name)?;
         let mut branch_files =
-            BranchFiles::from_directory_allow_new(&modpack.directory, branch_name)?;
+            match BranchFiles::from_directory(&modpack.directory, branch_name) {
+                Ok(branch_files) => branch_files,
+                Err(_error) => BranchFiles::default(&modpack.directory, branch_name)?,
+            };
 
         // Remove all entries to ensure that there will be no duplicates if the user changes loaders
         branch_files.files = Vec::new();

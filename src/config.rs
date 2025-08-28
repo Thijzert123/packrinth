@@ -721,27 +721,9 @@ impl BranchConfig {
 }
 
 impl BranchFiles {
-    /// Allow creating a new empty config file if the existing config was invalid.
-    pub fn from_directory_allow_new(
+    pub fn from_directory(
         directory: &Path,
         name: &String,
-    ) -> Result<Self, PackrinthError> {
-        Self::create_self_instance(directory, name, true)
-    }
-
-    pub fn from_directory(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
-        Self::create_self_instance(directory, name, false)
-    }
-
-    pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
-        let branch_files_path = directory.join(name).join(BRANCH_FILES_FILE_NAME);
-        json_to_file(self, branch_files_path)
-    }
-
-    fn create_self_instance(
-        directory: &Path,
-        name: &String,
-        allow_new: bool,
     ) -> Result<Self, PackrinthError> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
@@ -753,21 +735,17 @@ impl BranchFiles {
                             let branch_files: Self = match serde_json::from_str(&contents) {
                                 Ok(contents) => contents,
                                 Err(error) => {
-                                    if allow_new {
-                                        Self::create_default_branch_files(&branch_files_path)?
-                                    } else {
                                         return Err(PackrinthError::FailedToParseConfigJson(
                                             branch_files_path.display().to_string(),
                                             format!("{error}"),
                                         ));
-                                    }
                                 }
                             };
                             branch_files
                         }
                         Err(error) => {
                             if error.kind() == io::ErrorKind::NotFound {
-                                Self::create_default_branch_files(&branch_files_path)?
+                                Self::default(directory, name)?
                             } else {
                                 return Err(PackrinthError::FailedToReadToString(
                                     branch_files_path.display().to_string(),
@@ -790,14 +768,19 @@ impl BranchFiles {
         }
     }
 
-    fn create_default_branch_files(branch_versions_path: &PathBuf) -> Result<Self, PackrinthError> {
-        let branch_versions = Self {
+    pub fn default(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
+        let branch_files = Self {
             info: BRANCH_FILES_INFO.to_string(),
             projects: vec![],
             files: vec![],
         };
-        json_to_file(&branch_versions, branch_versions_path)?;
-        Ok(branch_versions)
+        branch_files.save(directory, name)?;
+        Ok(branch_files)
+    }
+
+    pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
+        let branch_files_path = directory.join(name).join(BRANCH_FILES_FILE_NAME);
+        json_to_file(self, branch_files_path)
     }
 }
 
