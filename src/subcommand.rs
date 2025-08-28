@@ -573,7 +573,9 @@ impl UpdateArgs {
                     }
                 }
                 FileResult::NotFound(project_id) => {
-                    progress_bar.print_info("Not found", &project_id, Color::Yellow, Style::Bold);
+                    if verbose {
+                        progress_bar.print_info("Not found", &project_id, Color::Yellow, Style::Bold);
+                    }
                 }
                 FileResult::Err(error) => {
                     progress_bar.print_info(
