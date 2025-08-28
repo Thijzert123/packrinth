@@ -169,7 +169,14 @@ const BRANCH_FILES_INFO: &str = "This file is managed by Packrinth and not inten
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BranchFiles {
     info: String,
+    pub projects: Vec<BranchFilesProject>,
     pub files: Vec<File>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Hash, Eq, PartialEq)]
+pub struct BranchFilesProject {
+    pub name: String,
+    pub id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -728,6 +735,7 @@ impl BranchFiles {
                     };
                     Ok(Self {
                         info: BRANCH_FILES_INFO.to_string(),
+                        projects: branch_files.projects,
                         files: branch_files.files,
                     })
                 } else {
@@ -748,10 +756,17 @@ impl BranchFiles {
     fn create_default_branch_files(branch_versions_path: &PathBuf) -> Result<Self, PackrinthError> {
         let branch_versions = Self {
             info: BRANCH_FILES_INFO.to_string(),
+            projects: vec![],
             files: vec![],
         };
         json_to_file(&branch_versions, branch_versions_path)?;
         Ok(branch_versions)
+    }
+}
+
+impl PartialEq<String> for BranchFilesProject {
+    fn eq(&self, other: &String) -> bool {
+        self.id == *other
     }
 }
 

@@ -127,6 +127,10 @@ pub struct MrPack {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
+    pub project_name: String,
+
     pub path: String,
     pub hashes: FileHashes,
 
@@ -298,6 +302,7 @@ impl File {
             .to_string();
 
         FileResult::Ok(Self {
+            project_name: modrinth_project.title,
             path,
             hashes: primary_file_hashes.expect("No primary file found").clone(),
             env: Some(Env {

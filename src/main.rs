@@ -17,9 +17,9 @@ pub fn print_error<T: Display, U: Display>(error: (T, U)) {
     const ERROR_STYLE: Style = Style::new().bold().red();
     const TIP_STYLE: Style = Style::new().green();
 
-    eprintln!("{}: {}", ERROR_STYLE.apply_to("error"), error.0);
+    eprintln!("{} {}", ERROR_STYLE.apply_to("error:"), error.0);
     eprintln!();
-    eprintln!("  {}: {}", TIP_STYLE.apply_to("tip"), error.1);
+    eprintln!("  {} {}", TIP_STYLE.apply_to("tip:"), error.1);
 }
 
 // All tuples are being made on-the-fly, so adding & would just add more unnecessary syntax
@@ -62,6 +62,9 @@ enum SubCommand {
 
     /// Export a branch to a Modrinth modpack
     Export(subcommand::ExportArgs),
+
+    /// Generate documentation
+    Doc(subcommand::DocArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -144,7 +147,8 @@ impl SubCommand {
             SubCommand::Project(args) => args.run(&mut modpack, config_args),
             SubCommand::Branch(args) => args.run(&mut modpack, config_args),
             SubCommand::Update(args) => args.run(&modpack, config_args),
-            SubCommand::Export(args) => args.run(&mut modpack, config_args),
+            SubCommand::Export(args) => args.run(&modpack, config_args),
+            SubCommand::Doc(args) => args.run(&modpack, config_args),
         }
     }
 }

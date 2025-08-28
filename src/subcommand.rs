@@ -1,14 +1,14 @@
 use crate::{ConfigArgs, print_error, print_success, single_line_error};
 use clap::Parser;
 use dialoguer::Confirm;
-use packrinth::config::{BranchConfig, BranchFiles, IncludeOrExclude, Modpack, ProjectSettings};
+use packrinth::config::{BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack, ProjectSettings};
 use packrinth::modrinth::{File, FileResult};
 use packrinth::{PackrinthError, config};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::cmp;
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
 
 #[derive(Debug, Parser)]
@@ -205,6 +205,26 @@ struct RemoveBranchesArgs {
 #[derive(Parser, Debug)]
 pub struct ExportArgs {
     branch: String,
+}
+
+#[derive(Parser, Debug)]
+pub struct DocArgs {
+    #[clap(subcommand)]
+    command: DocSubCommand,
+}
+
+#[derive(Parser, Debug)]
+enum DocSubCommand {
+    Project(ProjectDocArgs),
+}
+
+#[derive(Parser, Debug)]
+struct ProjectDocArgs;
+
+#[derive(Debug)]
+struct DocMarkdownTable<'a> {
+    column_names: Vec<&'a str>,
+    project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>
 }
 
 impl ProjectArgs {
@@ -551,6 +571,10 @@ impl UpdateArgs {
                 no_alpha,
             ) {
                 FileResult::Ok(file) => {
+                    branch_files.projects.push(BranchFilesProject {
+                        name: file.project_name.clone(),
+                        id: project_id.clone(),
+                    });
                     branch_files.files.push(file);
 
                     if verbose {
@@ -574,7 +598,12 @@ impl UpdateArgs {
                 }
                 FileResult::NotFound(project_id) => {
                     if verbose {
-                        progress_bar.print_info("Not found", &project_id, Color::Yellow, Style::Bold);
+                        progress_bar.print_info(
+                            "Not found",
+                            &project_id,
+                            Color::Yellow,
+                            Style::Bold,
+                        );
                     }
                 }
                 FileResult::Err(error) => {
@@ -701,7 +730,7 @@ impl RemoveBranchesArgs {
 }
 
 impl ExportArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
+    pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) {
         match modpack.export(&self.branch) {
             Ok(modpack_path) => print_success(format!(
                 "exported {} to {}",
@@ -710,5 +739,95 @@ impl ExportArgs {
             )),
             Err(error) => print_error(error.message_and_tip()),
         }
+    }
+}
+
+impl DocArgs {
+    pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) {
+        match &self.command {
+            DocSubCommand::Project(args) => args.run(modpack, config_args),
+        }
+    }
+}
+
+impl ProjectDocArgs {
+    pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) {
+        let mut column_names = vec!["Name"];
+        // project, map: branch, whether it has the project
+        let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> = HashMap::new();
+
+        for branch in &modpack.branches {
+            column_names.push(&branch);
+            let branch_files = match BranchFiles::from_directory(&modpack.directory, &branch) {
+                Ok(branch_files) => branch_files,
+                Err(error) => {
+                    print_error(error.message_and_tip());
+                    return;
+                }
+            };
+
+            for project in &branch_files.projects {
+                // Vector in hashmap that shows which branches are compatible with a project.
+                if let Some(branch_map) = project_map.get_mut(&project) { if let None = branch_map.get(branch) {
+                    branch_map.insert(branch.clone(), Some(()));
+                } } else {
+                    let mut branch_map = HashMap::new();
+                    branch_map.insert(branch.clone(), Some(()));
+                    project_map.insert(BranchFilesProject { name: project.name.clone(), id: project.id.clone() }, branch_map);
+                }
+            }
+        }
+
+        for project in &mut project_map {
+            for branch in &modpack.branches {
+                if project.1.get(branch).is_none() {
+                    project.1.insert(branch.clone(), None);
+                }
+            }
+        }
+
+        let table = DocMarkdownTable { column_names, project_map };
+
+        println!("{table}");
+    }
+}
+// TODO if .branch_files.json is invalid while updating, remove it and generate again
+impl Display for DocMarkdownTable<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // Write column names
+        writeln!(f, "|{}|", self.column_names.join("|"))?;
+
+        // Write alignment text (:-- is left, :-: is center)
+        write!(f, "|:--|")?;
+        // Use 1..len because column names include the 'Name' for the project column
+        for _ in 1..self.column_names.len() {
+            write!(f, ":-:|")?;
+        }
+        writeln!(f)?;
+
+        let mut sorted_project_map: Vec<_> = self.project_map.iter().collect();
+        // Sort by key (human name of project)
+        sorted_project_map.sort_by(|a, b| a.0.name.cmp(&b.0.name));
+
+        for project in sorted_project_map {
+            let mut project_url = "https://modrinth.com/project/".to_string();
+            project_url.push_str(&project.0.id);
+            write!(f, "|[{}]({})|", project.0.name, project_url)?;
+
+            let mut sorted_branch_map: Vec<_> = project.1.iter().collect();
+            // Sort by key (human name of project)
+            sorted_branch_map.sort_by(|a, b| a.0.cmp(b.0));
+
+            for branch in sorted_branch_map {
+                let icon = match branch.1 {
+                    Some(()) => "✅",
+                    None => "❌",
+                };
+                write!(f, "{icon}|")?;
+            }
+            writeln!(f)?;
+        }
+
+        Ok(())
     }
 }
