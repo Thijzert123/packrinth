@@ -502,61 +502,61 @@ impl RemoveProjectsArgs {
         }
     }
 }
-
+// TODO do pass errors to main function with ?, then print_error
 impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) {
-        if let Some(branches) = &self.branches {
-            for branch in branches {
-                if let Err(error) = Self::update_branch(
-                    modpack,
-                    branch,
-                    self.no_beta,
-                    self.no_alpha,
-                    config_args.verbose,
-                ) {
-                    print_error(error.message_and_tip());
-                    return;
-                }
-            }
+        // if let Some(branches) = &self.branches {
+        //     for branch in branches {
+        //         if let Err(error) = Self::update_branch(
+        //             modpack,
+        //             branch,
+        //             self.no_beta,
+        //             self.no_alpha,
+        //             config_args.verbose,
+        //         ) {
+        //             print_error(error.message_and_tip());
+        //             return;
+        //         }
+        //     }
+        //
+        //     print_success(format!("updated {}", branches.join(", ")));
+        // } else {
+        //     for branch in &modpack.branches {
+        //         if let Err(error) = Self::update_branch(
+        //             modpack,
+        //             branch,
+        //             self.no_beta,
+        //             self.no_alpha,
+        //             config_args.verbose,
+        //         ) {
+        //             print_error(error.message_and_tip());
+        //             return;
+        //         }
+        //     }
+        //
+        //     println!();
+        //     print_success(format!("updated {}", modpack.branches.join(", ")));
+        // }
 
-            print_success(format!("updated {}", branches.join(", ")));
+        let branches = if let Some(branches) = &self.branches {
+            branches
         } else {
-            for branch in &modpack.branches {
-                if let Err(error) = Self::update_branch(
-                    modpack,
-                    branch,
-                    self.no_beta,
-                    self.no_alpha,
-                    config_args.verbose,
-                ) {
-                    print_error(error.message_and_tip());
-                    return;
-                }
-            }
+            &modpack.branches
+        };
 
-            println!();
-            print_success(format!("updated {}", modpack.branches.join(", ")));
+        if let Err(error) = Self::update_branches(modpack, branches, self.no_beta, self.no_alpha, config_args.verbose) {
+            print_error(error.message_and_tip());
         }
     }
 
-    fn update_branch(
+    fn update_branches(
         modpack: &Modpack,
-        branch_name: &String,
+        branches: &Vec<String>,
         no_beta: bool,
         no_alpha: bool,
         verbose: bool,
     ) -> Result<(), PackrinthError> {
-        let branch_config = BranchConfig::from_directory(&modpack.directory, branch_name)?;
-        let mut branch_files = match BranchFiles::from_directory(&modpack.directory, branch_name) {
-            Ok(branch_files) => branch_files,
-            Err(_error) => BranchFiles::default(&modpack.directory, branch_name)?,
-        };
-
-        // Remove all entries to ensure that there will be no duplicates if the user changes loaders
-        branch_files.files = Vec::new();
-
-        let mut progress_bar = ProgressBar::new_with_eta(modpack.projects.len());
-        progress_bar.set_action(branch_name, Color::Blue, Style::Bold);
+        let mut progress_bar = ProgressBar::new_with_eta(modpack.projects.len() * branches.len());
         if let Some((terminal_size::Width(width), terminal_size::Height(_height))) =
             terminal_size::terminal_size()
         {
@@ -566,64 +566,80 @@ impl UpdateArgs {
             progress_bar.set_width(cmp::min(width.saturating_sub(45) as usize, 50));
         }
 
-        for project in &modpack.projects {
-            let project_id = project.0;
-            let project_settings = project.1;
-            match File::from_project(
-                branch_name,
-                &branch_config,
-                project_id,
-                project_settings,
-                no_beta,
-                no_alpha,
-            ) {
-                FileResult::Ok(file) => {
-                    branch_files.projects.push(BranchFilesProject {
-                        name: file.project_name.clone(),
-                        id: project_id.clone(),
-                    });
-                    branch_files.files.push(file);
+        for branch_name in branches {
+            progress_bar.set_action(branch_name, Color::Blue, Style::Bold);
 
-                    if verbose {
-                        progress_bar.print_info("added", project_id, Color::Green, Style::Normal);
+            let branch_config = BranchConfig::from_directory(&modpack.directory, branch_name)?;
+            let mut branch_files = match BranchFiles::from_directory(&modpack.directory, branch_name) {
+                Ok(branch_files) => branch_files,
+                Err(_error) => BranchFiles::default(&modpack.directory, branch_name)?,
+            };
+
+            // Remove all entries to ensure that there will be no duplicates if the user changes loaders
+            branch_files.projects = Vec::new();
+            branch_files.files = Vec::new();
+
+            for project in &modpack.projects {
+                let project_id = project.0;
+                let project_settings = project.1;
+                match File::from_project(
+                    branch_name,
+                    &branch_config,
+                    project_id,
+                    project_settings,
+                    no_beta,
+                    no_alpha,
+                ) {
+                    FileResult::Ok(file) => {
+                        branch_files.projects.push(BranchFilesProject {
+                            name: file.project_name.clone(),
+                            id: project_id.clone(),
+                        });
+                        branch_files.files.push(file);
+
+                        if verbose {
+                            progress_bar.print_info("added", project_id, Color::Green, Style::Normal);
+                        }
                     }
-                }
-                FileResult::Skipped(project_id) => {
-                    if verbose {
-                        progress_bar.print_info(
-                            "skipped",
-                            &project_id,
-                            Color::Yellow,
-                            Style::Normal,
-                        );
+                    FileResult::Skipped(project_id) => {
+                        if verbose {
+                            progress_bar.print_info(
+                                "skipped",
+                                &project_id,
+                                Color::Yellow,
+                                Style::Normal,
+                            );
+                        }
                     }
-                }
-                FileResult::NotFound(project_id) => {
-                    if verbose {
+                    FileResult::NotFound(project_id) => {
+                        if verbose {
+                            progress_bar.print_info(
+                                "not found",
+                                &project_id,
+                                Color::Yellow,
+                                Style::Bold,
+                            );
+                        }
+                    }
+                    FileResult::Err(error) => {
                         progress_bar.print_info(
-                            "not found",
-                            &project_id,
-                            Color::Yellow,
+                            "failed",
+                            &single_line_error(error.message_and_tip()),
+                            Color::Red,
                             Style::Bold,
                         );
                     }
                 }
-                FileResult::Err(error) => {
-                    progress_bar.print_info(
-                        "failed",
-                        &single_line_error(error.message_and_tip()),
-                        Color::Red,
-                        Style::Bold,
-                    );
-                }
+
+                progress_bar.inc();
             }
 
-            progress_bar.inc();
+            branch_files.save(&modpack.directory, branch_name)?;
         }
 
-        progress_bar.finalize();
+        progress_bar.print_final_info("success:", &format!("updated {}", branches.join(", ")), Color::Green, Style::Bold);
 
-        branch_files.save(&modpack.directory, branch_name)
+        Ok(())
     }
 }
 
