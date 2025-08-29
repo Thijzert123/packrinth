@@ -717,6 +717,11 @@ impl BranchConfig {
             "  - Acceptable loaders: {}",
             Loader::pretty_value_vec(&self.acceptable_loaders).join(", ")
         );
+        if self.manual_files.is_empty() {
+            println!("  - No manual files are added");
+        } else {
+            println!("  - Has manual files added, see the configuration file");
+        }
     }
 }
 
