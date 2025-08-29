@@ -540,7 +540,7 @@ impl Modpack {
         let options = SimpleFileOptions::default();
         let zip_file = match fs::File::create(&mrpack_path) {
             Ok(zip_file) => zip_file,
-            Err(_error) => return Err(PackrinthError::FailedToCreateFile(mrpack_path.display().to_string())),
+            Err(_error) => return Err(PackrinthError::FailedToInitializeFileType(mrpack_path.display().to_string())),
         };
 
         let mut zip = ZipWriter::new(zip_file);
@@ -569,7 +569,7 @@ impl Modpack {
                 let entry = match entry {
                     Ok(entry) => entry,
                     Err(error) => {
-                        result = Err(PackrinthError::FailedToGetWalkDirEntry);
+                        result = Err(PackrinthError::FailedToGetWalkDirEntry(format!("{error}")));
                         continue;
                     }
                 };
@@ -596,7 +596,7 @@ impl Modpack {
                     let mut original_file = match fs::File::open(path) {
                         Ok(file) => file,
                         Err(_error) => {
-                            result = Err(PackrinthError::FailedToCreateFile(
+                            result = Err(PackrinthError::FailedToInitializeFileType(
                                 path.display().to_string(),
                             ));
                             continue;

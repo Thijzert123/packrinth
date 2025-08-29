@@ -5,6 +5,7 @@ pub mod modrinth;
 
 #[derive(Debug)]
 pub enum PackrinthError {
+    // TODO add original error message to more errors
     PathIsFile(String),                                // path
     FailedToCreateDir(String),                         // dir to create
     FailedToReadToString(String),                      // path to read
@@ -19,11 +20,11 @@ pub enum PackrinthError {
     ProjectAlreadyHasExclusions(String),               // project
     ProjectAlreadyHasInclusions(String),               // project
     FailedToWriteFile(String),                         // path to write to
-    FailedToCreateFile(String),                        // file to create
+    FailedToInitializeFileType(String),                // file to create
     DirectoryExpected(String),                         // path that should have been a dir
     FailedToStartZipFile(String),                      // file to start
     FailedToWriteToZip(String),                        // what to write
-    FailedToGetWalkDirEntry,                           //
+    FailedToGetWalkDirEntry(String),                   // original error
     FailedToStripPath(String),                         // original path that had to be stripped
     FailedToCopyIntoBuffer,                            //
     FailedToAddZipDir(String),                         // zip path to add (is a dir)
@@ -54,11 +55,11 @@ impl PackrinthError {
             PackrinthError::ProjectAlreadyHasExclusions(project) => (format!("project {project} already has exclusions"), "you can't have both inclusions and exclusions for one project".to_string()),
             PackrinthError::ProjectAlreadyHasInclusions(project) => (format!("project {project} already has inclusions"), "you can't have both inclusions and exclusions for one project".to_string()),
             PackrinthError::FailedToWriteFile(path_to_write_to) => (format!("failed to write to file {path_to_write_to}"), "check if you have sufficient permissions and if the file exists".to_string()),
-            PackrinthError::FailedToCreateFile(file_to_create) => (format!("failed to create file {file_to_create}"), "check if you have sufficient permissions and if the path already exists".to_string()),
+            PackrinthError::FailedToInitializeFileType(file_to_create) => (format!("failed to create file {file_to_create}"), "check if you have sufficient permissions and if the path already exists".to_string()),
             PackrinthError::DirectoryExpected(path_should_have_been_dir) => (format!("expected a directory at {path_should_have_been_dir}"), "remove the path if possible".to_string()),
             PackrinthError::FailedToStartZipFile(file_to_start) => (format!("failed to start zip file at {file_to_start}"), file_an_issue),
             PackrinthError::FailedToWriteToZip(what_to_write) => (format!("failed to write {what_to_write} to zip"), file_an_issue),
-            PackrinthError::FailedToGetWalkDirEntry => ("failed to get entry from WalkDir".to_string(), file_an_issue),
+            PackrinthError::FailedToGetWalkDirEntry(original_error) => (format!("failed to get entry from WalkDir: {original_error}"), file_an_issue),
             PackrinthError::FailedToStripPath(original_path_to_be_stripped) => (format!("failed to strip path {original_path_to_be_stripped}"), file_an_issue),
             PackrinthError::FailedToCopyIntoBuffer => ("failed to copy data into buffer for zip".to_string(), file_an_issue),
             PackrinthError::FailedToAddZipDir(zip_dir) => (format!("failed to add zip directory {zip_dir}"), file_an_issue),
