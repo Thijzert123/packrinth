@@ -65,7 +65,6 @@ pub struct Modpack {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectSettings {
     // IndexMap<Branch, Project version id>
-    #[serde(flatten)]
     pub version_overrides: Option<IndexMap<String, String>>,
 
     #[serde(flatten)]

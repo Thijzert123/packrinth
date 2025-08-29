@@ -272,7 +272,7 @@ impl ListProjectsArgs {
         for project in projects {
             println!("{}", project.0);
 
-            if let Some(overrides) = &project.1.version_overrides && !overrides.is_empty() {
+            if let Some(overrides) = &project.1.version_overrides {
                 println!("  - Overrides:");
                 for version_override in overrides {
                     println!("    - {}: {}", version_override.0, version_override.1);
