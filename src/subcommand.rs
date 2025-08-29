@@ -504,7 +504,7 @@ impl RemoveProjectsArgs {
         }
     }
 }
-// TODO do pass errors to main function with ?, then print_error
+
 impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) {
         let branches = if let Some(branches) = &self.branches {
@@ -513,7 +513,13 @@ impl UpdateArgs {
             &modpack.branches
         };
 
-        if let Err(error) = Self::update_branches(modpack, branches, self.no_beta, self.no_alpha, config_args.verbose) {
+        if let Err(error) = Self::update_branches(
+            modpack,
+            branches,
+            self.no_beta,
+            self.no_alpha,
+            config_args.verbose,
+        ) {
             print_error(error.message_and_tip());
         }
     }
@@ -539,10 +545,11 @@ impl UpdateArgs {
             progress_bar.set_action(branch_name, Color::Blue, Style::Bold);
 
             let branch_config = BranchConfig::from_directory(&modpack.directory, branch_name)?;
-            let mut branch_files = match BranchFiles::from_directory(&modpack.directory, branch_name) {
-                Ok(branch_files) => branch_files,
-                Err(_error) => BranchFiles::default(&modpack.directory, branch_name)?,
-            };
+            let mut branch_files =
+                match BranchFiles::from_directory(&modpack.directory, branch_name) {
+                    Ok(branch_files) => branch_files,
+                    Err(_error) => BranchFiles::default(&modpack.directory, branch_name)?,
+                };
 
             // Remove all entries to ensure that there will be no duplicates if the user changes loaders
             branch_files.projects = Vec::new();
@@ -567,7 +574,12 @@ impl UpdateArgs {
                         branch_files.files.push(file);
 
                         if verbose {
-                            progress_bar.print_info("added", project_id, Color::Green, Style::Normal);
+                            progress_bar.print_info(
+                                "added",
+                                project_id,
+                                Color::Green,
+                                Style::Normal,
+                            );
                         }
                     }
                     FileResult::Skipped(project_id) => {
@@ -612,14 +624,24 @@ impl UpdateArgs {
                 branch_files.files.push(manual_file.clone());
 
                 if verbose {
-                    progress_bar.print_info("added", &manual_file.project_name, Color::Green, Style::Normal);
+                    progress_bar.print_info(
+                        "added",
+                        &manual_file.project_name,
+                        Color::Green,
+                        Style::Normal,
+                    );
                 }
             }
 
             branch_files.save(&modpack.directory, branch_name)?;
         }
 
-        progress_bar.print_final_info("success:", &format!("updated {}", branches.join(", ")), Color::Green, Style::Bold);
+        progress_bar.print_final_info(
+            "success:",
+            &format!("updated {}", branches.join(", ")),
+            Color::Green,
+            Style::Bold,
+        );
 
         Ok(())
     }
