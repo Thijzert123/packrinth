@@ -33,7 +33,7 @@ enum ProjectSubCommand {
     Add(AddProjectsArgs),
 
     /// Add a version override to a project in this modpack
-    Override(OverrideProjectArgs),
+    VersionOverride(VersionOverrideProjectArgs),
 
     /// Add an include list to a project in this modpack
     Include(IncludeProjectArgs),
@@ -65,21 +65,21 @@ struct AddProjectsArgs {
 }
 
 #[derive(Parser, Debug)]
-struct OverrideProjectArgs {
+struct VersionOverrideProjectArgs {
     #[clap(subcommand)]
-    command: OverrideSubCommand,
+    command: VersionOverrideSubCommand,
 }
 
 #[derive(Parser, Debug)]
-enum OverrideSubCommand {
-    Add(AddOverrideArgs),
+enum VersionOverrideSubCommand {
+    Add(AddVersionOverrideArgs),
 
     #[clap(visible_alias = "rm")]
-    Remove(RemoveOverrideArgs),
+    Remove(RemoveVersionOverrideArgs),
 }
 
 #[derive(Parser, Debug)]
-struct AddOverrideArgs {
+struct AddVersionOverrideArgs {
     project: String,
 
     branch: String,
@@ -88,7 +88,7 @@ struct AddOverrideArgs {
 }
 
 #[derive(Parser, Debug)]
-struct RemoveOverrideArgs {
+struct RemoveVersionOverrideArgs {
     project: String,
 
     branch: Option<String>,
@@ -238,7 +238,7 @@ impl ProjectArgs {
             match command {
                 ProjectSubCommand::List(args) => args.run(modpack, config_args),
                 ProjectSubCommand::Add(args) => args.run(modpack, config_args),
-                ProjectSubCommand::Override(args) => args.run(modpack, config_args),
+                ProjectSubCommand::VersionOverride(args) => args.run(modpack, config_args),
                 ProjectSubCommand::Include(args) => args.run(modpack, config_args),
                 ProjectSubCommand::Exclude(args) => args.run(modpack, config_args),
                 ProjectSubCommand::Remove(args) => args.run(modpack, config_args),
@@ -315,16 +315,16 @@ impl AddProjectsArgs {
     }
 }
 
-impl OverrideProjectArgs {
+impl VersionOverrideProjectArgs {
     pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) {
         match &self.command {
-            OverrideSubCommand::Add(args) => args.run(modpack, config_args),
-            OverrideSubCommand::Remove(args) => args.run(modpack, config_args),
+            VersionOverrideSubCommand::Add(args) => args.run(modpack, config_args),
+            VersionOverrideSubCommand::Remove(args) => args.run(modpack, config_args),
         }
     }
 }
 
-impl AddOverrideArgs {
+impl AddVersionOverrideArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
         if let Err(error) =
             modpack.add_project_override(&self.project, &self.branch, &self.project_version_id)
@@ -342,7 +342,7 @@ impl AddOverrideArgs {
     }
 }
 
-impl RemoveOverrideArgs {
+impl RemoveVersionOverrideArgs {
     pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) {
         if self.all {
             if let Err(error) = modpack.remove_all_project_overrides(&self.project) {
