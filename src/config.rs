@@ -520,7 +520,8 @@ impl Modpack {
         let branch_files = BranchFiles::from_directory(&self.directory, branch)?;
 
         let mrpack_file_name = format!("{}_{}.mrpack", self.name, branch_config.version);
-        let mrpack_path = self.directory.join(&mrpack_file_name);
+        let branch_dir = self.directory.join(branch);
+        let mrpack_path = branch_dir.join(&mrpack_file_name);
 
         let mrpack = MrPack {
             format_version: MODRINTH_PACK_FORMAT,
@@ -537,9 +538,9 @@ impl Modpack {
             Err(_error) => return Err(PackrinthError::FailedToSerialize),
         };
         let options = SimpleFileOptions::default();
-        let zip_file = match fs::File::create(&mrpack_json) {
+        let zip_file = match fs::File::create(&mrpack_path) {
             Ok(zip_file) => zip_file,
-            Err(_error) => return Err(PackrinthError::FailedToCreateFile(mrpack_json)),
+            Err(_error) => return Err(PackrinthError::FailedToCreateFile(mrpack_path.display().to_string())),
         };
 
         let mut zip = ZipWriter::new(zip_file);
@@ -552,17 +553,22 @@ impl Modpack {
             return Err(PackrinthError::FailedToWriteToZip(mrpack_json));
         }
 
-        let branch_dir = self.directory.join(branch);
-
         // If some items are skipped in the loop, this is set to Err, and it will be returned at the end.
         let mut result = Ok(());
 
         // Loop every file/dir in the override dirs
         for override_dir in OVERRIDE_DIRS {
-            for entry in WalkDir::new(branch_dir.join(override_dir)) {
+            let override_dir_path = branch_dir.join(override_dir);
+
+            // Skip override dir if it doesn't exist.
+            if let Ok(exists) = fs::exists(&override_dir_path) && !exists {
+                continue;
+            }
+
+            for entry in WalkDir::new(override_dir_path) {
                 let entry = match entry {
                     Ok(entry) => entry,
-                    Err(_error) => {
+                    Err(error) => {
                         result = Err(PackrinthError::FailedToGetWalkDirEntry);
                         continue;
                     }
