@@ -269,11 +269,10 @@ impl ListProjectsArgs {
             return;
         }
 
-        let mut iter = projects.iter().peekable();
-        while let Some(project) = iter.next() {
+        for project in projects {
             println!("{}", project.0);
 
-            if let Some(overrides) = &project.1.version_overrides {
+            if let Some(overrides) = &project.1.version_overrides && !overrides.is_empty() {
                 println!("  - Overrides:");
                 for version_override in overrides {
                     println!("    - {}: {}", version_override.0, version_override.1);
@@ -289,11 +288,6 @@ impl ListProjectsArgs {
                         println!("  - Exclusions: {}", exclusions.join(", "));
                     }
                 }
-            }
-
-            // Print new line between projects, but not at the very end.
-            if iter.peek().is_some() {
-                println!();
             }
         }
     }
@@ -753,7 +747,7 @@ impl RemoveBranchesArgs {
 
 impl ExportArgs {
     pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) {
-        match modpack.export(&self.branch) {
+        match modpack.export_branch(&self.branch) {
             Ok(modpack_path) => print_success(format!(
                 "exported {} to {}",
                 self.branch,
