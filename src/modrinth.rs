@@ -59,7 +59,7 @@ pub enum ProjectType {
     Shader,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum SideSupport {
     #[serde(rename = "required")]
     Required,
@@ -124,7 +124,7 @@ pub struct MrPack {
     pub dependencies: Dependencies,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
     #[serde(skip_serializing)]
@@ -141,7 +141,7 @@ pub struct File {
     pub file_size: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Env {
     pub client: SideSupport,

@@ -91,6 +91,7 @@ pub struct BranchConfig {
     pub main_mod_loader: MainLoader,
     pub loader_version: String,
     pub acceptable_loaders: Vec<Loader>,
+    pub manual_files: Vec<File>,
 }
 
 /// Loaders that a launcher has to install with the modpack.
@@ -188,7 +189,9 @@ pub struct BranchFiles {
 #[derive(Debug, Serialize, Deserialize, Hash, Eq, PartialEq, Clone)]
 pub struct BranchFilesProject {
     pub name: String,
-    pub id: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -670,14 +673,7 @@ impl BranchConfig {
                             }
                         }
                     };
-                    Ok(Self {
-                        version: branch_config.version,
-                        main_minecraft_version: branch_config.main_minecraft_version,
-                        acceptable_minecraft_versions: branch_config.acceptable_minecraft_versions,
-                        main_mod_loader: branch_config.main_mod_loader,
-                        loader_version: branch_config.loader_version,
-                        acceptable_loaders: branch_config.acceptable_loaders,
-                    })
+                    Ok(branch_config)
                 } else {
                     Err(PackrinthError::DirectoryExpected(
                         branch_dir.display().to_string(),
@@ -696,6 +692,7 @@ impl BranchConfig {
             main_mod_loader: MainLoader::Fabric,
             loader_version: "0.17.2".to_string(),
             acceptable_loaders: vec![Loader::Minecraft, Loader::VanillaShader, Loader::Fabric],
+            manual_files: vec![]
         };
         json_to_file(&branch_config, branch_config_path)?;
         Ok(branch_config)
@@ -783,7 +780,11 @@ impl BranchFiles {
 
 impl PartialEq<String> for BranchFilesProject {
     fn eq(&self, other: &String) -> bool {
-        self.id == *other
+        if let Some(id) = &self.id {
+            *id == *other
+        } else {
+            false
+        }
     }
 }
 

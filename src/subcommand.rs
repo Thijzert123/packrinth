@@ -26,7 +26,7 @@ pub struct ProjectArgs {
 #[derive(Parser, Debug)]
 enum ProjectSubCommand {
     /// List all projects that are currently added to this modpack
-    #[clap(alias = "ls")]
+    #[clap(visible_alias = "ls")]
     List(ListProjectsArgs),
 
     /// Add projects to this modpack
@@ -42,7 +42,7 @@ enum ProjectSubCommand {
     Exclude(ExcludeProjectArgs),
 
     /// Remove projects from this modpack
-    #[clap(alias = "rm")]
+    #[clap(visible_alias = "rm")]
     Remove(RemoveProjectsArgs),
 }
 
@@ -73,6 +73,8 @@ struct OverrideProjectArgs {
 #[derive(Parser, Debug)]
 enum OverrideSubCommand {
     Add(AddOverrideArgs),
+
+    #[clap(visible_alias = "rm")]
     Remove(RemoveOverrideArgs),
 }
 
@@ -105,7 +107,7 @@ struct IncludeProjectArgs {
 enum IncludeSubCommand {
     Add(AddInclusionsArgs),
 
-    #[clap(alias = "rm")]
+    #[clap(visible_alias = "rm")]
     Remove(RemoveInclusionsArgs),
 }
 
@@ -136,7 +138,7 @@ struct ExcludeProjectArgs {
 enum ExcludeSubCommand {
     Add(AddExclusionsArgs),
 
-    #[clap(alias = "rm")]
+    #[clap(visible_alias = "rm")]
     Remove(RemoveExclusionsArgs),
 }
 
@@ -183,12 +185,12 @@ pub struct BranchArgs {
 
 #[derive(Parser, Debug)]
 enum BranchSubCommand {
-    #[clap(alias = "ls")]
+    #[clap(visible_alias = "ls")]
     List(ListBranchesArgs),
 
     Add(AddBranchesArgs),
 
-    #[clap(alias = "rm")]
+    #[clap(visible_alias = "rm")]
     Remove(RemoveBranchesArgs),
 }
 
@@ -505,39 +507,6 @@ impl RemoveProjectsArgs {
 // TODO do pass errors to main function with ?, then print_error
 impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) {
-        // if let Some(branches) = &self.branches {
-        //     for branch in branches {
-        //         if let Err(error) = Self::update_branch(
-        //             modpack,
-        //             branch,
-        //             self.no_beta,
-        //             self.no_alpha,
-        //             config_args.verbose,
-        //         ) {
-        //             print_error(error.message_and_tip());
-        //             return;
-        //         }
-        //     }
-        //
-        //     print_success(format!("updated {}", branches.join(", ")));
-        // } else {
-        //     for branch in &modpack.branches {
-        //         if let Err(error) = Self::update_branch(
-        //             modpack,
-        //             branch,
-        //             self.no_beta,
-        //             self.no_alpha,
-        //             config_args.verbose,
-        //         ) {
-        //             print_error(error.message_and_tip());
-        //             return;
-        //         }
-        //     }
-        //
-        //     println!();
-        //     print_success(format!("updated {}", modpack.branches.join(", ")));
-        // }
-
         let branches = if let Some(branches) = &self.branches {
             branches
         } else {
@@ -593,7 +562,7 @@ impl UpdateArgs {
                     FileResult::Ok(file) => {
                         branch_files.projects.push(BranchFilesProject {
                             name: file.project_name.clone(),
-                            id: project_id.clone(),
+                            id: Some(project_id.clone()),
                         });
                         branch_files.files.push(file);
 
@@ -632,6 +601,19 @@ impl UpdateArgs {
                 }
 
                 progress_bar.inc();
+            }
+
+            // Copy manual files
+            for manual_file in branch_config.manual_files {
+                branch_files.projects.push(BranchFilesProject {
+                    name: manual_file.project_name.clone(),
+                    id: None,
+                });
+                branch_files.files.push(manual_file.clone());
+
+                if verbose {
+                    progress_bar.print_info("added", &manual_file.project_name, Color::Green, Style::Normal);
+                }
             }
 
             branch_files.save(&modpack.directory, branch_name)?;
@@ -840,9 +822,14 @@ impl Display for DocMarkdownTable<'_> {
 
         let mut iter = sorted_project_map.iter().peekable();
         while let Some(project) = iter.next() {
-            let mut project_url = "https://modrinth.com/project/".to_string();
-            project_url.push_str(&project.0.id);
-            write!(f, "|[{}]({})|", project.0.name, project_url)?;
+            if let Some(id) = &project.0.id {
+                // If project has an id (not a manual file), write a Markdown link.
+                let mut project_url = "https://modrinth.com/project/".to_string();
+                project_url.push_str(id);
+                write!(f, "|[{}]({})|", project.0.name, project_url)?;
+            } else {
+                write!(f, "|{}|", project.0.name)?;
+            }
 
             let mut sorted_branch_map: Vec<_> = project.1.iter().collect();
             // Sort by key (human name of project)
