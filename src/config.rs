@@ -91,6 +91,9 @@ pub struct BranchConfig {
     pub main_mod_loader: MainLoader,
     pub loader_version: String,
     pub acceptable_loaders: Vec<Loader>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
     pub manual_files: Vec<File>,
 }
 
@@ -692,7 +695,7 @@ impl BranchConfig {
             main_mod_loader: MainLoader::Fabric,
             loader_version: "0.17.2".to_string(),
             acceptable_loaders: vec![Loader::Minecraft, Loader::VanillaShader, Loader::Fabric],
-            manual_files: vec![]
+            manual_files: vec![],
         };
         json_to_file(&branch_config, branch_config_path)?;
         Ok(branch_config)
