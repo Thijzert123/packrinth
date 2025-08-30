@@ -20,5 +20,9 @@ console = "0.16.0"
 indexmap = { version = "2.11.0", features = ["serde"] }
 reqwest-retry = "0.7.0"
 reqwest-middleware = "0.4.2"
-tokio = {  version = "1.47.1", features = ["rt", "rt-multi-thread"] }
+tokio = { version = "1.47.1", features = ["rt", "rt-multi-thread"] }
 clap_complete = "4.5.57"
+
+[build-dependencies]
+clap = { version = "4.5.46", features = ["derive"] }
+clap-markdown = "0.1.5"

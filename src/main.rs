@@ -1,11 +1,11 @@
 #![warn(clippy::pedantic)]
+mod cli;
 mod subcommand;
 
+use crate::cli::Cli;
 use clap::Parser;
 use console::Style;
-use packrinth::config::{self, Modpack};
 use std::fmt::Display;
-use std::path::PathBuf;
 
 fn main() {
     Cli::parse().run();
@@ -35,124 +35,4 @@ pub fn print_success<T: Display>(message: T) {
     const SUCCESS_STYLE: Style = Style::new().bold().green();
 
     println!("{} {}", SUCCESS_STYLE.apply_to("success:"), message);
-}
-
-#[derive(Parser, Debug)]
-pub struct Cli {
-    #[clap(subcommand)]
-    subcommand: SubCommand,
-
-    #[clap(flatten)]
-    config_args: ConfigArgs,
-}
-
-#[derive(Parser, Debug)]
-enum SubCommand {
-    /// Initialize a new modpack project
-    Init,
-
-    /// Add or remove Modrinth projects and tweak them for your branches
-    Project(subcommand::ProjectArgs),
-
-    /// Create and remove branches that separate your Modpack for various versions
-    Branch(subcommand::BranchArgs),
-
-    /// Update branches with the newest project versions
-    Update(subcommand::UpdateArgs),
-
-    /// Export a branch to a Modrinth modpack
-    Export(subcommand::ExportArgs),
-
-    /// Generate Markdown documentation
-    Doc(subcommand::DocArgs),
-
-    /// Generate shell completion for Packrinth
-    Completions(subcommand::CompletionsArgs),
-}
-
-#[derive(Parser, Debug)]
-struct ConfigArgs {
-    /// Set the root directory of the modpack (directory of modpack.json)
-    #[clap(short, long, global = true)]
-    pub directory: Option<PathBuf>,
-
-    /// Output more information about the current process
-    #[clap(short, long, global = true)]
-    pub verbose: bool,
-}
-
-impl Cli {
-    fn run(&mut self) {
-        self.subcommand.run(&self.config_args);
-    }
-}
-
-impl SubCommand {
-    fn run(&self, config_args: &ConfigArgs) {
-        let current_dir = match &config_args.directory {
-            Some(dir) => dir,
-            None => match std::env::current_dir() {
-                Ok(current_dir) => &current_dir.clone(),
-                Err(_error) => {
-                    print_error((
-                        "couldn't get current directory",
-                        "the current directory may not exist or you have insufficient permissions to access the current directory",
-                    ));
-                    return;
-                }
-            },
-        };
-
-        if let Self::Init = self {
-            let modpack = match Modpack::new(current_dir) {
-                Ok(modpack) => modpack,
-                Err(error) => {
-                    print_error(error.message_and_tip());
-                    return;
-                }
-            };
-
-            match modpack.save() {
-                Ok(()) => print_success(format!(
-                    "created new modpack instance in directory {}",
-                    current_dir.display()
-                )),
-                Err(error) => print_error(error.message_and_tip()),
-            }
-
-            return;
-        }
-
-        let mut modpack = match Modpack::from_directory(current_dir) {
-            Ok(modpack) => modpack,
-            Err(error) => {
-                print_error(error.message_and_tip());
-                return;
-            }
-        };
-
-        if modpack.pack_format != config::CURRENT_PACK_FORMAT {
-            print_error((
-                format!(
-                    "pack format {} is not supported by this Packrinth version",
-                    modpack.pack_format
-                ),
-                format!(
-                    "please use a configuration with pack format {}",
-                    config::CURRENT_PACK_FORMAT
-                ),
-            ));
-            return;
-        }
-
-        match self {
-            SubCommand::Init => (),
-            SubCommand::Project(args) => args.run(&mut modpack, config_args),
-            SubCommand::Branch(args) => args.run(&mut modpack, config_args),
-            SubCommand::Update(args) => args.run(&modpack, config_args),
-            SubCommand::Export(args) => args.run(&modpack, config_args),
-            SubCommand::Doc(args) => args.run(&modpack, config_args),
-            SubCommand::Completions(args) => args.run(&modpack, config_args),
-        }
-    }
 }

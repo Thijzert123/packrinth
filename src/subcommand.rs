@@ -1,5 +1,6 @@
-use crate::{ConfigArgs, print_error, print_success, single_line_error, Cli};
-use clap::{CommandFactory, Parser};
+use crate::{Cli, print_error, print_success, single_line_error};
+use clap::CommandFactory;
+use clap_complete::{Generator, shells};
 use dialoguer::Confirm;
 use indexmap::IndexMap;
 use packrinth::config::{
@@ -9,297 +10,89 @@ use packrinth::modrinth::{File, FileResult};
 use packrinth::{PackrinthError, config};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
-use std::{cmp, io};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
-use clap_complete::{shells, Generator};
+use std::{cmp, io};
 
-#[derive(Debug, Parser)]
-pub struct ProjectArgs {
-    #[clap(subcommand)]
-    command: Option<ProjectSubCommand>,
+// Allow because we need all of them
+#[allow(clippy::wildcard_imports)]
+use crate::cli::*;
 
-    /// List information about added projects. If none are specified, all projects will be listed.
-    projects: Option<Vec<String>>,
+impl Cli {
+    pub fn run(&mut self) {
+        self.subcommand.run(&self.config_args);
+    }
 }
 
-#[derive(Parser, Debug)]
-enum ProjectSubCommand {
-    /// List all projects that are currently added to this modpack
-    #[clap(visible_alias = "ls")]
-    List(ListProjectsArgs),
+impl SubCommand {
+    fn run(&self, config_args: &ConfigArgs) {
+        let current_dir = match &config_args.directory {
+            Some(dir) => dir,
+            None => match std::env::current_dir() {
+                Ok(current_dir) => &current_dir.clone(),
+                Err(_error) => {
+                    print_error((
+                        "couldn't get current directory",
+                        "the current directory may not exist or you have insufficient permissions to access the current directory",
+                    ));
+                    return;
+                }
+            },
+        };
 
-    /// Add projects to this modpack
-    Add(AddProjectsArgs),
+        if let Self::Init = self {
+            let modpack = match Modpack::new(current_dir) {
+                Ok(modpack) => modpack,
+                Err(error) => {
+                    print_error(error.message_and_tip());
+                    return;
+                }
+            };
 
-    /// Add a version override to a project in this modpack
-    VersionOverride(VersionOverrideProjectArgs),
+            match modpack.save() {
+                Ok(()) => print_success(format!(
+                    "created new modpack instance in directory {}",
+                    current_dir.display()
+                )),
+                Err(error) => print_error(error.message_and_tip()),
+            }
 
-    /// Add inclusions to a project in this modpack
-    Inclusions(InclusionsProjectArgs),
+            return;
+        }
 
-    /// Add exclusions to a project in this modpack
-    Exclusions(ExclusionsProjectArgs),
+        let mut modpack = match Modpack::from_directory(current_dir) {
+            Ok(modpack) => modpack,
+            Err(error) => {
+                print_error(error.message_and_tip());
+                return;
+            }
+        };
 
-    /// Remove projects from this modpack
-    #[clap(visible_alias = "rm")]
-    Remove(RemoveProjectsArgs),
-}
+        if modpack.pack_format != config::CURRENT_PACK_FORMAT {
+            print_error((
+                format!(
+                    "pack format {} is not supported by this Packrinth version",
+                    modpack.pack_format
+                ),
+                format!(
+                    "please use a configuration with pack format {}",
+                    config::CURRENT_PACK_FORMAT
+                ),
+            ));
+            return;
+        }
 
-#[derive(Parser, Debug)]
-struct ListProjectsArgs;
-
-#[derive(Parser, Debug)]
-struct AddProjectsArgs {
-    // Allow so we don't have to put the slug between `
-    #[allow(clippy::doc_markdown)]
-    /// Projects to add
-    ///
-    /// The projects must be from Modrinth. You have to specify either the human-readable
-    /// slug that appears in the URL (fabric-api) or the slug (P7dR8mSH).
-    projects: Vec<String>,
-
-    /// Add branch inclusions for the projects that you are adding
-    ///
-    /// The added projects will only be updated for the branches you specify.
-    /// For a project, you can only have inclusions OR exclusions.
-    #[clap(short, long, group = "include_or_exclude")]
-    inclusions: Option<Vec<String>>,
-
-    /// Add branch exclusions for the projects that you are adding
-    ///
-    /// The added projects will not be updated for the branches you specify,
-    /// but the unspecified branches will be updated with this project.
-    /// For a project, you can only have inclusions OR exclusions.
-    #[clap(short, long, group = "include_or_exclude")]
-    exclusions: Option<Vec<String>>,
-}
-
-#[derive(Parser, Debug)]
-struct VersionOverrideProjectArgs {
-    #[clap(subcommand)]
-    command: VersionOverrideSubCommand,
-}
-
-#[derive(Parser, Debug)]
-enum VersionOverrideSubCommand {
-    /// Add a version override to a project
-    Add(AddVersionOverrideArgs),
-
-    /// Remove a version override from a project
-    #[clap(visible_alias = "rm")]
-    Remove(RemoveVersionOverrideArgs),
-}
-
-#[derive(Parser, Debug)]
-struct AddVersionOverrideArgs {
-    /// Project to add the version override to
-    project: String,
-
-    /// Branch that you want to be overridden
-    branch: String,
-
-    // Allow so we don't have to put the slug between `
-    #[allow(clippy::doc_markdown)]
-    /// The version ID of the override
-    ///
-    /// This must be a Modrinth version ID. You can find this by going to a project on the
-    /// Modrinth website, navigating to the version that you want to override and copying
-    /// the version ID that looks something like this: Q8ssLFZp
-    project_version_id: String,
-}
-
-#[derive(Parser, Debug)]
-struct RemoveVersionOverrideArgs {
-    /// Project to remove the override from
-    project: String,
-
-    /// Branch to remove the override from
-    branch: Option<String>,
-
-    /// Remove all overrides from a project
-    #[clap(short, long)]
-    all: bool,
-}
-
-#[derive(Parser, Debug)]
-struct InclusionsProjectArgs {
-    #[clap(subcommand)]
-    command: InclusionsSubCommand,
-}
-
-#[derive(Parser, Debug)]
-enum InclusionsSubCommand {
-    /// Add inclusions to a project
-    Add(AddInclusionsArgs),
-
-    /// Remove inclusions from a project
-    #[clap(visible_alias = "rm")]
-    Remove(RemoveInclusionsArgs),
-}
-
-#[derive(Parser, Debug)]
-struct AddInclusionsArgs {
-    /// Project to add inclusions to
-    project: String,
-
-    /// Branches to include
-    inclusions: Vec<String>,
-}
-
-#[derive(Parser, Debug)]
-struct RemoveInclusionsArgs {
-    /// Project to remove inclusions from
-    project: String,
-
-    /// Inclusions to remove
-    inclusions: Option<Vec<String>>,
-
-    /// Remove all inclusions from the project
-    #[clap(short, long)]
-    all: bool,
-}
-
-#[derive(Parser, Debug)]
-struct ExclusionsProjectArgs {
-    #[clap(subcommand)]
-    command: ExclusionsSubCommand,
-}
-
-#[derive(Parser, Debug)]
-enum ExclusionsSubCommand {
-    /// Add exclusions to a project
-    Add(AddExclusionsArgs),
-
-    #[clap(visible_alias = "rm")]
-    /// Remove exclusions from a project
-    Remove(RemoveExclusionsArgs),
-}
-
-#[derive(Parser, Debug)]
-struct AddExclusionsArgs {
-    /// Project to add exclusions to
-    project: String,
-
-    /// Branches to exclude
-    exclusions: Vec<String>,
-}
-
-#[derive(Parser, Debug)]
-struct RemoveExclusionsArgs {
-    /// Project to remove exclusions from
-    project: String,
-
-    /// Exclusions to remove
-    exclusions: Option<Vec<String>>,
-
-    /// Remove all exclusions from the project
-    #[clap(short, long)]
-    all: bool,
-}
-
-#[derive(Parser, Debug)]
-struct RemoveProjectsArgs {
-    /// Projects to remove from the modpack
-    projects: Vec<String>,
-}
-
-#[derive(Debug, Parser)]
-pub struct UpdateArgs {
-    /// Branches to update. If no branches are specified, all branches will be updated.
-    branches: Option<Vec<String>>,
-
-    /// Don't allow alpha releases to be added to branch files
-    #[clap(long)]
-    no_alpha: bool,
-
-    /// Don't allow beta releases to be added to branch files
-    #[clap(long)]
-    no_beta: bool,
-}
-
-#[derive(Debug, Parser)]
-pub struct BranchArgs {
-    #[clap(subcommand)]
-    command: Option<BranchSubCommand>,
-
-    /// Branches to list. If none are specified, you must use a subcommand.
-    branches: Option<Vec<String>>,
-}
-
-#[derive(Parser, Debug)]
-enum BranchSubCommand {
-    /// List information about all branches
-    #[clap(visible_alias = "ls")]
-    List(ListBranchesArgs),
-
-    /// Add new branches
-    Add(AddBranchesArgs),
-
-    /// Remove branches
-    #[clap(visible_alias = "rm")]
-    Remove(RemoveBranchesArgs),
-}
-
-#[derive(Parser, Debug)]
-struct ListBranchesArgs;
-
-#[derive(Parser, Debug)]
-struct AddBranchesArgs {
-    /// Names of new branches to add
-    branches: Vec<String>,
-}
-
-#[derive(Parser, Debug)]
-struct RemoveBranchesArgs {
-    /// Names of branches to remove
-    branches: Vec<String>,
-}
-
-#[derive(Parser, Debug)]
-pub struct ExportArgs {
-    /// Branches to export. If no branches are specified, all branches will be exported.
-    branches: Option<Vec<String>>,
-}
-
-#[derive(Parser, Debug)]
-pub struct DocArgs {
-    #[clap(subcommand)]
-    command: DocSubCommand,
-}
-
-#[derive(Parser, Debug)]
-enum DocSubCommand {
-    /// Generate documentation based on the local project
-    Project(ProjectDocArgs),
-}
-
-#[derive(Parser, Debug)]
-struct ProjectDocArgs;
-
-#[derive(Debug)]
-struct DocMarkdownTable<'a> {
-    column_names: Vec<&'a str>,
-    project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
-}
-
-#[derive(Parser, Debug)]
-pub struct CompletionsArgs {
-    /// The shell to generate the completion for
-    shell: CompletionShell,
-}
-
-#[derive(clap::ValueEnum, Debug, Clone)]
-enum CompletionShell {
-    Bash,
-    Elvish,
-    Fish,
-
-    #[clap(name = "powershell")]
-    PowerShell,
-
-    Zsh,
+        match self {
+            SubCommand::Init => (),
+            SubCommand::Project(args) => args.run(&mut modpack, config_args),
+            SubCommand::Branch(args) => args.run(&mut modpack, config_args),
+            SubCommand::Update(args) => args.run(&modpack, config_args),
+            SubCommand::Export(args) => args.run(&modpack, config_args),
+            SubCommand::Doc(args) => args.run(&modpack, config_args),
+            SubCommand::Completions(args) => args.run(&modpack, config_args),
+        }
+    }
 }
 
 impl ProjectArgs {
@@ -843,6 +636,12 @@ impl DocArgs {
     }
 }
 
+#[derive(Debug)]
+struct DocMarkdownTable<'a> {
+    column_names: Vec<&'a str>,
+    project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
+}
+
 impl ProjectDocArgs {
     // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
     #[allow(clippy::unused_self)]
@@ -959,6 +758,11 @@ impl CompletionsArgs {
     }
 
     fn print_completions<G: Generator>(generator: G, cmd: &mut clap::Command) {
-        clap_complete::generate(generator, cmd, cmd.get_name().to_string(), &mut io::stdout());
+        clap_complete::generate(
+            generator,
+            cmd,
+            cmd.get_name().to_string(),
+            &mut io::stdout(),
+        );
     }
 }
