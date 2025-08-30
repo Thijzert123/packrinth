@@ -228,8 +228,17 @@ impl File {
             }
         }
 
-        let loaders = Loader::modrinth_value_vec(&branch_config.acceptable_loaders);
-        let game_versions = &branch_config.acceptable_minecraft_versions;
+        let mut loaders = Loader::modrinth_value_vec(&branch_config.acceptable_loaders);
+        loaders.push(branch_config.mod_loader.modrinth_value());
+
+        // Default loaders that will always be added
+        loaders.push(Loader::Minecraft.modrinth_value());
+        loaders.push(Loader::VanillaShader.modrinth_value());
+
+        // Always add main minecraft version to acceptable minecraft versions
+        let mut game_versions = vec![branch_config.minecraft_version.clone()];
+        game_versions.extend(branch_config.acceptable_minecraft_versions.clone());
+
         let mut api_endpoint = format!(
             "/project/{project_id}/version?loaders={loaders:?}&game_versions={game_versions:?}"
         );

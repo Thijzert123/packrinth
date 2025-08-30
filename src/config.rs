@@ -85,10 +85,19 @@ const BRANCH_CONFIG_FILE_NAME: &str = "branch.json";
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BranchConfig {
     pub version: String,
-    pub main_minecraft_version: String,
+
+    pub minecraft_version: String,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
     pub acceptable_minecraft_versions: Vec<String>,
-    pub main_mod_loader: MainLoader,
+
+    pub mod_loader: MainLoader,
+
     pub loader_version: String,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
     pub acceptable_loaders: Vec<Loader>,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -643,7 +652,7 @@ impl Modpack {
         let mut fabric_loader = None;
         let mut quilt_loader = None;
 
-        match branch_config.main_mod_loader {
+        match branch_config.mod_loader {
             MainLoader::Forge => forge = Some(branch_config.loader_version),
             MainLoader::NeoForge => neoforge = Some(branch_config.loader_version),
             MainLoader::Fabric => fabric_loader = Some(branch_config.loader_version),
@@ -651,7 +660,7 @@ impl Modpack {
         }
 
         Dependencies {
-            minecraft: branch_config.main_minecraft_version,
+            minecraft: branch_config.minecraft_version,
             forge,
             neoforge,
             fabric_loader,
@@ -704,9 +713,9 @@ impl BranchConfig {
     fn create_default_branch_config(branch_config_path: &PathBuf) -> Result<Self, PackrinthError> {
         let branch_config = Self {
             version: "1.0.0-fabric".to_string(),
-            main_minecraft_version: "1.21.8".to_string(),
+            minecraft_version: "1.21.8".to_string(),
             acceptable_minecraft_versions: vec!["1.21.7".to_string(), "1.21.8".to_string()],
-            main_mod_loader: MainLoader::Fabric,
+            mod_loader: MainLoader::Fabric,
             loader_version: "0.17.2".to_string(),
             acceptable_loaders: vec![Loader::Minecraft, Loader::VanillaShader, Loader::Fabric],
             manual_files: vec![],
@@ -720,13 +729,13 @@ impl BranchConfig {
         println!("  - Branch version: {}", self.version);
         println!(
             "  - Main Minecraft version: {}",
-            self.main_minecraft_version
+            self.minecraft_version
         );
         println!(
             "  - Acceptable Minecraft versions: {}",
             self.acceptable_minecraft_versions.join(", ")
         );
-        println!("  - Main mod loader: {}", self.main_mod_loader.value());
+        println!("  - Main mod loader: {}", self.mod_loader.pretty_value());
         println!(
             "  - Acceptable loaders: {}",
             Loader::pretty_value_vec(&self.acceptable_loaders).join(", ")
@@ -811,12 +820,22 @@ impl PartialEq<String> for BranchFilesProject {
 }
 
 impl MainLoader {
-    const fn value(&self) -> &str {
+    const fn pretty_value(&self) -> &str {
         match self {
             MainLoader::Forge => "Forge",
             MainLoader::NeoForge => "NeoForge",
             MainLoader::Fabric => "Fabric",
             MainLoader::Quilt => "Quilt",
+        }
+    }
+
+    #[must_use]
+    pub const fn modrinth_value(&self) -> &str {
+        match self {
+            MainLoader::Forge => "forge",
+            MainLoader::NeoForge => "neoforge",
+            MainLoader::Fabric => "fabric",
+            MainLoader::Quilt => "quilt",
         }
     }
 }
@@ -872,7 +891,8 @@ impl Loader {
         }
     }
 
-    const fn modrinth_value(&self) -> &str {
+    #[must_use]
+    pub const fn modrinth_value(&self) -> &str {
         match self {
             Loader::Minecraft => "minecraft",
             Loader::Fabric => "fabric",

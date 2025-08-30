@@ -2,7 +2,6 @@ use crate::{Cli, print_error, print_success, single_line_error};
 use clap::CommandFactory;
 use clap_complete::{Generator, shells};
 use dialoguer::Confirm;
-use gix::Repository;
 use indexmap::IndexMap;
 use packrinth::config::{
     BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack, ProjectSettings,
@@ -11,10 +10,9 @@ use packrinth::modrinth::{File, FileResult};
 use packrinth::{PackrinthError, config, modpack_is_dirty};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
-use reqwest_middleware::RequestInitialiser;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::{cmp, io};
 // Allow because we need all of them
 #[allow(clippy::wildcard_imports)]
