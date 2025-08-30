@@ -35,11 +35,11 @@ enum ProjectSubCommand {
     /// Add a version override to a project in this modpack
     VersionOverride(VersionOverrideProjectArgs),
 
-    /// Add an include list to a project in this modpack
-    Include(IncludeProjectArgs),
+    /// Add inclusions to a project in this modpack
+    Inclusions(InclusionsProjectArgs),
 
-    /// Add an exclude list to a project in this modpack
-    Exclude(ExcludeProjectArgs),
+    /// Add exclusions to a project in this modpack
+    Exclusions(ExclusionsProjectArgs),
 
     /// Remove projects from this modpack
     #[clap(visible_alias = "rm")]
@@ -51,15 +51,26 @@ struct ListProjectsArgs;
 
 #[derive(Parser, Debug)]
 struct AddProjectsArgs {
+    // Allow so we don't have to put the slug between `
+    #[allow(clippy::doc_markdown)]
     /// Projects to add
     ///
     /// The projects must be from Modrinth. You have to specify either the human-readable
-    /// slug that appears in the URL (fabric-api) or the slug (`P7dR8mSH`).
+    /// slug that appears in the URL (fabric-api) or the slug (P7dR8mSH).
     projects: Vec<String>,
 
+    /// Add branch inclusions for the projects that you are adding
+    ///
+    /// The added projects will only be updated for the branches you specify.
+    /// For a project, you can only have inclusions OR exclusions.
     #[clap(short, long, group = "include_or_exclude")]
     inclusions: Option<Vec<String>>,
 
+    /// Add branch exclusions for the projects that you are adding
+    ///
+    /// The added projects will not be updated for the branches you specify,
+    /// but the unspecified branches will be updated with this project.
+    /// For a project, you can only have inclusions OR exclusions.
     #[clap(short, long, group = "include_or_exclude")]
     exclusions: Option<Vec<String>>,
 }
@@ -72,105 +83,137 @@ struct VersionOverrideProjectArgs {
 
 #[derive(Parser, Debug)]
 enum VersionOverrideSubCommand {
+    /// Add a version override to a project
     Add(AddVersionOverrideArgs),
 
+    /// Remove a version override from a project
     #[clap(visible_alias = "rm")]
     Remove(RemoveVersionOverrideArgs),
 }
 
 #[derive(Parser, Debug)]
 struct AddVersionOverrideArgs {
+    /// Project to add the version override to
     project: String,
 
+    /// Branch that you want to be overridden
     branch: String,
 
+    // Allow so we don't have to put the slug between `
+    #[allow(clippy::doc_markdown)]
+    /// The version ID of the override
+    ///
+    /// This must be a Modrinth version ID. You can find this by going to a project on the
+    /// Modrinth website, navigating to the version that you want to override and copying
+    /// the version ID that looks something like this: Q8ssLFZp
     project_version_id: String,
 }
 
 #[derive(Parser, Debug)]
 struct RemoveVersionOverrideArgs {
+    /// Project to remove the override from
     project: String,
 
+    /// Branch to remove the override from
     branch: Option<String>,
 
+    /// Remove all overrides from a project
     #[clap(short, long)]
     all: bool,
 }
 
 #[derive(Parser, Debug)]
-struct IncludeProjectArgs {
+struct InclusionsProjectArgs {
     #[clap(subcommand)]
-    command: IncludeSubCommand,
+    command: InclusionsSubCommand,
 }
 
 #[derive(Parser, Debug)]
-enum IncludeSubCommand {
+enum InclusionsSubCommand {
+    /// Add inclusions to a project
     Add(AddInclusionsArgs),
 
+    /// Remove inclusions from a project
     #[clap(visible_alias = "rm")]
     Remove(RemoveInclusionsArgs),
 }
 
 #[derive(Parser, Debug)]
 struct AddInclusionsArgs {
+    /// Project to add inclusions to
     project: String,
 
+    /// Branches to include
     inclusions: Vec<String>,
 }
 
 #[derive(Parser, Debug)]
 struct RemoveInclusionsArgs {
+    /// Project to remove inclusions from
     project: String,
 
+    /// Inclusions to remove
     inclusions: Option<Vec<String>>,
 
+    /// Remove all inclusions from the project
     #[clap(short, long)]
     all: bool,
 }
 
 #[derive(Parser, Debug)]
-struct ExcludeProjectArgs {
+struct ExclusionsProjectArgs {
     #[clap(subcommand)]
-    command: ExcludeSubCommand,
+    command: ExclusionsSubCommand,
 }
 
 #[derive(Parser, Debug)]
-enum ExcludeSubCommand {
+enum ExclusionsSubCommand {
+    /// Add exclusions to a project
     Add(AddExclusionsArgs),
 
     #[clap(visible_alias = "rm")]
+    /// Remove exclusions from a project
     Remove(RemoveExclusionsArgs),
 }
 
 #[derive(Parser, Debug)]
 struct AddExclusionsArgs {
+    /// Project to add exclusions to
     project: String,
 
+    /// Branches to exclude
     exclusions: Vec<String>,
 }
 
 #[derive(Parser, Debug)]
 struct RemoveExclusionsArgs {
+    /// Project to remove exclusions from
     project: String,
 
+    /// Exclusions to remove
     exclusions: Option<Vec<String>>,
 
+    /// Remove all exclusions from the project
     #[clap(short, long)]
     all: bool,
 }
 
 #[derive(Parser, Debug)]
 struct RemoveProjectsArgs {
+    /// Projects to remove from the modpack
     projects: Vec<String>,
 }
 
 #[derive(Debug, Parser)]
 pub struct UpdateArgs {
+    /// Branches to update. If no branches are specified, all branches will be updated.
     branches: Option<Vec<String>>,
 
+    /// Don't allow alpha releases to be added to branch files
     #[clap(long)]
     no_alpha: bool,
 
+    /// Don't allow beta releases to be added to branch files
     #[clap(long)]
     no_beta: bool,
 }
@@ -180,16 +223,20 @@ pub struct BranchArgs {
     #[clap(subcommand)]
     command: Option<BranchSubCommand>,
 
+    /// Branches to list. If none are specified, you must use a subcommand.
     branches: Option<Vec<String>>,
 }
 
 #[derive(Parser, Debug)]
 enum BranchSubCommand {
+    /// List information about all branches
     #[clap(visible_alias = "ls")]
     List(ListBranchesArgs),
 
+    /// Add new branches
     Add(AddBranchesArgs),
 
+    /// Remove branches
     #[clap(visible_alias = "rm")]
     Remove(RemoveBranchesArgs),
 }
@@ -199,16 +246,19 @@ struct ListBranchesArgs;
 
 #[derive(Parser, Debug)]
 struct AddBranchesArgs {
+    /// Names of new branches to add
     branches: Vec<String>,
 }
 
 #[derive(Parser, Debug)]
 struct RemoveBranchesArgs {
+    /// Names of branches to remove
     branches: Vec<String>,
 }
 
 #[derive(Parser, Debug)]
 pub struct ExportArgs {
+    /// Branches to export. If no branches are specified, all branches will be exported.
     branches: Option<Vec<String>>,
 }
 
@@ -220,6 +270,7 @@ pub struct DocArgs {
 
 #[derive(Parser, Debug)]
 enum DocSubCommand {
+    /// Generate documentation based on the local project
     Project(ProjectDocArgs),
 }
 
@@ -239,8 +290,8 @@ impl ProjectArgs {
                 ProjectSubCommand::List(args) => args.run(modpack, config_args),
                 ProjectSubCommand::Add(args) => args.run(modpack, config_args),
                 ProjectSubCommand::VersionOverride(args) => args.run(modpack, config_args),
-                ProjectSubCommand::Include(args) => args.run(modpack, config_args),
-                ProjectSubCommand::Exclude(args) => args.run(modpack, config_args),
+                ProjectSubCommand::Inclusions(args) => args.run(modpack, config_args),
+                ProjectSubCommand::Exclusions(args) => args.run(modpack, config_args),
                 ProjectSubCommand::Remove(args) => args.run(modpack, config_args),
             }
         } else if let Some(project_names) = &self.projects {
@@ -369,11 +420,11 @@ impl RemoveVersionOverrideArgs {
     }
 }
 
-impl IncludeProjectArgs {
+impl InclusionsProjectArgs {
     pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) {
         match &self.command {
-            IncludeSubCommand::Add(args) => args.run(modpack, config_args),
-            IncludeSubCommand::Remove(args) => args.run(modpack, config_args),
+            InclusionsSubCommand::Add(args) => args.run(modpack, config_args),
+            InclusionsSubCommand::Remove(args) => args.run(modpack, config_args),
         }
     }
 }
@@ -431,11 +482,11 @@ impl RemoveInclusionsArgs {
     }
 }
 
-impl ExcludeProjectArgs {
+impl ExclusionsProjectArgs {
     pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) {
         match &self.command {
-            ExcludeSubCommand::Add(args) => args.run(modpack, config_args),
-            ExcludeSubCommand::Remove(args) => args.run(modpack, config_args),
+            ExclusionsSubCommand::Add(args) => args.run(modpack, config_args),
+            ExclusionsSubCommand::Remove(args) => args.run(modpack, config_args),
         }
     }
 }

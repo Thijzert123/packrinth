@@ -38,7 +38,7 @@ pub fn print_success<T: Display>(message: T) {
 }
 
 #[derive(Parser, Debug)]
-struct Cli {
+pub struct Cli {
     #[clap(subcommand)]
     subcommand: SubCommand,
 
@@ -63,13 +63,13 @@ enum SubCommand {
     /// Export a branch to a Modrinth modpack
     Export(subcommand::ExportArgs),
 
-    /// Generate documentation
+    /// Generate Markdown documentation
     Doc(subcommand::DocArgs),
 }
 
 #[derive(Parser, Debug)]
 struct ConfigArgs {
-    /// Set the root directory of the modpack
+    /// Set the root directory of the modpack (directory of modpack.json)
     #[clap(short, long, global = true)]
     pub directory: Option<PathBuf>,
 
