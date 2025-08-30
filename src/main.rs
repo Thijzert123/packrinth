@@ -65,6 +65,9 @@ enum SubCommand {
 
     /// Generate Markdown documentation
     Doc(subcommand::DocArgs),
+
+    /// Generate shell completion for Packrinth
+    Completions(subcommand::CompletionsArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -149,6 +152,7 @@ impl SubCommand {
             SubCommand::Update(args) => args.run(&modpack, config_args),
             SubCommand::Export(args) => args.run(&modpack, config_args),
             SubCommand::Doc(args) => args.run(&modpack, config_args),
+            SubCommand::Completions(args) => args.run(&modpack, config_args),
         }
     }
 }

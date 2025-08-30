@@ -1,5 +1,5 @@
-use crate::{ConfigArgs, print_error, print_success, single_line_error};
-use clap::Parser;
+use crate::{ConfigArgs, print_error, print_success, single_line_error, Cli};
+use clap::{CommandFactory, Parser};
 use dialoguer::Confirm;
 use indexmap::IndexMap;
 use packrinth::config::{
@@ -9,10 +9,11 @@ use packrinth::modrinth::{File, FileResult};
 use packrinth::{PackrinthError, config};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
-use std::cmp;
+use std::{cmp, io};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
+use clap_complete::{shells, Generator};
 
 #[derive(Debug, Parser)]
 pub struct ProjectArgs {
@@ -281,6 +282,24 @@ struct ProjectDocArgs;
 struct DocMarkdownTable<'a> {
     column_names: Vec<&'a str>,
     project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
+}
+
+#[derive(Parser, Debug)]
+pub struct CompletionsArgs {
+    /// The shell to generate the completion for
+    shell: CompletionShell,
+}
+
+#[derive(clap::ValueEnum, Debug, Clone)]
+enum CompletionShell {
+    Bash,
+    Elvish,
+    Fish,
+
+    #[clap(name = "powershell")]
+    PowerShell,
+
+    Zsh,
 }
 
 impl ProjectArgs {
@@ -924,5 +943,22 @@ impl Display for DocMarkdownTable<'_> {
         }
 
         Ok(())
+    }
+}
+
+impl CompletionsArgs {
+    pub fn run(&self, _modpack: &Modpack, _config_args: &ConfigArgs) {
+        let mut cmd = Cli::command();
+        match self.shell {
+            CompletionShell::Bash => Self::print_completions(shells::Bash, &mut cmd),
+            CompletionShell::Elvish => Self::print_completions(shells::Elvish, &mut cmd),
+            CompletionShell::Fish => Self::print_completions(shells::Fish, &mut cmd),
+            CompletionShell::PowerShell => Self::print_completions(shells::PowerShell, &mut cmd),
+            CompletionShell::Zsh => Self::print_completions(shells::Zsh, &mut cmd),
+        }
+    }
+
+    fn print_completions<G: Generator>(generator: G, cmd: &mut clap::Command) {
+        clap_complete::generate(generator, cmd, cmd.get_name().to_string(), &mut io::stdout());
     }
 }
