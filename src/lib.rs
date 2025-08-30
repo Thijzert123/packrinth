@@ -1,7 +1,20 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
+
 pub mod config;
 pub mod modrinth;
+
+use crate::config::Modpack;
+
+#[must_use]
+pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
+    let git_repo = match gix::open(&modpack.directory) {
+        Ok(git_repo) => git_repo,
+        Err(_error) => return false,
+    };
+
+    git_repo.is_dirty().unwrap_or(false)
+}
 
 #[derive(Debug)]
 pub enum PackrinthError {
@@ -38,6 +51,7 @@ pub enum PackrinthError {
     NoBranchSpecified,                                 //
     NoInclusionsSpecified,                             //
     NoExclusionsSpecified,                             //
+    RepoIsDirtyWhileUpdating,                          //
 }
 
 impl PackrinthError {
@@ -78,6 +92,7 @@ impl PackrinthError {
             PackrinthError::NoBranchSpecified => ("no branch specified".to_string(), "specify a branch or remove all with the --all flag".to_string()),
             PackrinthError::NoInclusionsSpecified => ("no inclusions specified".to_string(), "specify inclusions or remove all with the --all flag".to_string()),
             PackrinthError::NoExclusionsSpecified => ("no exclusions specified".to_string(), "specify exclusions or remove all with the --all flag".to_string()),
+            PackrinthError::RepoIsDirtyWhileUpdating => ("git repository has uncommitted changes".to_string(), "pass the --allow-dirty flag to force updating".to_string()),
         }
     }
 }

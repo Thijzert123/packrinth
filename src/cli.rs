@@ -247,6 +247,10 @@ pub struct UpdateArgs {
     /// Don't allow beta releases to be added to branch files
     #[clap(long)]
     pub no_beta: bool,
+
+    /// If the modpack is in a Git repository, allow updating even if there are uncommitted changes
+    #[clap(short = 'D', long)]
+    pub allow_dirty: bool,
 }
 
 #[derive(Debug, Parser)]

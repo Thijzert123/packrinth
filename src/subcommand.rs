@@ -7,7 +7,7 @@ use packrinth::config::{
     BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack, ProjectSettings,
 };
 use packrinth::modrinth::{File, FileResult};
-use packrinth::{PackrinthError, config};
+use packrinth::{PackrinthError, config, modpack_is_dirty};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::collections::HashMap;
@@ -351,6 +351,11 @@ impl RemoveProjectsArgs {
 
 impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) {
+        if modpack_is_dirty(modpack) && !self.allow_dirty {
+            print_error(PackrinthError::RepoIsDirtyWhileUpdating.message_and_tip());
+            return;
+        }
+
         let branches = if let Some(branches) = &self.branches {
             branches
         } else {
