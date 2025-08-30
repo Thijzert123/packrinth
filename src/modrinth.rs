@@ -243,24 +243,40 @@ impl File {
             "/project/{project_id}/version?loaders={loaders:?}&game_versions={game_versions:?}"
         );
 
+        // Used to know if endpoint will return ONE version or a list of versions
+        let mut is_version_override = false;
+
         // Change endpoint to version if an override is provided for this branch
         if let Some(version_overrides) = &project_settings.version_overrides
             && let Some(version_override) = version_overrides.get(branch_name)
         {
             api_endpoint = format!("/version/{version_override}");
+            is_version_override = true;
         }
 
         let api_response = match request_text(&api_endpoint) {
             Ok(response) => response,
             Err(error) => return FileResult::Err(error),
         };
-        let modrinth_versions: Vec<Version> = match serde_json::from_str(&api_response) {
-            Ok(versions) => versions,
-            Err(error) => {
-                return FileResult::Err(PackrinthError::FailedToParseModrinthResponseJson(
-                    api_endpoint,
-                    format!("{error}"),
-                ));
+        let modrinth_versions: Vec<Version> = if is_version_override {
+            match serde_json::from_str::<Version>(&api_response) {
+                Ok(version) => vec![version],
+                Err(error) => {
+                    return FileResult::Err(PackrinthError::FailedToParseModrinthResponseJson(
+                        api_endpoint,
+                        format!("{error}"),
+                    ));
+                }
+            }
+        } else {
+            match serde_json::from_str(&api_response) {
+                Ok(versions) => versions,
+                Err(error) => {
+                    return FileResult::Err(PackrinthError::FailedToParseModrinthResponseJson(
+                        api_endpoint,
+                        format!("{error}"),
+                    ));
+                }
             }
         };
 

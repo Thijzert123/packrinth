@@ -727,10 +727,7 @@ impl BranchConfig {
     pub fn print_display(&self, name: &str) {
         println!("Branch {name}:");
         println!("  - Branch version: {}", self.version);
-        println!(
-            "  - Main Minecraft version: {}",
-            self.minecraft_version
-        );
+        println!("  - Main Minecraft version: {}", self.minecraft_version);
         println!(
             "  - Acceptable Minecraft versions: {}",
             self.acceptable_minecraft_versions.join(", ")
