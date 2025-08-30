@@ -1,4 +1,7 @@
 # Packrinth
+Packrinth is a CLI tool for creating and managing Minecraft modpacks with Modrinth projects. The main features are being able to automatically update mods in a modpack and separate a modpack in branches.
+If you want to see Packrinth in action, please take a look at [Client+](https://github.com/Thijzert123/client-plus), a modpack managed by Packrinth.
+For more detail on how to use Packrinth, go to [usage](#usage).
 
 ## Installation
 ### Cargo
@@ -33,3 +36,6 @@ After you have done that, run this to assemble a Debian package file:
 ```bash
 cargo deb
 ```
+
+## Usage
+Coming soon.
