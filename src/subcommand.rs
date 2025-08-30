@@ -31,11 +31,11 @@ impl SubCommand {
             Some(dir) => dir,
             None => match std::env::current_dir() {
                 Ok(current_dir) => &current_dir.clone(),
-                Err(_error) => {
-                    print_error((
-                        "couldn't get current directory",
-                        "the current directory may not exist or you have insufficient permissions to access the current directory",
-                    ));
+                Err(error) => {
+                    print_error(
+                        PackrinthError::FailedToGetCurrentDirectory(error.to_string())
+                            .message_and_tip(),
+                    );
                     return;
                 }
             },
@@ -70,16 +70,7 @@ impl SubCommand {
         };
 
         if modpack.pack_format != config::CURRENT_PACK_FORMAT {
-            print_error((
-                format!(
-                    "pack format {} is not supported by this Packrinth version",
-                    modpack.pack_format
-                ),
-                format!(
-                    "please use a configuration with pack format {}",
-                    config::CURRENT_PACK_FORMAT
-                ),
-            ));
+            print_error(PackrinthError::InvalidPackFormat(modpack.pack_format).message_and_tip());
             return;
         }
 
@@ -224,10 +215,7 @@ impl RemoveVersionOverrideArgs {
                 Err(error) => print_error(error.message_and_tip()),
             }
         } else {
-            print_error((
-                "no branch specified",
-                "specify a branch or remove all with the --all flag",
-            ));
+            print_error(PackrinthError::NoBranchSpecified.message_and_tip());
         }
     }
 }
@@ -286,10 +274,7 @@ impl RemoveInclusionsArgs {
                 Err(error) => print_error(error.message_and_tip()),
             }
         } else {
-            print_error((
-                "no inclusions specified",
-                "specify inclusions or remove all with the --all flag",
-            ));
+            print_error(PackrinthError::NoInclusionsSpecified.message_and_tip());
         }
     }
 }
@@ -347,6 +332,8 @@ impl RemoveExclusionsArgs {
                 )),
                 Err(error) => print_error(error.message_and_tip()),
             }
+        } else {
+            print_error(PackrinthError::NoExclusionsSpecified.message_and_tip());
         }
     }
 }

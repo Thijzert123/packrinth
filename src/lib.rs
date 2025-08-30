@@ -33,6 +33,11 @@ pub enum PackrinthError {
     AttemptedToAddOtherModpack,                        //
     NoModrinthFilesFoundForProject(String),            // project
     RequestFailed(String),                             // url
+    FailedToGetCurrentDirectory(String),               // original error
+    InvalidPackFormat(u16),                            // used pack format
+    NoBranchSpecified,                                 //
+    NoInclusionsSpecified,                             //
+    NoExclusionsSpecified,                             //
 }
 
 impl PackrinthError {
@@ -68,6 +73,11 @@ impl PackrinthError {
             PackrinthError::AttemptedToAddOtherModpack => ("one of the projects is another modpack".to_string(), "remove the modpack project with subcommand: project remove <MODPACK_PROJECT>".to_string()),
             PackrinthError::NoModrinthFilesFoundForProject(project) => (format!("no files found for project {project}"), "check if the project id is spelled correctly or try to remove or add project inclusions, exclusions or overrides".to_string()),
             PackrinthError::RequestFailed(url) => (format!("request to {url} failed"), format!("check your internet connection or {file_an_issue}")),
+            PackrinthError::FailedToGetCurrentDirectory(original_error) => (format!("couldn't get the current directory: {original_error}"), "the current directory may not exist or you have insufficient permissions to access the current directory".to_string()),
+            PackrinthError::InvalidPackFormat(used_pack_format) => (format!("pack format {used_pack_format} is not supported by this Packrinth version"), format!("please use a configuration with pack format {}", config::CURRENT_PACK_FORMAT)),
+            PackrinthError::NoBranchSpecified => ("no branch specified".to_string(), "specify a branch or remove all with the --all flag".to_string()),
+            PackrinthError::NoInclusionsSpecified => ("no inclusions specified".to_string(), "specify inclusions or remove all with the --all flag".to_string()),
+            PackrinthError::NoExclusionsSpecified => ("no exclusions specified".to_string(), "specify exclusions or remove all with the --all flag".to_string()),
         }
     }
 }
