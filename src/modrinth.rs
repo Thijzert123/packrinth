@@ -22,7 +22,8 @@ const USER_AGENT: &str = concat!(
 
 fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError> {
     let client = CLIENT.get_or_init(|| {
-        let retry_policy = ExponentialBackoff::builder().build_with_total_retry_duration(Duration::from_secs(60 * 2));
+        let retry_policy = ExponentialBackoff::builder()
+            .build_with_total_retry_duration(Duration::from_secs(60 * 2));
         ClientBuilder::new(
             reqwest::Client::builder()
                 .user_agent(USER_AGENT)

@@ -539,7 +539,11 @@ impl Modpack {
         let options = SimpleFileOptions::default();
         let zip_file = match fs::File::create(&mrpack_path) {
             Ok(zip_file) => zip_file,
-            Err(_error) => return Err(PackrinthError::FailedToInitializeFileType(mrpack_path.display().to_string())),
+            Err(_error) => {
+                return Err(PackrinthError::FailedToInitializeFileType(
+                    mrpack_path.display().to_string(),
+                ));
+            }
         };
 
         let mut zip = ZipWriter::new(zip_file);
@@ -560,7 +564,9 @@ impl Modpack {
             let override_dir_path = branch_dir.join(override_dir);
 
             // Skip override dir if it doesn't exist.
-            if let Ok(exists) = fs::exists(&override_dir_path) && !exists {
+            if let Ok(exists) = fs::exists(&override_dir_path)
+                && !exists
+            {
                 continue;
             }
 
