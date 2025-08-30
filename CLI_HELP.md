@@ -54,7 +54,11 @@ This document contains the help content for the `packrinth` command-line program
 
 Initialize a new modpack project
 
-**Usage:** `packrinth init`
+**Usage:** `packrinth init [OPTIONS]`
+
+###### **Options:**
+
+* `-G`, `--no-git-repo` — Don't initialize a Git repository
 
 
 

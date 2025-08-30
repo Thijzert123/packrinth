@@ -2,6 +2,7 @@ use crate::{Cli, print_error, print_success, single_line_error};
 use clap::CommandFactory;
 use clap_complete::{Generator, shells};
 use dialoguer::Confirm;
+use gix::Repository;
 use indexmap::IndexMap;
 use packrinth::config::{
     BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack, ProjectSettings,
@@ -10,11 +11,11 @@ use packrinth::modrinth::{File, FileResult};
 use packrinth::{PackrinthError, config, modpack_is_dirty};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
+use reqwest_middleware::RequestInitialiser;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::{cmp, io};
-
 // Allow because we need all of them
 #[allow(clippy::wildcard_imports)]
 use crate::cli::*;
@@ -41,22 +42,8 @@ impl SubCommand {
             },
         };
 
-        if let Self::Init = self {
-            let modpack = match Modpack::new(current_dir) {
-                Ok(modpack) => modpack,
-                Err(error) => {
-                    print_error(error.message_and_tip());
-                    return;
-                }
-            };
-
-            match modpack.save() {
-                Ok(()) => print_success(format!(
-                    "created new modpack instance in directory {}",
-                    current_dir.display()
-                )),
-                Err(error) => print_error(error.message_and_tip()),
-            }
+        if let Self::Init(args) = self {
+            args.run(current_dir, config_args);
 
             return;
         }
@@ -75,13 +62,45 @@ impl SubCommand {
         }
 
         match self {
-            SubCommand::Init => (),
+            SubCommand::Init(_args) => (),
             SubCommand::Project(args) => args.run(&mut modpack, config_args),
             SubCommand::Branch(args) => args.run(&mut modpack, config_args),
             SubCommand::Update(args) => args.run(&modpack, config_args),
             SubCommand::Export(args) => args.run(&modpack, config_args),
             SubCommand::Doc(args) => args.run(&modpack, config_args),
             SubCommand::Completions(args) => args.run(&modpack, config_args),
+        }
+    }
+}
+
+impl InitArgs {
+    pub fn run(&self, directory: &Path, _config_args: &ConfigArgs) {
+        let modpack = match Modpack::new(directory) {
+            Ok(modpack) => modpack,
+            Err(error) => {
+                print_error(error.message_and_tip());
+                return;
+            }
+        };
+
+        match modpack.save() {
+            Ok(()) => {
+                if !self.no_git_repo
+                    && let Err(error) = gix::init(directory)
+                {
+                    print_error(
+                        PackrinthError::FailedToInitGitRepoWhileInitModpack(error.to_string())
+                            .message_and_tip(),
+                    );
+                    return;
+                }
+
+                print_success(format!(
+                    "created new modpack in directory {}",
+                    directory.display()
+                ));
+            }
+            Err(error) => print_error(error.message_and_tip()),
         }
     }
 }

@@ -13,7 +13,7 @@ pub struct Cli {
 #[derive(Parser, Debug)]
 pub enum SubCommand {
     /// Initialize a new modpack project
-    Init,
+    Init(InitArgs),
 
     /// Add or remove Modrinth projects and tweak them for your branches
     Project(ProjectArgs),
@@ -43,6 +43,13 @@ pub struct ConfigArgs {
     /// Output more information about the current process
     #[clap(short, long, global = true)]
     pub verbose: bool,
+}
+
+#[derive(Debug, Parser)]
+pub struct InitArgs {
+    /// Don't initialize a Git repository
+    #[clap(short = 'G', long)]
+    pub no_git_repo: bool,
 }
 
 #[derive(Debug, Parser)]

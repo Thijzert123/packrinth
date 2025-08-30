@@ -52,6 +52,7 @@ pub enum PackrinthError {
     NoInclusionsSpecified,                             //
     NoExclusionsSpecified,                             //
     RepoIsDirtyWhileUpdating,                          //
+    FailedToInitGitRepoWhileInitModpack(String),       // original error
 }
 
 impl PackrinthError {
@@ -93,6 +94,7 @@ impl PackrinthError {
             PackrinthError::NoInclusionsSpecified => ("no inclusions specified".to_string(), "specify inclusions or remove all with the --all flag".to_string()),
             PackrinthError::NoExclusionsSpecified => ("no exclusions specified".to_string(), "specify exclusions or remove all with the --all flag".to_string()),
             PackrinthError::RepoIsDirtyWhileUpdating => ("git repository has uncommitted changes".to_string(), "pass the --allow-dirty flag to force updating".to_string()),
+            PackrinthError::FailedToInitGitRepoWhileInitModpack(original_error) => (format!("failed to initialize Git repository: {original_error}"), "the modpack itself was initialized successfully, so you can try to initialize a Git repository yourself".to_string()),
         }
     }
 }
