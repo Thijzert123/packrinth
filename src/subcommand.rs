@@ -209,7 +209,7 @@ struct RemoveBranchesArgs {
 
 #[derive(Parser, Debug)]
 pub struct ExportArgs {
-    branch: String,
+    branches: Option<Vec<String>>,
 }
 
 #[derive(Parser, Debug)]
@@ -747,13 +747,22 @@ impl RemoveBranchesArgs {
 
 impl ExportArgs {
     pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) {
-        match modpack.export_branch(&self.branch) {
-            Ok(modpack_path) => print_success(format!(
-                "exported {} to {}",
-                self.branch,
-                modpack_path.display()
-            )),
-            Err(error) => print_error(error.message_and_tip()),
+        match &self.branches {
+            None => Self::export_branches(modpack, &modpack.branches),
+            Some(branches) => Self::export_branches(modpack, branches),
+        }
+    }
+
+    fn export_branches(modpack: &Modpack, branches: &Vec<String>) {
+        for branch in branches {
+            match modpack.export_branch(branch) {
+                Ok(modpack_path) => print_success(format!(
+                    "exported {} to {}",
+                    branch,
+                    modpack_path.display()
+                )),
+                Err(error) => print_error(error.message_and_tip()),
+            }
         }
     }
 }
