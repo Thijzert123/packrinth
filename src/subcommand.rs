@@ -808,7 +808,7 @@ impl ExportArgs {
         for branch in branches {
             match modpack.export_branch(branch) {
                 Ok(modpack_path) => {
-                    print_success(format!("exported {} to {}", branch, modpack_path.display()))
+                    print_success(format!("exported {} to {}", branch, modpack_path.display()));
                 }
                 Err(error) => print_error(error.message_and_tip()),
             }

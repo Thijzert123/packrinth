@@ -514,6 +514,9 @@ impl Modpack {
         json_to_file(self, &self.modpack_config_path)
     }
 
+    // Allow because it's hard to split this function up in other functions
+    // without them having lots of parameters.
+    #[allow(clippy::too_many_lines)]
     pub fn export_branch(&self, branch: &String) -> Result<PathBuf, PackrinthError> {
         let branch_config = BranchConfig::from_directory(&self.directory, branch)?;
         let branch_files = BranchFiles::from_directory(&self.directory, branch)?;
