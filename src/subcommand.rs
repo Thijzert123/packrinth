@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 use packrinth::config::{
     BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack, ProjectSettings,
 };
-use packrinth::modrinth::{File, FileResult};
+use packrinth::modrinth::{Env, File, FileResult, SideSupport};
 use packrinth::{PackrinthError, config, modpack_is_dirty};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
@@ -384,17 +384,23 @@ impl UpdateArgs {
             branches,
             self.no_beta,
             self.no_alpha,
+            self.require_all,
             config_args.verbose,
         ) {
             print_error(error.message_and_tip());
         }
     }
 
+    // Allow because when this function is called, it is apparent what the bools mean.
+    #[allow(clippy::fn_params_excessive_bools)]
+    // Allow because most of it is by Cargo fmt.
+    #[allow(clippy::too_many_lines)]
     fn update_branches(
         modpack: &Modpack,
         branches: &Vec<String>,
         no_beta: bool,
         no_alpha: bool,
+        require_all: bool,
         verbose: bool,
     ) -> Result<(), PackrinthError> {
         let mut progress_bar = ProgressBar::new_with_eta(modpack.projects.len() * branches.len());
@@ -432,11 +438,19 @@ impl UpdateArgs {
                     no_beta,
                     no_alpha,
                 ) {
-                    FileResult::Ok(file) => {
+                    FileResult::Ok(mut file) => {
                         branch_files.projects.push(BranchFilesProject {
                             name: file.project_name.clone(),
                             id: Some(project_id.clone()),
                         });
+
+                        if require_all {
+                            file.env = Some(Env {
+                                client: SideSupport::Required,
+                                server: SideSupport::Required,
+                            });
+                        }
+
                         branch_files.files.push(file);
 
                         if verbose {

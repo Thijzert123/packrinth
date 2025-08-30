@@ -336,6 +336,7 @@ Update branches with the newest project versions
 
 * `--no-alpha` — Don't allow alpha releases to be added to branch files
 * `--no-beta` — Don't allow beta releases to be added to branch files
+* `-r`, `--require-all` — For every environment (server and client), set all projects as required
 * `-D`, `--allow-dirty` — If the modpack is in a Git repository, allow updating even if there are uncommitted changes
 
 

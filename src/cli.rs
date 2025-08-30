@@ -242,6 +242,8 @@ pub struct RemoveProjectsArgs {
     pub projects: Vec<String>,
 }
 
+// Allow because it is just a CLI.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Parser)]
 pub struct UpdateArgs {
     /// Branches to update. If no branches are specified, all branches will be updated.
@@ -254,6 +256,10 @@ pub struct UpdateArgs {
     /// Don't allow beta releases to be added to branch files
     #[clap(long)]
     pub no_beta: bool,
+
+    /// For every environment (server and client), set all projects as required
+    #[clap(short, long)]
+    pub require_all: bool,
 
     /// If the modpack is in a Git repository, allow updating even if there are uncommitted changes
     #[clap(short = 'D', long)]
