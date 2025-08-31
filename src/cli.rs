@@ -50,6 +50,10 @@ pub struct InitArgs {
     /// Don't initialize a Git repository
     #[clap(short = 'G', long)]
     pub no_git_repo: bool,
+
+    /// Force initializing a new modpack even if one already exists
+    #[clap(short, long)]
+    pub force: bool,
 }
 
 #[derive(Debug, Parser)]

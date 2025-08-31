@@ -16,6 +16,29 @@ pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
     git_repo.is_dirty().unwrap_or(false)
 }
 
+// TODO enum like this
+// pub enum Error {
+//     CurrentDir(Error),
+//     IoOpen {
+//         source: Error,
+//         path: PathBuf,
+//     },
+//     IoWrite {
+//         source: Error,
+//         path: PathBuf,
+//     },
+//     DirectoryExists {
+//         path: PathBuf,
+//     },
+//     DirectoryNotEmpty {
+//         path: PathBuf,
+//     },
+//     CreateDirectory {
+//         source: Error,
+//         path: PathBuf,
+//     },
+// }
+
 #[derive(Debug)]
 pub enum PackrinthError {
     // TODO add original error message to more errors
@@ -53,6 +76,7 @@ pub enum PackrinthError {
     NoExclusionsSpecified,                             //
     RepoIsDirtyWhileUpdating,                          //
     FailedToInitGitRepoWhileInitModpack(String),       // original error
+    ModpackAlreadyExists(String),                   // directory
 }
 
 impl PackrinthError {
@@ -95,6 +119,7 @@ impl PackrinthError {
             PackrinthError::NoExclusionsSpecified => ("no exclusions specified".to_string(), "specify exclusions or remove all with the --all flag".to_string()),
             PackrinthError::RepoIsDirtyWhileUpdating => ("git repository has uncommitted changes".to_string(), "pass the --allow-dirty flag to force updating".to_string()),
             PackrinthError::FailedToInitGitRepoWhileInitModpack(original_error) => (format!("failed to initialize Git repository: {original_error}"), "the modpack itself was initialized successfully, so you can try to initialize a Git repository yourself".to_string()),
+            PackrinthError::ModpackAlreadyExists(directory) => (format!("a modpack instance already exists in {directory}"), "to force initializing a new repository, pass the --force flag".to_string()),
         }
     }
 }

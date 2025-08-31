@@ -59,6 +59,7 @@ Initialize a new modpack project
 ###### **Options:**
 
 * `-G`, `--no-git-repo` — Don't initialize a Git repository
+* `-f`, `--force` — Force initializing a new modpack even if one already exists
 
 
 

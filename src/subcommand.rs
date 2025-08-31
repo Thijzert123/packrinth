@@ -13,7 +13,7 @@ use progress_bar::{Color, Style};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
-use std::{cmp, io};
+use std::{cmp, fs, io};
 // Allow because we need all of them
 #[allow(clippy::wildcard_imports)]
 use crate::cli::*;
@@ -73,6 +73,12 @@ impl SubCommand {
 
 impl InitArgs {
     pub fn run(&self, directory: &Path, _config_args: &ConfigArgs) {
+        let modpack_config_path = directory.join(config::MODPACK_CONFIG_FILE_NAME);
+        if !self.force && let Ok(exists) = fs::exists(&modpack_config_path) && exists {
+            print_error(PackrinthError::ModpackAlreadyExists(directory.display().to_string()).message_and_tip());
+            return;
+        }
+
         let modpack = match Modpack::new(directory) {
             Ok(modpack) => modpack,
             Err(error) => {
@@ -86,11 +92,18 @@ impl InitArgs {
                 if !self.no_git_repo
                     && let Err(error) = gix::init(directory)
                 {
-                    print_error(
-                        PackrinthError::FailedToInitGitRepoWhileInitModpack(error.to_string())
-                            .message_and_tip(),
-                    );
-                    return;
+                    // If the repo already exists, don't show an error.
+                    if !matches!(
+                        &error,
+                        gix::init::Error::Init(gix::create::Error::DirectoryExists { path })
+                            if path.file_name() == Some(std::ffi::OsStr::new(".git"))
+                    ) {
+                        print_error(
+                            PackrinthError::FailedToInitGitRepoWhileInitModpack(error.to_string())
+                                .message_and_tip(),
+                        );
+                        return;
+                    }
                 }
 
                 print_success(format!(
@@ -365,7 +378,7 @@ impl RemoveProjectsArgs {
         }
     }
 }
-
+// TODO default flags in modpack.json
 impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) {
         if modpack_is_dirty(modpack) && !self.allow_dirty {
