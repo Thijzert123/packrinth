@@ -265,6 +265,10 @@ pub struct UpdateArgs {
     #[clap(short, long)]
     pub require_all: bool,
 
+    /// Automatically add any dependencies required by the projects in the modpack
+    #[clap(short, long)]
+    pub auto_dependencies: bool,
+
     /// If the modpack is in a Git repository, allow updating even if there are uncommitted changes
     #[clap(short = 'D', long)]
     pub allow_dirty: bool,

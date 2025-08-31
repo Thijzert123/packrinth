@@ -1,5 +1,5 @@
 use crate::PackrinthError;
-use crate::modrinth::{Dependencies, File, MrPack};
+use crate::modrinth::{File, MrPack, MrPackDependencies};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -53,6 +53,7 @@ pub struct Modpack {
     pub summary: String,
     pub author: String,
     pub require_all: bool,
+    pub auto_dependencies: bool,
     pub branches: Vec<String>,
     pub projects: IndexMap<String, ProjectSettings>,
 
@@ -198,7 +199,7 @@ pub struct BranchFiles {
     pub files: Vec<File>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Hash, Eq, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Hash, Eq, PartialEq)]
 pub struct BranchFilesProject {
     pub name: String,
 
@@ -243,6 +244,7 @@ impl Modpack {
             summary: "Short summary for this modpack".to_string(),
             author: "John Doe".to_string(),
             require_all: false,
+            auto_dependencies: false,
             branches: Vec::new(),
             projects: IndexMap::new(),
             directory: PathBuf::from(directory),
@@ -648,7 +650,7 @@ impl Modpack {
         }
     }
 
-    fn create_dependencies(branch_config: BranchConfig) -> Dependencies {
+    fn create_dependencies(branch_config: BranchConfig) -> MrPackDependencies {
         let mut forge = None;
         let mut neoforge = None;
         let mut fabric_loader = None;
@@ -661,7 +663,7 @@ impl Modpack {
             MainLoader::Quilt => quilt_loader = Some(branch_config.loader_version),
         }
 
-        Dependencies {
+        MrPackDependencies {
             minecraft: branch_config.minecraft_version,
             forge,
             neoforge,
@@ -805,16 +807,6 @@ impl BranchFiles {
     pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
         let branch_files_path = directory.join(name).join(BRANCH_FILES_FILE_NAME);
         json_to_file(self, branch_files_path)
-    }
-}
-
-impl PartialEq<String> for BranchFilesProject {
-    fn eq(&self, other: &String) -> bool {
-        if let Some(id) = &self.id {
-            *id == *other
-        } else {
-            false
-        }
     }
 }
 

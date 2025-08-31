@@ -1,4 +1,3 @@
-use std::io::Write;
 use crate::{Cli, print_error, print_success, single_line_error};
 use clap::CommandFactory;
 use clap_complete::{Generator, shells};
@@ -7,15 +6,18 @@ use indexmap::IndexMap;
 use packrinth::config::{
     BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack, ProjectSettings,
 };
-use packrinth::modrinth::{Env, File, FileResult, SideSupport};
+use packrinth::modrinth::{
+    Env, File, FileResult, SideSupport, VersionDependency, VersionDependencyType,
+};
 use packrinth::{PackrinthError, config, modpack_is_dirty};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::Path;
 use std::{cmp, fs, io};
-use std::fs::OpenOptions;
 // Allow because we need all of them
 #[allow(clippy::wildcard_imports)]
 use crate::cli::*;
@@ -115,11 +117,14 @@ impl InitArgs {
                 }
 
                 let gitignore_path = directory.join(".gitignore");
-                if let Ok(exists) = fs::exists(&gitignore_path) && !exists {
+                if let Ok(exists) = fs::exists(&gitignore_path)
+                    && !exists
+                {
                     let mut gitignore_file = OpenOptions::new()
                         .append(true)
                         .create(true)
-                        .open(gitignore_path).unwrap();
+                        .open(gitignore_path)
+                        .unwrap();
                     writeln!(gitignore_file, "# Exported Modrinth modpacks").unwrap();
                     writeln!(gitignore_file, "*.mrpack").unwrap();
                 }
@@ -410,28 +415,23 @@ impl UpdateArgs {
             &modpack.branches
         };
 
-        if let Err(error) = Self::update_branches(
+        if let Err(error) = self.update_branches(
             modpack,
             branches,
-            self.no_beta,
-            self.no_alpha,
             self.require_all || modpack.require_all,
+            self.auto_dependencies || modpack.auto_dependencies,
             config_args.verbose,
         ) {
             print_error(error.message_and_tip());
         }
     }
 
-    // Allow because when this function is called, it is apparent what the bools mean.
-    #[allow(clippy::fn_params_excessive_bools)]
-    // Allow because most of it is by Cargo fmt.
-    #[allow(clippy::too_many_lines)]
     fn update_branches(
+        &self,
         modpack: &Modpack,
         branches: &Vec<String>,
-        no_beta: bool,
-        no_alpha: bool,
         require_all: bool,
+        auto_dependencies: bool,
         verbose: bool,
     ) -> Result<(), PackrinthError> {
         let mut progress_bar = ProgressBar::new_with_eta(modpack.projects.len() * branches.len());
@@ -458,72 +458,50 @@ impl UpdateArgs {
             branch_files.projects = Vec::new();
             branch_files.files = Vec::new();
 
+            let mut dependencies: Vec<VersionDependency> = Vec::new();
+
             for project in &modpack.projects {
-                let project_id = project.0;
-                let project_settings = project.1;
-                match File::from_project(
+                if let Some(new_dependencies) = self.update_project(
                     branch_name,
                     &branch_config,
-                    project_id,
-                    project_settings,
-                    no_beta,
-                    no_alpha,
+                    &mut branch_files,
+                    project.0,
+                    project.1,
+                    require_all,
+                    &mut progress_bar,
+                    verbose,
                 ) {
-                    FileResult::Ok(mut file) => {
-                        branch_files.projects.push(BranchFilesProject {
-                            name: file.project_name.clone(),
-                            id: Some(project_id.clone()),
-                        });
-
-                        if require_all {
-                            file.env = Some(Env {
-                                client: SideSupport::Required,
-                                server: SideSupport::Required,
-                            });
-                        }
-
-                        branch_files.files.push(file);
-
-                        if verbose {
-                            progress_bar.print_info(
-                                "added",
-                                project_id,
-                                Color::Green,
-                                Style::Normal,
-                            );
-                        }
-                    }
-                    FileResult::Skipped(project_id) => {
-                        if verbose {
-                            progress_bar.print_info(
-                                "skipped",
-                                &project_id,
-                                Color::Yellow,
-                                Style::Normal,
-                            );
-                        }
-                    }
-                    FileResult::NotFound(project_id) => {
-                        if verbose {
-                            progress_bar.print_info(
-                                "not found",
-                                &project_id,
-                                Color::Yellow,
-                                Style::Bold,
-                            );
-                        }
-                    }
-                    FileResult::Err(error) => {
-                        progress_bar.print_info(
-                            "failed",
-                            &single_line_error(error.message_and_tip()),
-                            Color::Red,
-                            Style::Bold,
-                        );
-                    }
+                    dependencies.extend(new_dependencies);
                 }
 
                 progress_bar.inc();
+            }
+
+            if auto_dependencies {
+                for dependency in dependencies {
+                    if let Some(project_id) = dependency.project_id
+                        && let VersionDependencyType::Required = dependency.dependency_type
+                        && !branch_files
+                            .projects
+                            .iter()
+                            .any(|project| project.id == Some(project_id.to_string()))
+                    {
+                        let project_settings = ProjectSettings {
+                            version_overrides: None,
+                            include_or_exclude: None,
+                        };
+                        self.update_project(
+                            branch_name,
+                            &branch_config,
+                            &mut branch_files,
+                            &project_id,
+                            &project_settings,
+                            require_all,
+                            &mut progress_bar,
+                            verbose,
+                        );
+                    }
+                }
             }
 
             // Copy manual files
@@ -555,6 +533,75 @@ impl UpdateArgs {
         );
 
         Ok(())
+    }
+
+    // Allow because when calling this function, it is clear what all parameters do.
+    #[allow(clippy::too_many_arguments)]
+    fn update_project(
+        &self,
+        branch_name: &String,
+        branch_config: &BranchConfig,
+        branch_files: &mut BranchFiles,
+        project_id: &str,
+        project_settings: &ProjectSettings,
+        require_all: bool,
+        progress_bar: &mut ProgressBar,
+        verbose: bool,
+    ) -> Option<Vec<VersionDependency>> {
+        match File::from_project(
+            branch_name,
+            branch_config,
+            project_id,
+            project_settings,
+            self.no_beta,
+            self.no_alpha,
+        ) {
+            FileResult::Ok {
+                mut file,
+                dependencies,
+                project_id, // This is the actual id (t234fs23), not the slug (fabric-api)
+            } => {
+                branch_files.projects.push(BranchFilesProject {
+                    name: file.project_name.clone(),
+                    id: Some(project_id.to_string()),
+                });
+
+                if require_all {
+                    file.env = Some(Env {
+                        client: SideSupport::Required,
+                        server: SideSupport::Required,
+                    });
+                }
+
+                branch_files.files.push(file);
+
+                if verbose {
+                    progress_bar.print_info("added", &project_id, Color::Green, Style::Normal);
+                }
+
+                return Some(dependencies);
+            }
+            FileResult::Skipped(project_id) => {
+                if verbose {
+                    progress_bar.print_info("skipped", &project_id, Color::Yellow, Style::Normal);
+                }
+            }
+            FileResult::NotFound(project_id) => {
+                if verbose {
+                    progress_bar.print_info("not found", &project_id, Color::Yellow, Style::Bold);
+                }
+            }
+            FileResult::Err(error) => {
+                progress_bar.print_info(
+                    "failed",
+                    &single_line_error(error.message_and_tip()),
+                    Color::Red,
+                    Style::Bold,
+                );
+            }
+        }
+
+        None
     }
 }
 

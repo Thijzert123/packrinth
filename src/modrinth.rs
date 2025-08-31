@@ -49,6 +49,7 @@ fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError>
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Project {
+    pub id: String,
     pub title: String,
     pub server_side: SideSupport,
     pub client_side: SideSupport,
@@ -90,6 +91,7 @@ pub struct Version {
     pub version_number: String,
     pub version_type: VersionType,
     pub files: Vec<VersionFile>,
+    pub dependencies: Vec<VersionDependency>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -120,6 +122,27 @@ pub struct FileHashes {
     pub sha512: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VersionDependency {
+    pub project_id: Option<String>,
+    pub dependency_type: VersionDependencyType,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum VersionDependencyType {
+    #[serde(rename = "required")]
+    Required,
+
+    #[serde(rename = "optional")]
+    Optional,
+
+    #[serde(rename = "incompatible")]
+    Incompatible,
+
+    #[serde(rename = "embedded")]
+    Embedded,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MrPack {
@@ -132,7 +155,7 @@ pub struct MrPack {
     pub summary: Option<String>,
 
     pub files: Vec<File>,
-    pub dependencies: Dependencies,
+    pub dependencies: MrPackDependencies,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -161,7 +184,7 @@ pub struct Env {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Dependencies {
+pub struct MrPackDependencies {
     pub minecraft: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -181,10 +204,29 @@ pub struct Dependencies {
 
 #[derive(Debug)]
 pub enum FileResult {
-    Ok(File),
+    Ok {
+        file: File,
+        dependencies: Vec<VersionDependency>,
+        project_id: String,
+    },
     Skipped(String),
     NotFound(String),
     Err(PackrinthError),
+}
+
+impl Project {
+    pub fn from_id(id: &str) -> Result<Self, PackrinthError> {
+        // Request to get general information about the project associated with the version
+        let api_endpoint = format!("/project/{id}");
+        let modrinth_project_response = request_text(&api_endpoint)?;
+        match serde_json::from_str::<Self>(&modrinth_project_response) {
+            Ok(versions) => Ok(versions),
+            Err(error) => Err(PackrinthError::FailedToParseModrinthResponseJson(
+                api_endpoint,
+                format!("{error}"),
+            )),
+        }
+    }
 }
 
 impl ProjectType {
@@ -302,18 +344,10 @@ impl File {
 
     fn from_modrinth_version(modrinth_version: &Version) -> FileResult {
         // Request to get general information about the project associated with the version
-        let api_endpoint = format!("/project/{}", &modrinth_version.project_id);
-        let modrinth_project_response = match request_text(&api_endpoint) {
-            Ok(response) => response,
-            Err(error) => return FileResult::Err(error),
-        };
-        let modrinth_project: Project = match serde_json::from_str(&modrinth_project_response) {
+        let modrinth_project: Project = match Project::from_id(&modrinth_version.project_id) {
             Ok(versions) => versions,
             Err(error) => {
-                return FileResult::Err(PackrinthError::FailedToParseModrinthResponseJson(
-                    api_endpoint,
-                    format!("{error}"),
-                ));
+                return FileResult::Err(error);
             }
         };
 
@@ -355,16 +389,20 @@ impl File {
             .expect("File name has non-valid UTF-8 characters")
             .to_string();
 
-        FileResult::Ok(Self {
-            project_name: modrinth_project.title,
-            path,
-            hashes: primary_file_hashes.expect("No Modrinth file found").clone(),
-            env: Some(Env {
-                client: modrinth_project.client_side,
-                server: modrinth_project.server_side,
-            }),
-            downloads: vec![primary_file_url.expect("No Modrinth file found").clone()],
-            file_size: *primary_file_size.expect("No Modrinth file found"),
-        })
+        FileResult::Ok {
+            file: Self {
+                project_name: modrinth_project.title,
+                path,
+                hashes: primary_file_hashes.expect("No Modrinth file found").clone(),
+                env: Some(Env {
+                    client: modrinth_project.client_side,
+                    server: modrinth_project.server_side,
+                }),
+                downloads: vec![primary_file_url.expect("No Modrinth file found").clone()],
+                file_size: *primary_file_size.expect("No Modrinth file found"),
+            },
+            dependencies: modrinth_version.dependencies.clone(),
+            project_id: modrinth_project.id,
+        }
     }
 }
