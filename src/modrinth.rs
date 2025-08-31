@@ -1,5 +1,6 @@
 //! Structs that are only used for (de)serializing JSONs associated with Modrinth.
 
+use std::cmp;
 use crate::PackrinthError;
 use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -90,6 +91,7 @@ pub struct Version {
     pub project_id: String,
     pub version_number: String,
     pub version_type: VersionType,
+    pub game_versions: Vec<String>,
     pub files: Vec<VersionFile>,
     pub dependencies: Vec<VersionDependency>,
 }
@@ -300,7 +302,7 @@ impl File {
             Ok(response) => response,
             Err(error) => return FileResult::Err(error),
         };
-        let modrinth_versions: Vec<Version> = if is_version_override {
+        let mut modrinth_versions: Vec<Version> = if is_version_override {
             match serde_json::from_str::<Version>(&api_response) {
                 Ok(version) => vec![version],
                 Err(error) => {
@@ -322,6 +324,25 @@ impl File {
             }
         };
 
+        // It is not confusing in this context.
+        #[allow(clippy::items_after_statements)]
+        fn max_semver(versions: &[String]) -> Option<semver::Version> {
+            versions
+                .iter()
+                .filter_map(|s| s.parse::<semver::Version>().ok())
+                .max()
+        }
+
+        modrinth_versions.sort_by(|a, b| {
+            let ma = max_semver(&a.game_versions);
+            let mb = max_semver(&b.game_versions);
+            match (ma, mb) {
+                (Some(va), Some(vb)) => cmp::Reverse(va).cmp(&cmp::Reverse(vb)),
+                (Some(_), None) => cmp::Ordering::Less,
+                (None, Some(_)) => cmp::Ordering::Greater,
+                (None, None) => cmp::Ordering::Equal,
+            }
+        });
         for modrinth_version in modrinth_versions {
             match modrinth_version.version_type {
                 VersionType::Release => return Self::from_modrinth_version(&modrinth_version),
