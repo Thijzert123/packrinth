@@ -396,7 +396,7 @@ impl RemoveProjectsArgs {
         }
     }
 }
-// TODO default flags in modpack.json
+
 impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) {
         if modpack_is_dirty(modpack) && !self.allow_dirty {
@@ -415,7 +415,7 @@ impl UpdateArgs {
             branches,
             self.no_beta,
             self.no_alpha,
-            self.require_all,
+            self.require_all || modpack.require_all,
             config_args.verbose,
         ) {
             print_error(error.message_and_tip());

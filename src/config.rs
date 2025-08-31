@@ -52,6 +52,7 @@ pub struct Modpack {
     pub name: String,
     pub summary: String,
     pub author: String,
+    pub require_all: bool,
     pub branches: Vec<String>,
     pub projects: IndexMap<String, ProjectSettings>,
 
@@ -241,6 +242,7 @@ impl Modpack {
             name: "My Modrinth modpack".to_string(),
             summary: "Short summary for this modpack".to_string(),
             author: "John Doe".to_string(),
+            require_all: false,
             branches: Vec::new(),
             projects: IndexMap::new(),
             directory: PathBuf::from(directory),
