@@ -76,7 +76,7 @@ pub enum PackrinthError {
     NoExclusionsSpecified,                             //
     RepoIsDirtyWhileUpdating,                          //
     FailedToInitGitRepoWhileInitModpack(String),       // original error
-    ModpackAlreadyExists(String),                   // directory
+    ModpackAlreadyExists(String),                      // directory
 }
 
 impl PackrinthError {

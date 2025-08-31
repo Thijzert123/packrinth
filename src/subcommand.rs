@@ -74,8 +74,14 @@ impl SubCommand {
 impl InitArgs {
     pub fn run(&self, directory: &Path, _config_args: &ConfigArgs) {
         let modpack_config_path = directory.join(config::MODPACK_CONFIG_FILE_NAME);
-        if !self.force && let Ok(exists) = fs::exists(&modpack_config_path) && exists {
-            print_error(PackrinthError::ModpackAlreadyExists(directory.display().to_string()).message_and_tip());
+        if !self.force
+            && let Ok(exists) = fs::exists(&modpack_config_path)
+            && exists
+        {
+            print_error(
+                PackrinthError::ModpackAlreadyExists(directory.display().to_string())
+                    .message_and_tip(),
+            );
             return;
         }
 
