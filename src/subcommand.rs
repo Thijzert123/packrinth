@@ -1,3 +1,4 @@
+use std::io::Write;
 use crate::{Cli, print_error, print_success, single_line_error};
 use clap::CommandFactory;
 use clap_complete::{Generator, shells};
@@ -14,6 +15,7 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
 use std::{cmp, fs, io};
+use std::fs::OpenOptions;
 // Allow because we need all of them
 #[allow(clippy::wildcard_imports)]
 use crate::cli::*;
@@ -110,6 +112,16 @@ impl InitArgs {
                         );
                         return;
                     }
+                }
+
+                let gitignore_path = directory.join(".gitignore");
+                if let Ok(exists) = fs::exists(&gitignore_path) && !exists {
+                    let mut gitignore_file = OpenOptions::new()
+                        .append(true)
+                        .create(true)
+                        .open(gitignore_path).unwrap();
+                    writeln!(gitignore_file, "# Exported Modrinth modpacks").unwrap();
+                    writeln!(gitignore_file, "*.mrpack").unwrap();
                 }
 
                 print_success(format!(
