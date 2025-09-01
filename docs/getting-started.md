@@ -6,7 +6,7 @@ nav_order: 2
 
 # Getting started
 _This page assumes you have already installed Packrinth.
-Instructions can be found [here](index.md#installation)._
+Instructions can be found [here](/#installation)._
 
 __Mods, resource packs, data packs, shaders and plugins will be called `projects` from now on.__
 
