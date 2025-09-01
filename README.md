@@ -8,7 +8,7 @@ For more detail on how to use Packrinth, go [the website](https://thijzert123.gi
 ### Cargo
 To install Packrinth with Cargo, run: 
 ```bash
-cargo install --git https://github.com/Thijzert123/packrinth
+cargo install packrinth
 ```
 
 ### Pre-compiled binaries

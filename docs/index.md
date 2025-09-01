@@ -20,6 +20,6 @@ a Minecraft modpack managed by Packrinth.
 ## Installation
 If you have Rust's package manager, Cargo, installed, you can use that to install Packrinth:
 ```bash
-cargo install --git https://github.com/Thijzert123/packrinth
+cargo install packrinth
 ```
 Pre-compiled binaries will be available soon.
