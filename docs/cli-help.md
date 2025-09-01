@@ -103,7 +103,7 @@ List all projects that are currently added to this modpack
 
 Add projects to this modpack
 
-**Usage:** `packrinth project add [OPTIONS] [PROJECTS]...`
+**Usage:** `packrinth project add [OPTIONS] <PROJECTS>...`
 
 ###### **Arguments:**
 
@@ -187,7 +187,7 @@ Add inclusions to a project in this modpack
 
 Add inclusions to a project
 
-**Usage:** `packrinth project inclusions add <PROJECT> [INCLUSIONS]...`
+**Usage:** `packrinth project inclusions add <PROJECT> <INCLUSIONS>...`
 
 ###### **Arguments:**
 
@@ -232,7 +232,7 @@ Add exclusions to a project in this modpack
 
 Add exclusions to a project
 
-**Usage:** `packrinth project exclusions add <PROJECT> [EXCLUSIONS]...`
+**Usage:** `packrinth project exclusions add <PROJECT> <EXCLUSIONS>...`
 
 ###### **Arguments:**
 
@@ -264,7 +264,7 @@ Remove exclusions from a project
 
 Remove projects from this modpack
 
-**Usage:** `packrinth project remove [PROJECTS]...`
+**Usage:** `packrinth project remove <PROJECTS>...`
 
 **Command Alias:** `rm`
 
@@ -306,7 +306,7 @@ List information about all branches
 
 Add new branches
 
-**Usage:** `packrinth branch add [BRANCHES]...`
+**Usage:** `packrinth branch add <BRANCHES>...`
 
 ###### **Arguments:**
 
@@ -318,7 +318,7 @@ Add new branches
 
 Remove branches
 
-**Usage:** `packrinth branch remove [BRANCHES]...`
+**Usage:** `packrinth branch remove <BRANCHES>...`
 
 **Command Alias:** `rm`
 

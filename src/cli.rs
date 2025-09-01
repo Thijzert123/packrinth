@@ -99,6 +99,7 @@ pub struct AddProjectsArgs {
     ///
     /// The projects must be from Modrinth. You have to specify either the human-readable
     /// slug that appears in the URL (fabric-api) or the slug (P7dR8mSH).
+    #[arg(required = true)]
     pub projects: Vec<String>,
 
     /// Add branch inclusions for the projects that you are adding
@@ -186,6 +187,7 @@ pub struct AddInclusionsArgs {
     pub project: String,
 
     /// Branches to include
+    #[arg(required = true)]
     pub inclusions: Vec<String>,
 }
 
@@ -224,6 +226,7 @@ pub struct AddExclusionsArgs {
     pub project: String,
 
     /// Branches to exclude
+    #[arg(required = true)]
     pub exclusions: Vec<String>,
 }
 
@@ -243,6 +246,7 @@ pub struct RemoveExclusionsArgs {
 #[derive(Parser, Debug)]
 pub struct RemoveProjectsArgs {
     /// Projects to remove from the modpack
+    #[arg(required = true)]
     pub projects: Vec<String>,
 }
 
@@ -303,12 +307,14 @@ pub struct ListBranchesArgs;
 #[derive(Parser, Debug)]
 pub struct AddBranchesArgs {
     /// Names of new branches to add
+    #[arg(required = true)]
     pub branches: Vec<String>,
 }
 
 #[derive(Parser, Debug)]
 pub struct RemoveBranchesArgs {
     /// Names of branches to remove
+    #[arg(required = true)]
     pub branches: Vec<String>,
 }
 
