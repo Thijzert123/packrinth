@@ -8,6 +8,7 @@ nav_order: 3
 {:toc}
 
 # `modpack.json`
+
 | Key                 | Type           | Default                        | Description                                                                                             |
 |---------------------|----------------|:-------------------------------|---------------------------------------------------------------------------------------------------------|
 | `pack_format`       | number 0-65535 | 1                              | The format of the configuration. This helps Packrinth decide whether to update to a new version or not. |
@@ -20,11 +21,13 @@ nav_order: 3
 | `projects`          | project object | _empty_                        | All projects of the modpack.                                                                            |
 
 ## `project` object
+
 | Key          | Type                    | Default | Description                                                                                            |
 |--------------|-------------------------|---------|--------------------------------------------------------------------------------------------------------|
 | _project id_ | project settings object | _empty_ | This project ID must be from Modrinth. It has to be the actual id (4ffh482k) or the slug (fabric-api). |
 
 ### `project settings` object
+
 | Key                            | Type                    | Default       | Description                                                                                                                               |
 |--------------------------------|-------------------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------|
 | `version_overrides` (optional) | version override object | _not present_ | The version overrides for a project. This allows you to specify the exact version that a branch has to use for the project.               |
@@ -32,6 +35,7 @@ nav_order: 3
 | `exclude` (optional)           | string array            | _not present_ | All the branches that are NOT allowed to include the project. All the other branches are allowed to do so. Not compatible with `include`. |
 
 #### `version override` object
+
 | Key           | Type   | Default       | Description                                                   |
 |---------------|--------|---------------|---------------------------------------------------------------|
 | _branch name_ | string | _not present_ | The branch to override with a Modrinth version ID (423fue84). |
