@@ -718,10 +718,10 @@ impl BranchConfig {
         let branch_config = Self {
             version: "1.0.0-fabric".to_string(),
             minecraft_version: "1.21.8".to_string(),
-            acceptable_minecraft_versions: vec!["1.21.7".to_string(), "1.21.8".to_string()],
+            acceptable_minecraft_versions: vec!["1.21.6".to_string(), "1.21.7".to_string()],
             mod_loader: MainLoader::Fabric,
             loader_version: "0.17.2".to_string(),
-            acceptable_loaders: vec![Loader::Minecraft, Loader::VanillaShader, Loader::Fabric],
+            acceptable_loaders: vec![Loader::Minecraft, Loader::VanillaShader],
             manual_files: vec![],
         };
         json_to_file(&branch_config, branch_config_path)?;
