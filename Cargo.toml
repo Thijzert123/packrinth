@@ -1,6 +1,11 @@
 [package]
 name = "packrinth"
 description = "CLI tool for creating and maintaining your own Minecraft modpack"
+homepage = "https://thijzert123.github.io/packrinth"
+repository = "https://github.com/Thijzert123/packrinth"
+readme = "README.md"
+keywords = ["cli", "minecraft", "modpack", "modrinth"]
+categories = ["command-line-utilities", "development-tools"]
 authors = ["Thijzert <184778919+Thijzert123@users.noreply.github.com>"]
 license = "MIT"
 version = "0.1.0"
