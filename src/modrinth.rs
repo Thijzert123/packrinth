@@ -1,12 +1,12 @@
 //! Structs that are only used for (de)serializing JSONs associated with Modrinth.
 
-use std::cmp;
 use crate::PackrinthError;
 use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
+use std::cmp;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Duration;
