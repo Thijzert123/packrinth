@@ -1,0 +1,9 @@
+title: Packrinth
+description: CLI tool for creating and maintaining your own Minecraft modpack
+theme: just-the-docs
+color_scheme: dark
+
+url: https://thijzert123.github.io/packrinth
+
+aux_links:
+  GitHub Repository: https://github.com/Thijzert123/packrinth

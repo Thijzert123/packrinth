@@ -1,3 +1,8 @@
+---
+title: CLI Help
+layout: default
+---
+
 # Command-Line Help for `packrinth`
 
 This document contains the help content for the `packrinth` command-line program.
@@ -386,6 +391,7 @@ Generate shell completion for Packrinth
 * `<SHELL>` — The shell to generate the completion for
 
   Possible values: `bash`, `elvish`, `fish`, `powershell`, `zsh`
+
 
 
 
