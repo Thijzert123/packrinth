@@ -249,16 +249,16 @@ impl RemoveVersionOverrideArgs {
     ) -> Result<(), PackrinthError> {
         if self.all {
             modpack.remove_all_project_overrides(&self.project)?;
-             modpack.save()?;
+            modpack.save()?;
 
-                    print_success(format!("removed all overrides for {}", self.project));
-                    Ok(())
+            print_success(format!("removed all overrides for {}", self.project));
+            Ok(())
         } else if let Some(branch) = &self.branch {
             modpack.remove_project_override(branch, &self.project)?;
-             modpack.save()?;
+            modpack.save()?;
 
-                print_success(format!("removed {} override for {}", self.project, branch));
-                Ok(())
+            print_success(format!("removed {} override for {}", self.project, branch));
+            Ok(())
         } else {
             Err(PackrinthError::NoBranchSpecified)
         }
@@ -598,7 +598,11 @@ impl UpdateArgs {
 }
 
 impl BranchArgs {
-    pub fn run(&self, modpack: &mut Modpack, config_args: &ConfigArgs) -> Result<(), PackrinthError> {
+    pub fn run(
+        &self,
+        modpack: &mut Modpack,
+        config_args: &ConfigArgs,
+    ) -> Result<(), PackrinthError> {
         if let Some(command) = &self.command {
             match command {
                 BranchSubCommand::List(args) => args.run(modpack, config_args),
@@ -654,7 +658,11 @@ impl ListBranchesArgs {
 }
 
 impl AddBranchesArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
+    pub fn run(
+        &self,
+        modpack: &mut Modpack,
+        _config_args: &ConfigArgs,
+    ) -> Result<(), PackrinthError> {
         for branch_name in &self.branches {
             match modpack.new_branch(branch_name) {
                 Ok(_branch) => (),
@@ -673,7 +681,13 @@ impl AddBranchesArgs {
 }
 
 impl RemoveBranchesArgs {
-    pub fn run(&self, modpack: &mut Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
+    // Allow because it is required in Cli::run.
+    #[allow(clippy::unnecessary_wraps)]
+    pub fn run(
+        &self,
+        modpack: &mut Modpack,
+        _config_args: &ConfigArgs,
+    ) -> Result<(), PackrinthError> {
         println!(
             "These branches in directory {} will be removed:",
             modpack.directory.display()
@@ -713,6 +727,8 @@ impl ExportArgs {
         }
     }
 
+    // Allow because it is required in Cli::run.
+    #[allow(clippy::unnecessary_wraps)]
     fn export_branches(modpack: &Modpack, branches: &Vec<String>) -> Result<(), PackrinthError> {
         for branch in branches {
             match modpack.export_branch(branch) {
@@ -721,7 +737,8 @@ impl ExportArgs {
                 }
                 Err(error) => {
                     // Don't use ? because then we can't try again for the next branch.
-                    print_error(error.message_and_tip());},
+                    print_error(error.message_and_tip());
+                }
             }
         }
         Ok(())
@@ -844,6 +861,8 @@ impl Display for DocMarkdownTable<'_> {
 }
 
 impl CompletionsArgs {
+    // Allow because it is required in Cli::run.
+    #[allow(clippy::unnecessary_wraps)]
     pub fn run(&self, _modpack: &Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
         let mut cmd = Cli::command();
         match self.shell {
