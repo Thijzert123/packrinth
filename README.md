@@ -37,3 +37,9 @@ After you have done that, run this to assemble a Debian package file:
 ```bash
 cargo deb
 ```
+
+## Crate as library
+Packrinth provides a library alongside the binary.
+This library is currently not optimised for third-party usage, so it isn't well documented.
+If you don't mind reading through the source code, you can use it to easily modify
+Packrinth's configuration.
