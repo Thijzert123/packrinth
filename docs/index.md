@@ -23,3 +23,8 @@ If you have Rust's package manager, Cargo, installed, you can use that to instal
 cargo install packrinth
 ```
 Pre-compiled binaries will be available soon.
+
+## Getting started
+Please read the [full guide](full-guide.md). It explains all the basics for Packrinth.
+If you just want a reference for the CLI and configuration, take a look at [CLI help](cli-help.md) and
+[configuration reference](configuration-reference.md).

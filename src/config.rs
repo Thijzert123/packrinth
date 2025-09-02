@@ -111,7 +111,7 @@ pub struct BranchConfig {
 /// See <https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack>
 /// at `dependencies` for more information.
 #[derive(Debug, Serialize, Deserialize)]
-pub enum MainLoader {
+pub enum MainLoader { // TODO don't force a main loader, be able to go without
     #[serde(rename = "forge")]
     Forge,
     #[serde(rename = "neoforge")]
@@ -850,7 +850,8 @@ impl Loader {
         values
     }
 
-    const fn pretty_value(&self) -> &str {
+    #[must_use]
+    pub const fn pretty_value(&self) -> &str {
         match self {
             Loader::Minecraft => "Minecraft",
             Loader::Fabric => "Fabric",

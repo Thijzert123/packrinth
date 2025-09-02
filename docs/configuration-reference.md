@@ -4,8 +4,16 @@ layout: default
 nav_order: 3
 ---
 
+# Configuration reference
+{: .no_toc }
+
+## Table of contents
+{: .no_toc .text-delta }
+
 1. TOC
 {:toc}
+
+---
 
 # `modpack.json`
 

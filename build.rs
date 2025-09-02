@@ -8,6 +8,10 @@ use std::fs::OpenOptions;
 mod cli;
 
 fn main() {
+    generate_cli_help_doc();
+}
+
+fn generate_cli_help_doc() {
     // Generate CLI Markdown documentation and write it to a file
     let doc = clap_markdown::help_markdown_custom::<Cli>(
         &clap_markdown::MarkdownOptions::new().show_footer(false),
