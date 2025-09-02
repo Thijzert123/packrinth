@@ -23,7 +23,7 @@ defaults:
 jobs:
   upload-assets:
     name: ${{ matrix.target }}
-    if: github.repository_owner == 'Thijzert123' && startsWith(github.event.release.name, 'packrinth@')
+    if: github.repository_owner == 'Thijzert123' && startsWith(github.event.release.name, 'v')
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
