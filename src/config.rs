@@ -114,7 +114,6 @@ pub struct BranchConfig {
 /// at `dependencies` for more information.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MainLoader {
-    // TODO don't force a main loader, be able to go without
     #[serde(rename = "forge")]
     Forge,
     #[serde(rename = "neoforge")]
