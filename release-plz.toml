@@ -2,3 +2,16 @@
 git_release_name = "{{ package }}@{{ version }}"
 git_release_type = "auto"
 release_always = false
+
+[changelog]
+commit_parsers = [
+    { message = "^feat", group = "added" },
+    { message = "^changed", group = "changed" },
+    { message = "^deprecated", group = "deprecated" },
+    { message = "^fix", group = "fixed" },
+    { message = "^security", group = "security" },
+    { message = "^.*", group = "other" },
+    { message = "^chore", skip = true },
+    { message = "^refactor", skip = true },
+    { message = "^ignore", skip = true }
+]
