@@ -638,7 +638,9 @@ impl ListBranchesArgs {
         let mut iter = branches.iter().peekable();
         while let Some(branch_name) = iter.next() {
             match BranchConfig::from_directory(directory, branch_name) {
-                Ok(branch) => branch.print_display(branch_name),
+                Ok(branch) => if let Err(error) = branch.print_display(branch_name) {
+                    print_error(error.message_and_tip());
+                }
                 Err(error) => {
                     if let PackrinthError::BranchDoesNotExist(_branch_name) = error {
                         println!(

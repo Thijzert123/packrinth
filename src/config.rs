@@ -738,7 +738,7 @@ impl BranchConfig {
         Ok(branch_config)
     }
 
-    pub fn print_display(&self, name: &str) {
+    pub fn print_display(&self, name: &str) -> Result<(), PackrinthError> {
         println!("Branch {name}:");
         println!("  - Branch version: {}", self.version);
         println!("  - Main Minecraft version: {}", self.minecraft_version);
@@ -748,6 +748,10 @@ impl BranchConfig {
         );
         if let Some(mod_loader) = &self.mod_loader {
             println!("  - Main mod loader: {}", mod_loader.pretty_value());
+            match &self.loader_version {
+                None => return Err(PackrinthError::MainModLoaderProvidedButNoVersion),
+                Some(loader_version) => println!("  - Main mod loader version: {loader_version}"),
+            }
         }
         println!(
             "  - Acceptable loaders: {}",
@@ -758,6 +762,8 @@ impl BranchConfig {
         } else {
             println!("  - Has manual files added, see the configuration file");
         }
+
+        Ok(())
     }
 }
 
