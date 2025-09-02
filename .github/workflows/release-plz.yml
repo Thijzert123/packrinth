@@ -19,21 +19,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Generating a GitHub token, so that PRs and tags created by
-      # the release-plz-action can trigger actions workflows.
-      - name: Generate GitHub token
-        uses: actions/create-github-app-token@v2
-        id: generate-token
-        with:
-          # GitHub App ID secret name
-          app-id: ${{ secrets.APP_ID }}
-          # GitHub App private key secret name
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ steps.generate-token.outputs.token }}
+          token: ${{ secrets.RELEASE_PLZ_TOKEN }}
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Run release-plz
@@ -41,7 +31,7 @@ jobs:
         with:
           command: release
         env:
-          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   # Create a PR with the new versions and changelog, preparing the next release.
@@ -56,21 +46,11 @@ jobs:
       group: release-plz-${{ github.ref }}
       cancel-in-progress: false
     steps:
-      # Generating a GitHub token, so that PRs and tags created by
-      # the release-plz-action can trigger actions workflows.
-      - name: Generate GitHub token
-        uses: actions/create-github-app-token@v2
-        id: generate-token
-        with:
-          # GitHub App ID secret name
-          app-id: ${{ secrets.APP_ID }}
-          # GitHub App private key secret name
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ steps.generate-token.outputs.token }}
+          token: ${{ secrets.RELEASE_PLZ_TOKEN }}
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Run release-plz
@@ -78,5 +58,5 @@ jobs:
         with:
           command: release-pr
         env:
-          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
