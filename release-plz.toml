@@ -10,9 +10,9 @@ commit_parsers = [
     { message = "^deprecated", group = "deprecated" },
     { message = "^fix", group = "fixed" },
     { message = "^security", group = "security" },
-    { message = "^.*", group = "other" },
     { message = "^chore", skip = true },
     { message = "^refactor", skip = true },
     { message = "^ignore", skip = true },
-    { message = "^docs", skip = true }
+    { message = "^docs", skip = true },
+    { message = "^.*", group = "other" }
 ]
