@@ -33,6 +33,10 @@ impl Cli {
 
 impl SubCommand {
     fn run(&self, config_args: &ConfigArgs) -> Result<(), PackrinthError> {
+        if let SubCommand::Version(args) = self {
+            return args.run(config_args);
+        }
+
         let current_dir = match &config_args.directory {
             Some(dir) => dir,
             None => match std::env::current_dir() {
@@ -57,6 +61,7 @@ impl SubCommand {
 
         match self {
             SubCommand::Init(_args) => Ok(()),
+            SubCommand::Version(_args) => Ok(()),
             SubCommand::Project(args) => args.run(&mut modpack, config_args),
             SubCommand::Branch(args) => args.run(&mut modpack, config_args),
             SubCommand::Update(args) => args.run(&modpack, config_args),
@@ -883,5 +888,21 @@ impl CompletionsArgs {
             cmd.get_name().to_string(),
             &mut io::stdout(),
         );
+    }
+}
+
+impl VersionArgs {
+    // Allow because it is required in Cli::run.
+    #[allow(clippy::unnecessary_wraps)]
+    // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
+    #[allow(clippy::unused_self)]
+    pub fn run(&self, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
+        println!("Packrinth by {}", crate::AUTHORS);
+        println!("Version {}", crate::VERSION);
+        println!();
+        println!("If you find any bugs, have suggestions, or want to contribute, please visit the Git repository at:");
+        println!("{}", crate::REPOSITORY);
+
+        Ok(())
     }
 }

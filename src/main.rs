@@ -7,6 +7,10 @@ use clap::Parser;
 use console::Style;
 use std::fmt::Display;
 
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
+pub const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
+
 fn main() {
     Cli::parse().run();
 }

@@ -33,6 +33,7 @@ This document contains the help content for the `packrinth` command-line program
 * [`packrinth doc`↴](#packrinth-doc)
 * [`packrinth doc project`↴](#packrinth-doc-project)
 * [`packrinth completions`↴](#packrinth-completions)
+* [`packrinth version`↴](#packrinth-version)
 
 ## `packrinth`
 
@@ -47,6 +48,7 @@ This document contains the help content for the `packrinth` command-line program
 * `export` — Export a branch to a Modrinth modpack
 * `doc` — Generate Markdown documentation
 * `completions` — Generate shell completion for Packrinth
+* `version` — Show information about the current Packrinth installation
 
 ###### **Options:**
 
@@ -392,6 +394,14 @@ Generate shell completion for Packrinth
 
   Possible values: `bash`, `elvish`, `fish`, `powershell`, `zsh`
 
+
+
+
+## `packrinth version`
+
+Show information about the current Packrinth installation
+
+**Usage:** `packrinth version`
 
 
 

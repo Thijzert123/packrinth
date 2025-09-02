@@ -32,6 +32,9 @@ pub enum SubCommand {
 
     /// Generate shell completion for Packrinth
     Completions(CompletionsArgs),
+
+    /// Show information about the current Packrinth installation
+    Version(VersionArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -356,3 +359,6 @@ pub enum CompletionShell {
 
     Zsh,
 }
+
+#[derive(Parser, Debug)]
+pub struct VersionArgs;
