@@ -1,8 +1,8 @@
-use std::io::Write;
 use crate::cli::Cli;
-use std::path::PathBuf;
 use std::env;
 use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::PathBuf;
 
 #[path = "src/cli.rs"]
 mod cli;
@@ -17,20 +17,24 @@ fn generate_cli_help_doc() {
         &clap_markdown::MarkdownOptions::new().show_footer(false),
     );
 
-    let doc_file_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("docs").join("cli-help.md");
+    let doc_file_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
+        .join("docs")
+        .join("cli-help.md");
 
     let mut doc_file = OpenOptions::new()
         .create(true)
         .truncate(true)
         .write(true)
-        .open(&doc_file_path).unwrap();
+        .open(&doc_file_path)
+        .unwrap();
 
     writeln!(doc_file, "---").unwrap();
 
     let mut doc_file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(&doc_file_path).unwrap();
+        .open(&doc_file_path)
+        .unwrap();
 
     writeln!(doc_file, "title: CLI Help").unwrap();
     writeln!(doc_file, "layout: default").unwrap();

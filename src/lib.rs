@@ -77,6 +77,7 @@ pub enum PackrinthError {
     RepoIsDirtyWhileUpdating,                          //
     FailedToInitGitRepoWhileInitModpack(String),       // original error
     ModpackAlreadyExists(String),                      // directory
+    MainModLoaderProvidedButNoVersion,                 //
 }
 
 impl PackrinthError {
@@ -120,6 +121,7 @@ impl PackrinthError {
             PackrinthError::RepoIsDirtyWhileUpdating => ("git repository has uncommitted changes".to_string(), "pass the --allow-dirty flag to force updating".to_string()),
             PackrinthError::FailedToInitGitRepoWhileInitModpack(original_error) => (format!("failed to initialize Git repository: {original_error}"), "the modpack itself was initialized successfully, so you can try to initialize a Git repository yourself".to_string()),
             PackrinthError::ModpackAlreadyExists(directory) => (format!("a modpack instance already exists in {directory}"), "to force initializing a new repository, pass the --force flag".to_string()),
+            PackrinthError::MainModLoaderProvidedButNoVersion => ("a main mod loader was specified for a branch, but no version was provided".to_string(), "add the loader_version to branch.json".to_string()),
         }
     }
 }

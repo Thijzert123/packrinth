@@ -273,7 +273,9 @@ impl File {
         }
 
         let mut loaders = Loader::modrinth_value_vec(&branch_config.acceptable_loaders);
-        loaders.push(branch_config.mod_loader.modrinth_value());
+        if let Some(mod_loader) = &branch_config.mod_loader {
+            loaders.push(mod_loader.modrinth_value());
+        }
 
         // Default loaders that will always be added
         loaders.push(Loader::Minecraft.modrinth_value());

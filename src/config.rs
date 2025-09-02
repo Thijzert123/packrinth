@@ -94,9 +94,11 @@ pub struct BranchConfig {
     #[serde(default)]
     pub acceptable_minecraft_versions: Vec<String>,
 
-    pub mod_loader: MainLoader,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mod_loader: Option<MainLoader>,
 
-    pub loader_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loader_version: Option<String>,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
     #[serde(default)]
@@ -111,7 +113,8 @@ pub struct BranchConfig {
 /// See <https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack>
 /// at `dependencies` for more information.
 #[derive(Debug, Serialize, Deserialize)]
-pub enum MainLoader { // TODO don't force a main loader, be able to go without
+pub enum MainLoader {
+    // TODO don't force a main loader, be able to go without
     #[serde(rename = "forge")]
     Forge,
     #[serde(rename = "neoforge")]
@@ -545,7 +548,7 @@ impl Modpack {
             name: self.name.clone(),
             summary: Some(self.summary.clone()),
             files: branch_files.files,
-            dependencies: Self::create_dependencies(branch_config),
+            dependencies: Self::create_dependencies(branch_config)?,
         };
 
         let mrpack_json = match serde_json_to_string_pretty(&mrpack) {
@@ -650,26 +653,34 @@ impl Modpack {
         }
     }
 
-    fn create_dependencies(branch_config: BranchConfig) -> MrPackDependencies {
+    fn create_dependencies(
+        branch_config: BranchConfig,
+    ) -> Result<MrPackDependencies, PackrinthError> {
         let mut forge = None;
         let mut neoforge = None;
         let mut fabric_loader = None;
         let mut quilt_loader = None;
 
-        match branch_config.mod_loader {
-            MainLoader::Forge => forge = Some(branch_config.loader_version),
-            MainLoader::NeoForge => neoforge = Some(branch_config.loader_version),
-            MainLoader::Fabric => fabric_loader = Some(branch_config.loader_version),
-            MainLoader::Quilt => quilt_loader = Some(branch_config.loader_version),
+        if let Some(main_loader) = branch_config.mod_loader {
+            let Some(loader_version) = branch_config.loader_version else {
+                return Err(PackrinthError::MainModLoaderProvidedButNoVersion);
+            };
+
+            match main_loader {
+                MainLoader::Forge => forge = Some(loader_version),
+                MainLoader::NeoForge => neoforge = Some(loader_version),
+                MainLoader::Fabric => fabric_loader = Some(loader_version),
+                MainLoader::Quilt => quilt_loader = Some(loader_version),
+            }
         }
 
-        MrPackDependencies {
+        Ok(MrPackDependencies {
             minecraft: branch_config.minecraft_version,
             forge,
             neoforge,
             fabric_loader,
             quilt_loader,
-        }
+        })
     }
 }
 
@@ -719,8 +730,8 @@ impl BranchConfig {
             version: "1.0.0-fabric".to_string(),
             minecraft_version: "1.21.8".to_string(),
             acceptable_minecraft_versions: vec!["1.21.6".to_string(), "1.21.7".to_string()],
-            mod_loader: MainLoader::Fabric,
-            loader_version: "0.17.2".to_string(),
+            mod_loader: Some(MainLoader::Fabric),
+            loader_version: Some("0.17.2".to_string()),
             acceptable_loaders: vec![Loader::Minecraft, Loader::VanillaShader],
             manual_files: vec![],
         };
@@ -736,7 +747,9 @@ impl BranchConfig {
             "  - Acceptable Minecraft versions: {}",
             self.acceptable_minecraft_versions.join(", ")
         );
-        println!("  - Main mod loader: {}", self.mod_loader.pretty_value());
+        if let Some(mod_loader) = &self.mod_loader {
+            println!("  - Main mod loader: {}", mod_loader.pretty_value());
+        }
         println!(
             "  - Acceptable loaders: {}",
             Loader::pretty_value_vec(&self.acceptable_loaders).join(", ")

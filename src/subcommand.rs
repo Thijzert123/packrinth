@@ -900,7 +900,9 @@ impl VersionArgs {
         println!("Packrinth by {}", crate::AUTHORS);
         println!("Version {}", crate::VERSION);
         println!();
-        println!("If you find any bugs, have suggestions, or want to contribute, please visit the Git repository at:");
+        println!(
+            "If you find any bugs, have suggestions, or want to contribute, please visit the Git repository at:"
+        );
         println!("{}", crate::REPOSITORY);
 
         Ok(())
