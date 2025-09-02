@@ -24,6 +24,8 @@ Then, compile the debug build with:
 cargo build
 ```
 
+You can also manually install Packrinth with one of the pre-compiled binaries from the [latest GitHub release](https://github.com/Thijzert123/packrinth/releases/latest).
+
 ## Crate as library
 Packrinth provides a library alongside the binary.
 This library is currently not optimised for third-party usage, so it isn't well documented.

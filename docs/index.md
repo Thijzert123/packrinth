@@ -18,11 +18,12 @@ a Minecraft modpack managed by Packrinth.
 - Automatically generating documentation
 
 ## Installation
-If you have Rust's package manager, Cargo, installed, you can use that to install Packrinth:
+If you have Cargo installed, you can use that to install Packrinth:
 ```bash
 cargo install packrinth
 ```
-Pre-compiled binaries will be available soon.
+
+You can also manually install Packrinth with one of the pre-compiled binaries from the [latest GitHub release](https://github.com/Thijzert123/packrinth/releases/latest).
 
 ## Getting started
 Please read the [full guide](full-guide.md). It explains all the basics for Packrinth.
