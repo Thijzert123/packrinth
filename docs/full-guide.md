@@ -74,6 +74,7 @@ This field is set to `false` by default to prevent confusion when more projects 
 you thought. It is important to know that only _required_ dependencies will be added.
 If you want optional dependencies to be in your modpack, you have to add them manually.
 
+{: .note }
 We will ignore the `branches` and `projects` field, and we will come back to it later.
 
 ## Branches
