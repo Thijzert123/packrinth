@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/Thijzert123/packrinth/compare/v0.1.1...v0.2.0) - 2025-09-02
+
+### Added
+
+- Add version subcommand
+
+### Fixed
+
+- Main mod loader will now be shown when listing branches
+- Allow not providing `mod_loader` and `loader_version` in `branch.json`
+
+### Other
+
+- Update docs for this version
+- remove TODO
+- More docs improvements
+
 ## [0.1.1](https://github.com/Thijzert123/packrinth/compare/v0.1.0...v0.1.1) - 2025-09-02
 
 ### Fixed
