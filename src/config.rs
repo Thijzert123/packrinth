@@ -67,9 +67,11 @@ pub struct Modpack {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectSettings {
     // IndexMap<Branch, Project version id>
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub version_overrides: Option<IndexMap<String, String>>,
 
     #[serde(flatten)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub include_or_exclude: Option<IncludeOrExclude>,
 }
 
