@@ -13,5 +13,6 @@ commit_parsers = [
     { message = "^.*", group = "other" },
     { message = "^chore", skip = true },
     { message = "^refactor", skip = true },
-    { message = "^ignore", skip = true }
+    { message = "^ignore", skip = true },
+    { message = "^docs", skip = true }
 ]
