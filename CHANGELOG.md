@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- update default branch config to be more accurate
+- Some vec arguments will now be required (empty isn't allowed anymore)
+- Update default branch config to be more accurate
 
 ### Other
 
