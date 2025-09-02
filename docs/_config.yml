@@ -16,3 +16,6 @@ callouts:
   summary:
     title: Summary
     color: purple
+  note:
+    title: Note
+    color: blue

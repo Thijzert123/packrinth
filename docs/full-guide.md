@@ -128,6 +128,10 @@ to set the correct mod loader version in `loader_version`. You can check possibl
 Similar to `acceptable_minecraft_versions`, `acceptable_loaders` allows other loaders than the main mod loader
 to be added to the branch. For a full list, check [here](loaders.html#other-loaders).
 
+{: .note }
+You can also choose to not provide a main mod loader. To do this, remove the `mod_loader` and `loader_version`
+fields.
+
 ## Adding projects
 Let's add some projects to our modpack with `packrinth project add <PROJECTS>`. To add Sodium and Lithium, run this:
 ```bash
