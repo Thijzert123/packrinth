@@ -59,7 +59,10 @@ The field `require_all` is a little bit more obscure: if it is set to `true`, ev
 for all projects will be set to `required`. This means that when the user installs the modpack,
 they will always install all mods, regardless of whether they are on a dedicated server or not.
 Even more, some modpack installers may prompt the user if one of the environments is set to
-`optional`. A rule of thumbs is: if you want to separate mods for client and server, keep this
+`optional`.
+
+{: .summary }
+If you want to separate mods for client and server, keep this
 setting to `false`. If you want that every user downloads all projects you have specified, set
 this setting to `true`.
 
@@ -69,7 +72,7 @@ This field is set to `false` by default to prevent confusion when more projects 
 you thought. It is important to know that only _required_ dependencies will be added.
 If you want optional dependencies to be in your modpack, you have to add them manually.
 
-We will ignore the `branches` and `projects` field, and we will come back later.
+We will ignore the `branches` and `projects` field, and we will come back to it later.
 
 ## Branches
 A Packrinth modpack always consists of at lease one branch. A branch has its own project versions and is completely
@@ -111,6 +114,8 @@ As you can see, for every branch a config file with the name `branch.json` is cr
         ]
 }
 ```
+_branch.json_
+
 Obviously, assuming this is the configuration file for our branch `1.21.5`, it is not right for our purposes.
 You can change the version to `1.0.0-fabric+1.21.5` to make it clearer to users what modpack branch this is.
 The version will be included in the final `.mrpack` file. Additionally, change `minecraft_version` to the version
@@ -119,9 +124,9 @@ only target Minecraft 1.21.7, in this case, will still be added to this branch, 
 Minecraft 1.21.8.
 
 `mod_loader` specifies the mod loader that gets installed alongside Minecraft by the modpack installer. It is important
-to set the correct mod loader version in `loader_version`. You can check possible `mod_loader` values [here](loaders.md#main-mod-loader).
+to set the correct mod loader version in `loader_version`. You can check possible `mod_loader` values [here](loaders.html#main-mod-loader).
 Similar to `acceptable_minecraft_versions`, `acceptable_loaders` allows other loaders than the main mod loader
-to be added to the branch. For a full list, check [here](loaders.md#other-loaders).
+to be added to the branch. For a full list, check [here](loaders.html#other-loaders).
 
 ## Adding projects
 Let's add some projects to our modpack with `packrinth project add <PROJECTS>`. To add Sodium and Lithium, run this:
@@ -142,7 +147,7 @@ newest project suitable for your branch settings. It will put all this data in a
 This file contains data that can directly be used for exporting your modpack. This way, export time is minimized
 because no requests to the Modrinth API have to be made.
 
-{: .warning }
+{: .important }
 You should never edit this file: always tweak your settings
 in `modpack.json` or `branch.json` and then run `packrinth update`. You should, however, add the file to your Git
 repository, to make sure you can always export the exact same modpack. If you are familiar with Cargo, it works

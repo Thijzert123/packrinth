@@ -10,6 +10,9 @@ aux_links:
   GitHub Repository: https://github.com/Thijzert123/packrinth
 
 callouts:
-  warning:
-    title: Warning
+  important:
+    title: Important
     color: yellow
+  summary:
+    title: Summary
+    color: purple
