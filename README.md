@@ -6,7 +6,7 @@ For more detail on how to use Packrinth, go [the website](https://thijzert123.gi
 
 ## Installation
 ### Cargo
-To install Packrinth with Cargo, run: 
+To install the latest version of Packrinth with Cargo, run:
 ```bash
 cargo install packrinth
 ```
@@ -19,23 +19,9 @@ To compile Packrinth, clone the Git repository with:
 ```bash
 git clone https://github.com/Thijzert123/packrinth.git
 ```
-Then, compile the release build if you want to use the binary for production with:
-```bash
-cargo build --release
-```
-If you just want a quick build for debugging purposes, you can run:
+Then, compile the debug build with:
 ```bash
 cargo build
-```
-
-### Debian packages
-To compile Debian packages, you need `cargo-deb`. You can install it with:
-```bash
-cargo install cargo-deb
-```
-After you have done that, run this to assemble a Debian package file:
-```bash
-cargo deb
 ```
 
 ## Crate as library

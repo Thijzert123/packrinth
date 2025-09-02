@@ -15,10 +15,12 @@ nav_order: 2
 
 ---
 
-_This page assumes you have already installed Packrinth.
-Instructions can be found [here](https://thijzert123.github.io/packrinth/#installation)._
+{: .note }
+This page assumes you have already installed Packrinth.
+Instructions can be found [here](https://thijzert123.github.io/packrinth/#installation).
 
-__Mods, resource packs, data packs, shaders and plugins will be called `projects` from now on.__
+{: .note }
+Mods, resource packs, data packs, shaders and plugins will be called `projects` from now on.
 
 ## Initializing the modpack
 To get started, initialize a Packrinth modpack instance with `packrinth init`.
@@ -156,3 +158,24 @@ You should never edit this file: always tweak your settings
 in `modpack.json` or `branch.json` and then run `packrinth update`. You should, however, add the file to your Git
 repository, to make sure you can always export the exact same modpack. If you are familiar with Cargo, it works
 about the same as the `Cargo.lock` file.
+
+## Exporting a branch
+It is time to export to a Modrinth modpack! To do so, run this command:
+```bash
+$ packrinth export [BRANCHES]
+```
+If no branches are provided, all branches will be exported. The final file will be in the directory of the branch.
+The file name is produced like this:
+```
+name_version.mrpack
+```
+The `name` refers to the `name` field in `modpack.json`, and the `version` field refers to the `version` field
+in the relevant `branch.json`.
+
+{: .note }
+Exporting a modpack doesn't take long, because all the web requests have already been made during `packrinth update`!
+
+The final modpack file can be uploaded to Modrinth, or you can privately distribute it among your friends.
+
+## Further reference
+TODO
