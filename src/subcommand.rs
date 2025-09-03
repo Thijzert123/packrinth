@@ -42,9 +42,9 @@ impl SubCommand {
             None => match std::env::current_dir() {
                 Ok(current_dir) => &current_dir.clone(),
                 Err(error) => {
-                    return Err(PackrinthError::FailedToGetCurrentDirectory(
-                        error.to_string(),
-                    ));
+                    return Err(PackrinthError::FailedToGetCurrentDirectory {
+                        error_message: error.to_string(),
+                    });
                 }
             },
         };
@@ -56,7 +56,9 @@ impl SubCommand {
         let mut modpack = Modpack::from_directory(current_dir)?;
 
         if modpack.pack_format != config::CURRENT_PACK_FORMAT {
-            return Err(PackrinthError::InvalidPackFormat(modpack.pack_format));
+            return Err(PackrinthError::InvalidPackFormat {
+                used_pack_format: modpack.pack_format,
+            });
         }
 
         match self {
@@ -79,9 +81,9 @@ impl InitArgs {
             && let Ok(exists) = fs::exists(&modpack_config_path)
             && exists
         {
-            return Err(PackrinthError::ModpackAlreadyExists(
-                directory.display().to_string(),
-            ));
+            return Err(PackrinthError::ModpackAlreadyExists {
+                directory: directory.display().to_string(),
+            });
         }
 
         let modpack = Modpack::new(directory)?;
@@ -97,9 +99,9 @@ impl InitArgs {
                 gix::init::Error::Init(gix::create::Error::DirectoryExists { path })
                     if path.file_name() == Some(std::ffi::OsStr::new(".git"))
             ) {
-                return Err(PackrinthError::FailedToInitGitRepoWhileInitModpack(
-                    error.to_string(),
-                ));
+                return Err(PackrinthError::FailedToInitGitRepoWhileInitModpack {
+                    error_message: error.to_string(),
+                });
             }
         }
 
@@ -644,7 +646,11 @@ impl ListBranchesArgs {
                     }
                 }
                 Err(error) => {
-                    if let PackrinthError::BranchDoesNotExist(_branch_name) = error {
+                    if let PackrinthError::BranchDoesNotExist {
+                        branch: _,
+                        error_message: _,
+                    } = error
+                    {
                         println!(
                             "Branch {} is declared in the modpack config file ({}), but it doesn't exist. Please consider removing it from the configuration or re-adding the branch.",
                             branch_name,

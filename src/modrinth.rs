@@ -41,10 +41,12 @@ fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError>
     let response = runtime
         .block_on(client.get(&full_url).send())
         .expect("Failed to get response");
-    if let Ok(text) = runtime.block_on(response.text()) {
-        Ok(text)
-    } else {
-        Err(PackrinthError::RequestFailed(full_url))
+    match runtime.block_on(response.text()) {
+        Ok(text) => Ok(text),
+        Err(error) => Err(PackrinthError::RequestFailed {
+            url: full_url,
+            error_message: error.to_string(),
+        }),
     }
 }
 
@@ -223,10 +225,10 @@ impl Project {
         let modrinth_project_response = request_text(&api_endpoint)?;
         match serde_json::from_str::<Self>(&modrinth_project_response) {
             Ok(versions) => Ok(versions),
-            Err(error) => Err(PackrinthError::FailedToParseModrinthResponseJson(
-                api_endpoint,
-                format!("{error}"),
-            )),
+            Err(error) => Err(PackrinthError::FailedToParseModrinthResponseJson {
+                modrinth_endpoint: api_endpoint,
+                error_message: error.to_string(),
+            }),
         }
     }
 }
@@ -308,20 +310,20 @@ impl File {
             match serde_json::from_str::<Version>(&api_response) {
                 Ok(version) => vec![version],
                 Err(error) => {
-                    return FileResult::Err(PackrinthError::FailedToParseModrinthResponseJson(
-                        api_endpoint,
-                        format!("{error}"),
-                    ));
+                    return FileResult::Err(PackrinthError::FailedToParseModrinthResponseJson {
+                        modrinth_endpoint: api_endpoint,
+                        error_message: error.to_string(),
+                    });
                 }
             }
         } else {
             match serde_json::from_str(&api_response) {
                 Ok(versions) => versions,
                 Err(error) => {
-                    return FileResult::Err(PackrinthError::FailedToParseModrinthResponseJson(
-                        api_endpoint,
-                        format!("{error}"),
-                    ));
+                    return FileResult::Err(PackrinthError::FailedToParseModrinthResponseJson {
+                        modrinth_endpoint: api_endpoint,
+                        error_message: error.to_string(),
+                    });
                 }
             }
         };
