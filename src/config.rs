@@ -1,3 +1,5 @@
+//! Structs for configuring and managing a Packrinth modpack instance.
+
 use crate::PackrinthError;
 use crate::modrinth::{File, MrPack, MrPackDependencies};
 use indexmap::IndexMap;
@@ -10,11 +12,11 @@ use walkdir::WalkDir;
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
 
-/// Pack format version. Can be used for checking if the user uses the right packrinth
+/// Pack format version.
+///
+/// Can be used for checking if the user uses the right packrinth
 /// version for their project.
 pub const CURRENT_PACK_FORMAT: u16 = 1;
-
-pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 
 fn json_to_file<T, P>(json_value: &T, file: P) -> Result<(), PackrinthError>
 where
@@ -23,7 +25,7 @@ where
 {
     let json = match serde_json_to_string_pretty(json_value) {
         Ok(json) => json,
-        Err(_error) => return Err(PackrinthError::FailedToSerialize),
+        Err(_error) => return Err(PackrinthError::FailedToSerialize), // TODO add original error message here
     };
     if let Err(error) = fs::write(&file, json) {
         return Err(PackrinthError::FailedToWriteFile {
@@ -46,7 +48,10 @@ where
     Ok(String::from_utf8_lossy(&buf).to_string())
 }
 
-/// Config file at the root of the project. File is named <code>modpack.json</code>.
+/// Config file at the root of the modpack directory.
+///
+/// It is important to know that every function that modifies the modpack, DOESN'T save it to
+/// the configuration file. To do that, use [`Modpack::save`].
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Modpack {
     pub pack_format: u16,
@@ -56,6 +61,11 @@ pub struct Modpack {
     pub require_all: bool,
     pub auto_dependencies: bool,
     pub branches: Vec<String>,
+
+    /// A map of added projects.
+    ///
+    /// The key is the Modrinth project ID (fabric-api or 3jfh38sf),
+    /// and the value is a map of settings for the project.
     pub projects: IndexMap<String, ProjectSettings>,
 
     #[serde(skip)]
@@ -65,6 +75,7 @@ pub struct Modpack {
     pub modpack_config_path: PathBuf,
 }
 
+/// Settings for one project that is added to a modpack.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectSettings {
     // IndexMap<Branch, Project version id>
@@ -76,6 +87,10 @@ pub struct ProjectSettings {
     pub include_or_exclude: Option<IncludeOrExclude>,
 }
 
+/// Inclusions or exclusions for a project.
+///
+/// Inclusions allow projects to ONLY be added
+/// to specific branches, while exclusions remove projects from branches.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum IncludeOrExclude {
     #[serde(rename = "include")]
@@ -87,6 +102,9 @@ pub enum IncludeOrExclude {
 
 const BRANCH_CONFIG_FILE_NAME: &str = "branch.json";
 
+/// Configuration for a branch.
+///
+/// This configuration is supposed to be edited by the user.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BranchConfig {
     pub version: String,
@@ -112,7 +130,8 @@ pub struct BranchConfig {
     pub manual_files: Vec<File>,
 }
 
-/// Loaders that a launcher has to install with the modpack.
+/// Loader that a launcher has to install with the modpack.
+///
 /// See <https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack>
 /// at `dependencies` for more information.
 #[derive(Debug, Serialize, Deserialize)]
@@ -127,6 +146,7 @@ pub enum MainLoader {
     Quilt,
 }
 
+/// All Modrinth loaders, including loaders for shader packs.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Loader {
     // For resource packs and data packs
@@ -197,27 +217,33 @@ pub enum Loader {
 const BRANCH_FILES_FILE_NAME: &str = ".branch_files.json";
 const BRANCH_FILES_INFO: &str = "This file is managed by Packrinth and not intended for manual editing. You should, however, add it to your Git repository.";
 
+/// A configuration file for all the files for a branch.
+///
+/// This configuration file is intended to be updated by Packrinth, not by theo
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BranchFiles {
     info: String,
+
+    /// All projects added in a branch.
+    ///
+    /// These can be used for generating documentation based on [`BranchFiles`]
+    /// without making additional web request. That is because a [`File`] doesn't contain
+    /// a human-friendly name and Modrinth ID for a project.
     pub projects: Vec<BranchFilesProject>,
+
     pub files: Vec<File>,
 }
-
+/// Project for [`BranchFiles`].
 #[derive(Debug, Serialize, Deserialize, Clone, Hash, Eq, PartialEq)]
 pub struct BranchFilesProject {
     pub name: String,
 
+    /// The Modrinth ID for a project. If [`None`], the project was a manual project.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Side {
-    Server,
-    Client,
-    Both,
-}
+const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 
 /// The current most recent pack format of a .mrpack file.
 const MODRINTH_PACK_FORMAT: u16 = 1;
@@ -227,7 +253,31 @@ const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
 const OVERRIDE_DIRS: [&str; 3] = ["overrides", "server-overrides", "client-overrides"];
 
 impl Modpack {
-    pub fn new(directory: &Path) -> Result<Self, PackrinthError> {
+    /// Creates a new modpack to a directory.
+    ///
+    /// If the directory doesn't exist, it will be created, including its parent directories
+    /// if necessary.
+    ///
+    /// If `force` is set to `true`, a modpack will be initialized
+    /// even if one already exists in the specified directory. In this case, the configuration file
+    /// will be overridden with the default configuration.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::ModpackAlreadyExists`] if a modpack configuration file already exists
+    ///   in the directory and `force` was `false`
+    /// - [`PackrinthError::PathIsFile`] if the directory path is a file
+    /// - [`PackrinthError::ProjectIsNotAdded`] if creating the directory failed
+    pub fn new(directory: &Path, force: bool) -> Result<Self, PackrinthError> {
+        let modpack_config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
+        if !force
+            && let Ok(exists) = fs::exists(&modpack_config_path)
+            && exists
+        {
+            return Err(PackrinthError::ModpackAlreadyExists {
+                directory: directory.display().to_string(),
+            });
+        }
+
         match fs::metadata(directory) {
             Ok(metadata) => {
                 if metadata.is_file() {
@@ -262,6 +312,11 @@ impl Modpack {
         Ok(modpack)
     }
 
+    /// Gets a modpack from a directory.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToReadToString`] if reading the modpack configuration failed
+    /// - [`PackrinthError::FailedToParseConfigJson`] if parsing the configuration JSON failed
     pub fn from_directory(directory: &Path) -> Result<Self, PackrinthError> {
         let modpack_config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
 
@@ -291,6 +346,7 @@ impl Modpack {
         Ok(modpack)
     }
 
+    /// Adds projects to the modpack with optional version overrides or inclusions or exclusions.
     pub fn add_projects(
         &mut self,
         projects: &[String],
@@ -315,7 +371,11 @@ impl Modpack {
         }
     }
 
-    pub fn add_project_override(
+    /// Adds a version override to a project added to this modpack.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
+    pub fn add_version_override(
         &mut self,
         project: &str,
         branch: &str,
@@ -339,7 +399,13 @@ impl Modpack {
         Ok(())
     }
 
-    pub fn remove_project_override(
+    /// Removes a version override from a project added to this modpack.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
+    /// - [`PackrinthError::OverrideDoesNotExist`] if given override doesn't exist for given project
+    /// - [`PackrinthError::NoOverridesForProject`] if no overrides exist for given project at all
+    pub fn remove_version_override(
         &mut self,
         project: &str,
         branch: &str,
@@ -367,7 +433,11 @@ impl Modpack {
         }
     }
 
-    pub fn remove_all_project_overrides(&mut self, project: &str) -> Result<(), PackrinthError> {
+    /// Removes all version overrides from a project.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
+    pub fn remove_all_version_overrides(&mut self, project: &str) -> Result<(), PackrinthError> {
         if let Some(project_settings) = self.projects.get_mut(project) {
             project_settings.version_overrides = None;
             Ok(())
@@ -378,6 +448,11 @@ impl Modpack {
         }
     }
 
+    /// Adds inclusions to a project.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
+    /// - [`PackrinthError::ProjectAlreadyHasExclusions`] if the project already has exclusions
     pub fn add_project_inclusions(
         &mut self,
         project: &str,
@@ -407,6 +482,11 @@ impl Modpack {
         Ok(())
     }
 
+    /// Removes inclusions from a project.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
+    /// - [`PackrinthError::NoInclusionsForProject`] if no inclusions exist for the project
     pub fn remove_project_inclusions(
         &mut self,
         project: &str,
@@ -430,6 +510,11 @@ impl Modpack {
         }
     }
 
+    /// Removes all project inclusions.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
+    /// - [`PackrinthError::NoInclusionsForProject`] if no inclusions exist for the project
     pub fn remove_all_project_inclusions(&mut self, project: &str) -> Result<(), PackrinthError> {
         if let Some(project_settings) = self.projects.get_mut(project)
             && let Some(include_or_exclude) = &project_settings.include_or_exclude
@@ -450,6 +535,11 @@ impl Modpack {
         }
     }
 
+    /// Adds exclusions to a project.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
+    /// - [`PackrinthError::ProjectAlreadyHasInclusions`] if the project already has inclusions
     pub fn add_project_exclusions(
         &mut self,
         project: &str,
@@ -479,6 +569,11 @@ impl Modpack {
         Ok(())
     }
 
+    /// Removes exclusions from a project.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
+    /// - [`PackrinthError::NoExclusionsForProject`] if no exclusions exist for the project
     pub fn remove_project_exclusions(
         &mut self,
         project: &str,
@@ -502,6 +597,11 @@ impl Modpack {
         }
     }
 
+    /// Removes all exclusions from a project.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
+    /// - [`PackrinthError::NoExclusionsForProject`] if no exclusions exist for the project
     pub fn remove_all_project_exclusions(&mut self, project: &str) -> Result<(), PackrinthError> {
         if let Some(project_settings) = self.projects.get_mut(project)
             && let Some(include_or_exclude) = &project_settings.include_or_exclude
@@ -522,6 +622,7 @@ impl Modpack {
         }
     }
 
+    /// Removes projects from the modpack.
     pub fn remove_projects(&mut self, projects: &[String]) {
         for project in projects {
             // shift_remove to show Git that one line was removed
@@ -530,7 +631,12 @@ impl Modpack {
     }
 
     /// Creates new branches.
-    /// If it already exists, it just returns the existing branch.
+    ///
+    /// This function also creates the branch directory.
+    /// If the branch already exists, it just returns the existing branch.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToCreateDir`] if the creation of the branch directory failed
     pub fn new_branch(&mut self, name: &String) -> Result<BranchConfig, PackrinthError> {
         if !self.branches.contains(name) {
             self.branches.push(name.clone());
@@ -548,6 +654,10 @@ impl Modpack {
         BranchConfig::from_directory(&self.directory, name)
     }
 
+    /// Removes branches from the modpack.
+    ///
+    /// It also removes the branch directories. If something goes wrong during this process,
+    /// all errors get ignored.
     pub fn remove_branches(&mut self, branch_names: &Vec<String>) {
         for branch_name in branch_names {
             let branch_path = self.directory.join(branch_name);
@@ -564,10 +674,32 @@ impl Modpack {
         }
     }
 
+    /// Saves the modpack to the configuration file.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToSerialize`] if serialising this type to a JSON failed
+    /// - [`PackrinthError::FailedToWriteFile`] if writing the JSON to a file failed
     pub fn save(&self) -> Result<(), PackrinthError> {
         json_to_file(self, &self.modpack_config_path)
     }
 
+    /// Exports a branch to a `.mrpack` file.
+    ///
+    /// The path of the exported modpack will be a file in the branch directory.
+    /// The full path gets returned if exporting was successful.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToSerialize`] if serializing the main manifest goes wrong
+    ///
+    /// Other errors may occur while creating the zip file:
+    /// - [`PackrinthError::FailedToInitializeFileType`]
+    /// - [`PackrinthError::FailedToStartZipFile`]
+    /// - [`PackrinthError::FailedToWriteToZip`]
+    /// - [`PackrinthError::FailedToGetWalkDirEntry`]
+    /// - [`PackrinthError::FailedToStripPath`]
+    /// - [`PackrinthError::FailedToCopyIntoBuffer`]
+    /// - [`PackrinthError::FailedToAddZipDir`]
+    /// - [`PackrinthError::FailedToFinishZip`]
     // Allow because it's hard to split this function up in other functions
     // without them having lots of parameters.
     #[allow(clippy::too_many_lines)]
@@ -737,6 +869,13 @@ impl Modpack {
 }
 
 impl BranchConfig {
+    /// Gets a branch configuration type from a directory and name.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToParseConfigJson`] if the branch configuration file was invalid
+    /// - [`PackrinthError::FailedToReadToString`] if reading the configuration file failed
+    /// - [`PackrinthError::DirectoryExpected`] if the given directory is not a directory
+    /// - [`PackrinthError::BranchDoesNotExist`] if the branch doesn't exist
     pub fn from_directory(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
@@ -795,6 +934,23 @@ impl BranchConfig {
         Ok(branch_config)
     }
 
+    /// Prints a representation of the branch.
+    ///
+    /// Example:
+    /// ```text
+    /// Branch 1.20.1:
+    ///   - Branch version: 1.0.0+1.20.1-alpha.1
+    ///   - Main Minecraft version: 1.20.1
+    ///   - Acceptable Minecraft versions:
+    ///   - Main mod loader: Fabric
+    ///   - Main mod loader version: 0.17.2
+    ///   - Acceptable loaders: Iris
+    ///   - No manual files are added
+    /// ```
+    ///
+    /// # Errors
+    /// - [`PackrinthError::MainModLoaderProvidedButNoVersion`] if a main mod loader was specified
+    ///   in the configuration file, but no version for the mod loader was set
     pub fn print_display(&self, name: &str) -> Result<(), PackrinthError> {
         println!("Branch {name}:");
         println!("  - Branch version: {}", self.version);
@@ -825,6 +981,13 @@ impl BranchConfig {
 }
 
 impl BranchFiles {
+    /// Gets a branch files type from a branch directory and name.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToParseConfigJson`] if the branch files configuration file was invalid
+    /// - [`PackrinthError::FailedToReadToString`] if reading the configuration file failed
+    /// - [`PackrinthError::DirectoryExpected`] if the given directory is not a directory
+    /// - [`PackrinthError::BranchDoesNotExist`] if the branch doesn't exist
     pub fn from_directory(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
@@ -873,7 +1036,8 @@ impl BranchFiles {
         }
     }
 
-    pub fn default(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
+    /// Returns the default configuration.
+    pub fn default(directory: &Path, name: &String) -> Result<Self, PackrinthError> { // TODO move this to trait Default and remove save
         let branch_files = Self {
             info: BRANCH_FILES_INFO.to_string(),
             projects: vec![],
@@ -883,6 +1047,11 @@ impl BranchFiles {
         Ok(branch_files)
     }
 
+    /// Saves the current files configuration to the directory and name of the branch.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToSerialize`] if serialising this type to a JSON failed
+    /// - [`PackrinthError::FailedToWriteFile`] if writing the JSON to a file failed
     pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
         let branch_files_path = directory.join(name).join(BRANCH_FILES_FILE_NAME);
         json_to_file(self, branch_files_path)
@@ -890,7 +1059,9 @@ impl BranchFiles {
 }
 
 impl MainLoader {
-    const fn pretty_value(&self) -> &str {
+    /// Returns a pretty human-friendly value.
+    #[must_use]
+    pub const fn pretty_value(&self) -> &str {
         match self {
             MainLoader::Forge => "Forge",
             MainLoader::NeoForge => "NeoForge",
@@ -899,6 +1070,7 @@ impl MainLoader {
         }
     }
 
+    /// Returns the Modrinth value, which can be used in the URL of web requests.
     #[must_use]
     pub const fn modrinth_value(&self) -> &str {
         match self {
@@ -911,6 +1083,7 @@ impl MainLoader {
 }
 
 impl Loader {
+    /// Returns a pretty human-friendly value [`Vec`].
     #[must_use]
     pub fn pretty_value_vec(loaders: &Vec<Self>) -> Vec<&str> {
         let mut values = Vec::new();
@@ -920,6 +1093,7 @@ impl Loader {
         values
     }
 
+    /// Returns the Modrinth value [`Vec`], which can be used in the URL of web requests.
     #[must_use]
     pub fn modrinth_value_vec(loaders: &Vec<Self>) -> Vec<&str> {
         let mut values = Vec::new();
@@ -929,6 +1103,7 @@ impl Loader {
         values
     }
 
+    /// Returns a pretty human-friendly value.
     #[must_use]
     pub const fn pretty_value(&self) -> &str {
         match self {
@@ -962,6 +1137,7 @@ impl Loader {
         }
     }
 
+    /// Returns the Modrinth value, which can be used in the URL of web requests.
     #[must_use]
     pub const fn modrinth_value(&self) -> &str {
         match self {

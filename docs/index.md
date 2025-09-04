@@ -29,3 +29,7 @@ You can also manually install Packrinth with one of the pre-compiled binaries fr
 Please read the [full guide](full-guide.md). It explains all the basics for Packrinth.
 If you just want a reference for the CLI and configuration, take a look at [CLI help](cli-help.md) and
 [configuration reference](configuration-reference.md).
+
+## Packrinth as library
+Packrinth provides a library alongside the binary. Using this, you can modify Packrinth's configuration
+in an idiomatic way. For example, you can write your own CLI interface for Packrinth!

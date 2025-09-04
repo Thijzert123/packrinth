@@ -50,6 +50,7 @@ fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError>
     }
 }
 
+/// Part of the fields returned from the `/project` Modrinth API endpoint (v2).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Project {
     pub id: String,
@@ -59,6 +60,7 @@ pub struct Project {
     pub project_type: ProjectType,
 }
 
+/// The type of project.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ProjectType {
     #[serde(rename = "mod")]
@@ -74,6 +76,7 @@ pub enum ProjectType {
     Shader,
 }
 
+/// The support for a specific environment (server or client).
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum SideSupport {
     #[serde(rename = "required")]
@@ -86,7 +89,7 @@ pub enum SideSupport {
     Unsupported,
 }
 
-/// Struct that can be used to deserialize Modrinth version JSONs (/version).
+/// /// Part of the fields returned from the `/version` Modrinth API endpoint (v2).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Version {
     pub id: String,
@@ -98,6 +101,7 @@ pub struct Version {
     pub dependencies: Vec<VersionDependency>,
 }
 
+/// Type of version.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum VersionType {
     #[serde(rename = "release")]
@@ -120,18 +124,21 @@ pub struct VersionFile {
     pub hashes: FileHashes,
 }
 
+/// Hashes for a file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileHashes {
     pub sha1: String,
     pub sha512: String,
 }
 
+/// Dependency for a version.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VersionDependency {
     pub project_id: Option<String>,
     pub dependency_type: VersionDependencyType,
 }
 
+/// Type of version dependency.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum VersionDependencyType {
     #[serde(rename = "required")]
@@ -147,6 +154,7 @@ pub enum VersionDependencyType {
     Embedded,
 }
 
+/// The main index file in a Modrinth modpack.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MrPack {
@@ -162,6 +170,7 @@ pub struct MrPack {
     pub dependencies: MrPackDependencies,
 }
 
+/// A file in a modpack.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
@@ -179,6 +188,7 @@ pub struct File {
     pub file_size: u64,
 }
 
+/// Environment information for a file in a Modrinth modpack.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Env {
@@ -186,6 +196,7 @@ pub struct Env {
     pub server: SideSupport,
 }
 
+/// Dependencies for a modpack, which are mod loaders that get installed alongside the modpack.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MrPackDependencies {
@@ -206,6 +217,7 @@ pub struct MrPackDependencies {
     pub quilt_loader: Option<String>,
 }
 
+/// The result of creating a file.
 #[derive(Debug)]
 pub enum FileResult {
     Ok {
@@ -219,6 +231,11 @@ pub enum FileResult {
 }
 
 impl Project {
+    /// Gets a project from the Modrinth ID.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::RequestFailed`] if the Modrinth request failed
+    /// - [`PackrinthError::FailedToParseConfigJson`] if the Modrinth response was invalid
     pub fn from_id(id: &str) -> Result<Self, PackrinthError> {
         // Request to get general information about the project associated with the version
         let api_endpoint = format!("/project/{id}");
@@ -234,7 +251,10 @@ impl Project {
 }
 
 impl ProjectType {
-    /// Returns the directory of where the project would go in to.
+    /// Returns the directory name of where the project would go in to.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::AttemptedToAddOtherModpack`] when [`ProjectType`] is [`ProjectType::Modpack`]
     pub fn directory(&self) -> Result<&str, PackrinthError> {
         match self {
             ProjectType::Mod => Ok("mods"),
@@ -249,6 +269,7 @@ impl ProjectType {
 }
 
 impl File {
+    /// Creates a file type from a project.
     #[must_use]
     pub fn from_project(
         branch_name: &String,

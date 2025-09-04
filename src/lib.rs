@@ -6,6 +6,9 @@ pub mod modrinth;
 
 use crate::config::Modpack;
 
+/// Checks if the modpack is dirty by checking whether the directory of the modpack
+/// has uncommitted changes. If any errors occur (for example, if no Git repository exists),
+/// `false` will be returned.
 #[must_use]
 pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
     let git_repo = match gix::open(&modpack.directory) {
@@ -16,6 +19,7 @@ pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
     git_repo.is_dirty().unwrap_or(false)
 }
 
+/// An error that can occur while performing Packrinth operations.
 #[derive(Debug)]
 pub enum PackrinthError {
     PathIsFile {
@@ -122,6 +126,8 @@ pub enum PackrinthError {
 }
 
 impl PackrinthError {
+    /// Returns a message and tip for a [`PackrinthError`], in the form of (message, tip).
+    /// It uses the relevant data in the enum value.
     #[must_use]
     pub fn message_and_tip(&self) -> (String, String) {
         let file_an_issue: String =

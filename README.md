@@ -27,7 +27,5 @@ cargo build
 You can also manually install Packrinth with one of the pre-compiled binaries from the [latest GitHub release](https://github.com/Thijzert123/packrinth/releases/latest).
 
 ## Crate as library
-Packrinth provides a library alongside the binary.
-This library is currently not optimised for third-party usage, so it isn't well documented.
-If you don't mind reading through the source code, you can use it to easily modify
-Packrinth's configuration.
+Packrinth provides a library alongside the binary. Using this, you can modify Packrinth's configuration
+in an idiomatic way. For example, you can write your own CLI interface for Packrinth!

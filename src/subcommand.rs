@@ -76,17 +76,7 @@ impl SubCommand {
 
 impl InitArgs {
     pub fn run(&self, directory: &Path, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
-        let modpack_config_path = directory.join(config::MODPACK_CONFIG_FILE_NAME);
-        if !self.force
-            && let Ok(exists) = fs::exists(&modpack_config_path)
-            && exists
-        {
-            return Err(PackrinthError::ModpackAlreadyExists {
-                directory: directory.display().to_string(),
-            });
-        }
-
-        let modpack = Modpack::new(directory)?;
+        let modpack = Modpack::new(directory, self.force)?;
 
         modpack.save()?;
 
@@ -237,7 +227,7 @@ impl AddVersionOverrideArgs {
         modpack: &mut Modpack,
         _config_args: &ConfigArgs,
     ) -> Result<(), PackrinthError> {
-        modpack.add_project_override(&self.project, &self.branch, &self.project_version_id)?;
+        modpack.add_version_override(&self.project, &self.branch, &self.project_version_id)?;
         modpack.save()?;
 
         print_success(format!(
@@ -255,13 +245,13 @@ impl RemoveVersionOverrideArgs {
         _config_args: &ConfigArgs,
     ) -> Result<(), PackrinthError> {
         if self.all {
-            modpack.remove_all_project_overrides(&self.project)?;
+            modpack.remove_all_version_overrides(&self.project)?;
             modpack.save()?;
 
             print_success(format!("removed all overrides for {}", self.project));
             Ok(())
         } else if let Some(branch) = &self.branch {
-            modpack.remove_project_override(branch, &self.project)?;
+            modpack.remove_version_override(branch, &self.project)?;
             modpack.save()?;
 
             print_success(format!("removed {} override for {}", self.project, branch));
@@ -652,9 +642,7 @@ impl ListBranchesArgs {
                     } = error
                     {
                         println!(
-                            "Branch {} is declared in the modpack config file ({}), but it doesn't exist. Please consider removing it from the configuration or re-adding the branch.",
-                            branch_name,
-                            config::MODPACK_CONFIG_FILE_NAME
+                            "Branch {branch_name} is declared in the modpack config file, but it doesn't exist. Please consider removing it from the configuration or re-adding the branch.",
                         );
                     } else {
                         return Err(error);
