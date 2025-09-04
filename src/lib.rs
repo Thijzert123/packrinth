@@ -41,7 +41,9 @@ pub enum PackrinthError {
         modrinth_endpoint: String,
         error_message: String,
     },
-    FailedToSerialize,
+    FailedToSerialize {
+        error_message: String,
+    },
     ProjectIsNotAdded {
         project: String,
     },
@@ -138,7 +140,7 @@ impl PackrinthError {
             PackrinthError::FailedToReadToString { path_to_read, error_message } => (format!("failed to read file {path_to_read}: {error_message}"), "check if you have sufficient permissions and if the file exists".to_string()),
             PackrinthError::FailedToParseConfigJson { config_path, error_message } => (format!("config file {config_path} is invalid: {error_message}"), "fix it according to JSON standards".to_string()),
             PackrinthError::FailedToParseModrinthResponseJson { modrinth_endpoint, error_message } => (format!("modrinth response from endpoint {modrinth_endpoint} is invalid: {error_message}"), file_an_issue),
-            PackrinthError::FailedToSerialize => ("failed to serialize to a JSON".to_string(), file_an_issue),
+            PackrinthError::FailedToSerialize{ error_message } => (format!("failed to serialize to a JSON: {error_message}"), file_an_issue),
             PackrinthError::ProjectIsNotAdded { project } => (format!("project {project} is not added to this modpack"), "add it with subcommand: project add".to_string()),
             PackrinthError::OverrideDoesNotExist { project, branch } => (format!("{project} does not have an override for branch {branch}"), "add one with subcommand: project override add".to_string()),
             PackrinthError::NoOverridesForProject { project } => (format!("project {project} doesn't have any overrides"), "add one with subcommand: project override add".to_string()),

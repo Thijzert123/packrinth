@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
-use walkdir::WalkDir;
+use walkdir::{WalkDir};
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
 
@@ -25,7 +25,7 @@ where
 {
     let json = match serde_json_to_string_pretty(json_value) {
         Ok(json) => json,
-        Err(_error) => return Err(PackrinthError::FailedToSerialize), // TODO add original error message here
+        Err(error) => return Err(PackrinthError::FailedToSerialize { error_message: error.to_string() }),
     };
     if let Err(error) = fs::write(&file, json) {
         return Err(PackrinthError::FailedToWriteFile {
@@ -723,7 +723,7 @@ impl Modpack {
 
         let mrpack_json = match serde_json_to_string_pretty(&mrpack) {
             Ok(mrpack_json) => mrpack_json,
-            Err(_error) => return Err(PackrinthError::FailedToSerialize),
+            Err(error) => return Err(PackrinthError::FailedToSerialize { error_message: error.to_string() }),
         };
         let options = SimpleFileOptions::default();
         let zip_file = match fs::File::create(&mrpack_path) {
