@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/Thijzert123/packrinth/compare/v0.2.1...v0.3.0) - 2025-09-04
+
+### Added
+
+- Add original error message to `PackrinthErrror::FailedToSerialize`
+- [**breaking**] When an error is shown, the original error message containing more information is shown more often
+
+### Fixed
+
+- Move the `default` function of `BranchFiles` to trait `Default`
+
 ## [0.2.1](https://github.com/Thijzert123/packrinth/compare/v0.2.0...v0.2.1) - 2025-09-02
 
 ### Fixed
