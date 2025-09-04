@@ -1009,7 +1009,9 @@ impl BranchFiles {
                         }
                         Err(error) => {
                             if error.kind() == io::ErrorKind::NotFound {
-                                Self::default(directory, name)?
+                                let default_branch_files = Self::default();
+                                default_branch_files.save(directory, name)?;
+                                default_branch_files
                             } else {
                                 return Err(PackrinthError::FailedToReadToString {
                                     path_to_read: branch_files_path.display().to_string(),
@@ -1036,17 +1038,6 @@ impl BranchFiles {
         }
     }
 
-    /// Returns the default configuration.
-    pub fn default(directory: &Path, name: &String) -> Result<Self, PackrinthError> { // TODO move this to trait Default and remove save
-        let branch_files = Self {
-            info: BRANCH_FILES_INFO.to_string(),
-            projects: vec![],
-            files: vec![],
-        };
-        branch_files.save(directory, name)?;
-        Ok(branch_files)
-    }
-
     /// Saves the current files configuration to the directory and name of the branch.
     ///
     /// # Errors
@@ -1055,6 +1046,16 @@ impl BranchFiles {
     pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
         let branch_files_path = directory.join(name).join(BRANCH_FILES_FILE_NAME);
         json_to_file(self, branch_files_path)
+    }
+}
+
+impl Default for BranchFiles {
+    fn default() -> Self {
+        Self {
+            info: BRANCH_FILES_INFO.to_string(),
+            projects: vec![],
+            files: vec![],
+        }
     }
 }
 

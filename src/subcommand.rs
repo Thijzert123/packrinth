@@ -440,7 +440,11 @@ impl UpdateArgs {
             let mut branch_files =
                 match BranchFiles::from_directory(&modpack.directory, branch_name) {
                     Ok(branch_files) => branch_files,
-                    Err(_error) => BranchFiles::default(&modpack.directory, branch_name)?,
+                    Err(_error) => {
+                        let default_branch_files = BranchFiles::default();
+                        default_branch_files.save(&modpack.directory, branch_name)?;
+                        default_branch_files
+                    },
                 };
 
             // Remove all entries to ensure that there will be no duplicates if the user changes loaders
