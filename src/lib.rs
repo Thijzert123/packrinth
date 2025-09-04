@@ -6,7 +6,9 @@ pub mod modrinth;
 
 use crate::config::Modpack;
 
-/// Checks if the modpack is dirty by checking whether the directory of the modpack
+/// Checks if the modpack is dirty.
+///
+/// It does this by checking whether the directory of the modpack
 /// has uncommitted changes. If any errors occur (for example, if no Git repository exists),
 /// `false` will be returned.
 #[must_use]
