@@ -29,4 +29,36 @@ These loaders are possible values for `mod_loader` in `branch.json`.
 | Quilt    | `quilt`             |
 
 ## Other loaders
-# TODO
+Every project on Modrinth has a loader (including shader packs). Some notable loaders are `minecraft` and
+`vanilla`. `minecraft` is the loader for resource packs and `vanilla` is used for vanilla shaders. These are both
+included in your `branch.json`s `acceptable_loaders` by default.
+
+| Name                 | Configuration value |
+|----------------------|---------------------|
+| Minecraft            | `minecraft`         |
+| Fabric               | `fabric`            |
+| Forge                | `forge`             |
+| NeoForge             | `neoforge`          |
+| Quilt                | `quilt`             |
+| Babric               | `babric`            |
+| BTA (Babric)         | `bta-babric`        |
+| Java Agent           | `java-agent`        |
+| Legacy Fabric        | `legacy-fabric`     |
+| LiteLoader           | `liteloader`        |
+| Risugami's ModLoader | `modloader`         |
+| NilLoader            | `nilloader`         |
+| Ornithe              | `ornithe`           |
+| Rift                 | `rift`              |
+| Canvas               | `canvas`            |
+| Iris                 | `iris`              |
+| OptiFine             | `optifine`          |
+| Vanilla Shader       | `vanilla`           |
+| Bukkit               | `bukkit`            |
+| Folia                | `folia`             |
+| Paper                | `paper`             |
+| Purpur               | `purpur`            |
+| Spigot               | `spigot`            |
+| Sponge               | `sponge`            |
+| BungeeCord           | `bungeecord`        |
+| Velocity             | `velocity`          |
+| Waterfall            | `waterfall`         |
