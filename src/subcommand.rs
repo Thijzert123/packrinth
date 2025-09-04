@@ -444,7 +444,7 @@ impl UpdateArgs {
                         let default_branch_files = BranchFiles::default();
                         default_branch_files.save(&modpack.directory, branch_name)?;
                         default_branch_files
-                    },
+                    }
                 };
 
             // Remove all entries to ensure that there will be no duplicates if the user changes loaders
