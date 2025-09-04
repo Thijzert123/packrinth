@@ -10,6 +10,7 @@ authors = ["Thijzert <184778919+Thijzert123@users.noreply.github.com>"]
 license = "MIT"
 version = "0.3.0"
 edition = "2024"
+rust-version = "1.88.0"
 include = ["src/", "*.md"]
 
 [dependencies]
