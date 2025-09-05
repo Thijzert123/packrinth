@@ -44,9 +44,10 @@ Below is the generated config output from `packrinth doc`.
 
 ---
 
-# Client+ _by Thijzert (https://github.com/Thijzert123)_
+# Client+ _by Thijzert ([https://github.com/Thijzert123](https://github.com/Thijzert123))_
 Modpack focused on improving vanilla Minecraft on the client-side.
 ## What is included?
+
 |Name|1.21.8|1.21.7|1.21.6|1.21.5|1.21.4|1.21.3|1.21.1|1.20.4|1.20.1|
 |:--|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 |[(Bee's) Fancy Crops](https://modrinth.com/project/UGEVQ6t9)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
