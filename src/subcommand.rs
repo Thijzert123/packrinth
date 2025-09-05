@@ -752,69 +752,10 @@ impl ExportArgs {
     }
 }
 
-impl DocArgs {
-    pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<(), PackrinthError> {
-        match &self.command {
-            DocSubCommand::Project(args) => args.run(modpack, config_args),
-        }
-    }
-}
-
 #[derive(Debug)]
 struct DocMarkdownTable<'a> {
     column_names: Vec<&'a str>,
     project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
-}
-
-impl ProjectDocArgs {
-    // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
-    #[allow(clippy::unused_self)]
-    pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
-        let mut column_names = vec!["Name"];
-        // project, map: branch, whether it has the project
-        let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> =
-            HashMap::new();
-
-        for branch in &modpack.branches {
-            column_names.push(branch);
-            // Even tough we are in a loop, we want to abort the action if something goes wrong
-            // here, to avoid incorrect docs.
-            let branch_files = BranchFiles::from_directory(&modpack.directory, branch)?;
-
-            for project in &branch_files.projects {
-                // Vector in hashmap that shows which branches are compatible with a project.
-                if let Some(branch_map) = project_map.get_mut(project) {
-                    if branch_map.get(branch).is_none() {
-                        branch_map.insert(branch.clone(), Some(()));
-                    }
-                } else {
-                    let mut branch_map = HashMap::new();
-                    branch_map.insert(branch.clone(), Some(()));
-                    project_map.insert(project.clone(), branch_map);
-                }
-            }
-        }
-
-        for project in &mut project_map {
-            for branch in &modpack.branches {
-                if project.1.get(branch).is_none() {
-                    project.1.insert(branch.clone(), None);
-                }
-            }
-        }
-
-        let table = DocMarkdownTable {
-            column_names,
-            project_map,
-        };
-
-        println!("# {} _by {}_", modpack.name, modpack.author);
-        println!("{}", modpack.summary);
-        println!("## What is included?");
-        println!("{table}");
-
-        Ok(())
-    }
 }
 
 impl Display for DocMarkdownTable<'_> {
@@ -862,6 +803,57 @@ impl Display for DocMarkdownTable<'_> {
                 writeln!(f)?;
             }
         }
+
+        Ok(())
+    }
+}
+
+impl DocArgs {
+    // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
+    #[allow(clippy::unused_self)]
+    pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
+        let mut column_names = vec!["Name"];
+        // project, map: branch, whether it has the project
+        let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> =
+            HashMap::new();
+
+        for branch in &modpack.branches {
+            column_names.push(branch);
+            // Even tough we are in a loop, we want to abort the action if something goes wrong
+            // here, to avoid incorrect docs.
+            let branch_files = BranchFiles::from_directory(&modpack.directory, branch)?;
+
+            for project in &branch_files.projects {
+                // Vector in hashmap that shows which branches are compatible with a project.
+                if let Some(branch_map) = project_map.get_mut(project) {
+                    if branch_map.get(branch).is_none() {
+                        branch_map.insert(branch.clone(), Some(()));
+                    }
+                } else {
+                    let mut branch_map = HashMap::new();
+                    branch_map.insert(branch.clone(), Some(()));
+                    project_map.insert(project.clone(), branch_map);
+                }
+            }
+        }
+
+        for project in &mut project_map {
+            for branch in &modpack.branches {
+                if project.1.get(branch).is_none() {
+                    project.1.insert(branch.clone(), None);
+                }
+            }
+        }
+
+        let table = DocMarkdownTable {
+            column_names,
+            project_map,
+        };
+
+        println!("# {} _by {}_", modpack.name, modpack.author);
+        println!("{}", modpack.summary);
+        println!("## What is included?");
+        println!("{table}");
 
         Ok(())
     }

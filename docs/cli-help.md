@@ -31,7 +31,6 @@ This document contains the help content for the `packrinth` command-line program
 * [`packrinth update`↴](#packrinth-update)
 * [`packrinth export`↴](#packrinth-export)
 * [`packrinth doc`↴](#packrinth-doc)
-* [`packrinth doc project`↴](#packrinth-doc-project)
 * [`packrinth completions`↴](#packrinth-completions)
 * [`packrinth version`↴](#packrinth-version)
 
@@ -366,19 +365,7 @@ Export a branch to a Modrinth modpack
 
 Generate Markdown documentation
 
-**Usage:** `packrinth doc <COMMAND>`
-
-###### **Subcommands:**
-
-* `project` — Generate documentation based on the local project
-
-
-
-## `packrinth doc project`
-
-Generate documentation based on the local project
-
-**Usage:** `packrinth doc project`
+**Usage:** `packrinth doc`
 
 
 

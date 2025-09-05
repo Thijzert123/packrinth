@@ -328,19 +328,7 @@ pub struct ExportArgs {
 }
 
 #[derive(Parser, Debug)]
-pub struct DocArgs {
-    #[clap(subcommand)]
-    pub command: DocSubCommand,
-}
-
-#[derive(Parser, Debug)]
-pub enum DocSubCommand {
-    /// Generate documentation based on the local project
-    Project(ProjectDocArgs),
-}
-
-#[derive(Parser, Debug)]
-pub struct ProjectDocArgs;
+pub struct DocArgs;
 
 #[derive(Parser, Debug)]
 pub struct CompletionsArgs {
