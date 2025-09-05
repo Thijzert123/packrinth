@@ -29,8 +29,6 @@ To add version overrides, add the `version_overrides` key with a map of `branch:
 map like so:
 ```json
 {
-        -- snip --
-  
         "projects": {
                 "yosbr": {
                         "version_overrides": {
@@ -43,6 +41,8 @@ map like so:
         }
 }
 ```
+_modpack.json (some fields were omitted)_
+
 [Your Options Shall Be Respected](https://modrinth.com/mod/yosbr) is a Minecraft mod that works on all recent Minecraft
 versions, but it doesn't say that on its Modrinth page. By adding the version overrides, the project gets added anyway.
 
@@ -60,8 +60,6 @@ To add inclusions or exclusions, add the `include` or `exclude` key with a strin
 map like so:
 ```json
 {
-        -- snip --
-  
         "projects": {
                 "sodium": {
                         "include": [
@@ -78,7 +76,7 @@ map like so:
         }
 }
 ```
-_modpack.json_
+_modpack.json (some fields were omitted)_
 
 Imagine if this is the configuration file for a modpack with four branches: `1.20.1`, `1.20.4` and `1.21.3`.
 With these inclusions and exclusions, `sodium` will be added to `1.20.1` and `1.20.4`, but not to branch `1.21.3`.
