@@ -179,4 +179,4 @@ Exporting a modpack doesn't take long, because all the web requests have already
 The final modpack file can be uploaded to Modrinth, or you can privately distribute it among your friends.
 
 ## Further reference
-TODO
+Please read one of the other guides for more specific documentation for other features.
