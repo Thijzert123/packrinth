@@ -4,8 +4,11 @@ layout: home
 nav_order: 1
 ---
 
+<img src="logo.png" alt="logo" width=100 height=100 />
+
 # Packrinth
 Packrinth is a CLI tool for creating and managing Minecraft modpacks with Modrinth projects.
+{: .text-center}
 
 If you want to see an example of how Packrinth is used, see [Client+](https://github.com/Thijzert123/client-plus),
 a Minecraft modpack managed by Packrinth.
