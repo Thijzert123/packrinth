@@ -12,9 +12,9 @@ configuration (`branch.json`). You have to put a list of files.
 To see what information you need to provide, look at the [configuration reference](configuration-reference.md#file-object).
 
 {: .important }
-You can add any manual files and export it to a Modrinth modpack, but to host a Modrinth modpack on the Modrinth
-website, the download links can only be from these websites:
-- `cdn.modrinth.com`
-- `github.com`
-- `raw.githubusercontent.com`
-- `gitlab.com`
+> You can add any manual files and export it to a Modrinth modpack, but to host a Modrinth modpack on the Modrinth
+> website, the download links can only be from these websites:
+> - `cdn.modrinth.com`
+> - `github.com`
+> - `raw.githubusercontent.com`
+> - `gitlab.com`
