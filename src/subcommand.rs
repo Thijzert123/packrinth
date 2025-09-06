@@ -35,6 +35,8 @@ impl SubCommand {
     fn run(&self, config_args: &ConfigArgs) -> Result<(), PackrinthError> {
         if let SubCommand::Version(args) = self {
             return args.run(config_args);
+        } else if let SubCommand::Completions(args) = self {
+            return args.run(config_args);
         }
 
         let current_dir = match &config_args.directory {
@@ -64,12 +66,12 @@ impl SubCommand {
         match self {
             SubCommand::Init(_args) => Ok(()),
             SubCommand::Version(_args) => Ok(()),
+            SubCommand::Completions(_args) => Ok(()),
             SubCommand::Project(args) => args.run(&mut modpack, config_args),
             SubCommand::Branch(args) => args.run(&mut modpack, config_args),
             SubCommand::Update(args) => args.run(&modpack, config_args),
             SubCommand::Export(args) => args.run(&modpack, config_args),
             SubCommand::Doc(args) => args.run(&modpack, config_args),
-            SubCommand::Completions(args) => args.run(&modpack, config_args),
         }
     }
 }
@@ -862,7 +864,7 @@ impl DocArgs {
 impl CompletionsArgs {
     // Allow because it is required in Cli::run.
     #[allow(clippy::unnecessary_wraps)]
-    pub fn run(&self, _modpack: &Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
+    pub fn run(&self, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
         let mut cmd = Cli::command();
         match self.shell {
             CompletionShell::Bash => Self::print_completions(shells::Bash, &mut cmd),
