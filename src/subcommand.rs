@@ -64,14 +64,12 @@ impl SubCommand {
         }
 
         match self {
-            SubCommand::Init(_args) => Ok(()),
-            SubCommand::Version(_args) => Ok(()),
-            SubCommand::Completions(_args) => Ok(()),
             SubCommand::Project(args) => args.run(&mut modpack, config_args),
             SubCommand::Branch(args) => args.run(&mut modpack, config_args),
             SubCommand::Update(args) => args.run(&modpack, config_args),
             SubCommand::Export(args) => args.run(&modpack, config_args),
             SubCommand::Doc(args) => args.run(&modpack, config_args),
+            _ => Ok(()) // These cases should have been handled before this match statement.
         }
     }
 }
