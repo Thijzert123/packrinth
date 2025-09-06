@@ -127,9 +127,10 @@ only target Minecraft 1.21.7, in this case, will still be added to this branch, 
 Minecraft 1.21.8.
 
 `mod_loader` specifies the mod loader that gets installed alongside Minecraft by the modpack installer. It is important
-to set the correct mod loader version in `loader_version`. You can check possible `mod_loader` values [here](loaders.html#main-mod-loader).
+to set the correct mod loader version in `loader_version`.
 Similar to `acceptable_minecraft_versions`, `acceptable_loaders` allows other loaders than the main mod loader
-to be added to the branch. For a full list, check [here](loaders.html#other-loaders).
+to be added to the branch. For a full list of acceptable values for `mod_loader`, look [here](configuration-reference.html#main-mod-loader).
+For acceptable values for `acceptable_loaders`, check [here](configuration-reference.html#other-loaders).
 
 {: .note }
 You can also choose to not provide a main mod loader. To do this, remove the `mod_loader` and `loader_version`

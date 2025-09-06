@@ -89,7 +89,7 @@ pub enum SideSupport {
     Unsupported,
 }
 
-/// /// Part of the fields returned from the `/version` Modrinth API endpoint (v2).
+/// Part of the fields returned from the `/version` Modrinth API endpoint (v2).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Version {
     pub id: String,

@@ -928,7 +928,7 @@ impl BranchConfig {
         }
     }
 
-    fn create_default_branch_config(branch_config_path: &PathBuf) -> Result<Self, PackrinthError> {
+    fn create_default_branch_config(branch_config_path: &PathBuf) -> Result<Self, PackrinthError> { // TODO move to Default impl
         let branch_config = Self {
             version: "1.0.0-fabric".to_string(),
             minecraft_version: "1.21.8".to_string(),
