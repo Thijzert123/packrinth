@@ -50,29 +50,56 @@ Modpack focused on improving vanilla Minecraft on the client-side.
 
 |Name|1.21.8|1.21.7|1.21.6|1.21.5|1.21.4|1.21.3|1.21.1|1.20.4|1.20.1|
 |:--|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-|[(Bee's) Fancy Crops](https://modrinth.com/project/UGEVQ6t9)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
-|[(Bee's) Fancy Crops](https://modrinth.com/project/fancy-crops)|✅|✅|✅|✅|✅|✅|✅|✅|❌|
-|[3D Skin Layers](https://modrinth.com/project/zV5r3pPn)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
-|[No Chat Reports](https://modrinth.com/project/qQyHxfxd)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
-|[No Chat Reports](https://modrinth.com/project/no-chat-reports)|✅|✅|✅|✅|✅|✅|✅|✅|❌|
-|[Sodium](https://modrinth.com/project/AANobbMI)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
-|[Sodium Extra](https://modrinth.com/project/PtjYWJkn)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
-|[Sodium Extra](https://modrinth.com/project/sodium-extra)|✅|✅|✅|✅|✅|✅|✅|✅|❌|
-|[Solas Shader](https://modrinth.com/project/solas-shader)|✅|✅|✅|✅|✅|✅|✅|✅|❌|
-|[Solas Shader](https://modrinth.com/project/EpQFjzrQ)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
-|[Sound Controller](https://modrinth.com/project/sound-controller)|✅|✅|✅|✅|✅|✅|✅|✅|❌|
-|[Sound Controller](https://modrinth.com/project/uY9zbflw)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
-|[Sounds](https://modrinth.com/project/sound)|✅|✅|✅|✅|✅|✅|✅|✅|❌|
-|[Sounds](https://modrinth.com/project/ZouiUX7t)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
-|[Spawned Eggs](https://modrinth.com/project/spawned-eggs)|✅|✅|✅|✅|✅|❌|❌|❌|❌|
-|[Spectral](https://modrinth.com/project/spectral)|✅|✅|✅|✅|✅|✅|❌|❌|❌|
-|[Zoomify](https://modrinth.com/project/zoomify)|✅|✅|✅|✅|✅|✅|✅|✅|❌|
-|[[EMF] Entity Model Features](https://modrinth.com/project/entity-model-features)|✅|✅|✅|✅|✅|✅|✅|✅|❌|
-|[[EMF] Entity Model Features](https://modrinth.com/project/4I1XuqiY)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
-|[[ETF] Entity Texture Features](https://modrinth.com/project/entitytexturefeatures)|✅|✅|✅|✅|✅|✅|✅|✅|❌|
-|[[ETF] Entity Texture Features](https://modrinth.com/project/BVzZfTc1)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
-|[cat_jam](https://modrinth.com/project/cat_jam)|✅|✅|✅|✅|✅|✅|❌|❌|❌|
-|[e4mc](https://modrinth.com/project/qANg5Jrr)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
-|[e4mc](https://modrinth.com/project/e4mc)|✅|✅|✅|✅|✅|✅|✅|✅|❌|
-|[qrafty's Capitalized Font](https://modrinth.com/project/qraftys-capitalized-font)|✅|✅|✅|✅|✅|✅|✅|✅|❌|
-|[qrafty's Capitalized Font](https://modrinth.com/project/FA4ebMMU)|❌|❌|❌|❌|❌|❌|❌|❌|✅|
+|[Searchables](https://modrinth.com/project/fuuu3xnx)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Show Me Your Skin!](https://modrinth.com/project/bD7YqcA3)|✅|✅|✅|❌|❌|❌|✅|✅|✅|
+|[Shulker Box Tooltip](https://modrinth.com/project/2M01OLQq)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Simple Fog Control](https://modrinth.com/project/Glp1bwYc)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Simple Grass Flowers](https://modrinth.com/project/ti9KkMHm)|✅|✅|✅|✅|✅|✅|❌|❌|❌|
+|[Simple Voice Chat](https://modrinth.com/project/9eGKb6K1)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Skin Grabber](https://modrinth.com/project/TtybOAsL)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Skin Shuffle](https://modrinth.com/project/3s19I5jr)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Sodium](https://modrinth.com/project/AANobbMI)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Sodium Extra](https://modrinth.com/project/PtjYWJkn)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Solas Shader](https://modrinth.com/project/EpQFjzrQ)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Sound Controller](https://modrinth.com/project/uY9zbflw)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Sounds](https://modrinth.com/project/ZouiUX7t)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Spawned Eggs](https://modrinth.com/project/yPBwDzHA)|✅|✅|✅|✅|✅|❌|❌|❌|❌|
+|[Spectral](https://modrinth.com/project/vaaOMowT)|✅|✅|✅|✅|✅|✅|❌|❌|❌|
+|[Spryzeen's Healthbars](https://modrinth.com/project/ZMcqgmIV)|❌|❌|✅|❌|❌|❌|❌|❌|❌|
+|[Spryzeen's Knight Armor](https://modrinth.com/project/EwJHG2NA)|❌|❌|✅|✅|✅|✅|❌|❌|❌|
+|[Status Effect Bars](https://modrinth.com/project/x02cBj9Y)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Subtle Effects](https://modrinth.com/project/4q8UOK1d)|✅|❌|✅|✅|✅|✅|✅|✅|✅|
+|[Super Duper Vanilla](https://modrinth.com/project/LMIZZNxZ)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Sushi Bar](https://modrinth.com/project/tr2Mv6ke)|✅|✅|❌|❌|❌|❌|❌|❌|❌|
+|[Symbol Chat](https://modrinth.com/project/NKvLVQMc)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[TCDCommons API](https://modrinth.com/project/Eldc1g37)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Text Placeholder API](https://modrinth.com/project/eXts2L7r)|❌|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Theone's Eating Animation Pack](https://modrinth.com/project/OhzX8kDf)|❌|❌|❌|❌|✅|✅|✅|✅|✅|
+|[Torturable Healthbars](https://modrinth.com/project/WPuyL1eO)|✅|✅|✅|✅|✅|✅|❌|❌|❌|
+|[Torturable Healthbars, but with FA](https://modrinth.com/project/mQpUi57Q)|✅|✅|✅|✅|✅|✅|❌|❌|❌|
+|[Translations for Sodium](https://modrinth.com/project/yfDziwn1)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[UniLib](https://modrinth.com/project/nT86WUER)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[VTDownloader](https://modrinth.com/project/1E2sq1cp)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Vervada's enhanced plants](https://modrinth.com/project/ghc0v6DT)|❌|❌|✅|✅|✅|✅|❌|❌|❌|
+|[View Bobbing Options](https://modrinth.com/project/Yr9J16k6)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Visuality](https://modrinth.com/project/rI0hvYcd)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Visuals](https://modrinth.com/project/pWBAsHgt)|❌|❌|❌|❌|❌|✅|✅|✅|✅|
+|[Voice Chat Soundboard](https://modrinth.com/project/N8s60DWW)|✅|✅|✅|❌|✅|❌|❌|❌|❌|
+|[WaxedIcons](https://modrinth.com/project/pC9ELBuh)|❌|❌|✅|✅|✅|✅|✅|✅|✅|
+|[Wider Tab](https://modrinth.com/project/IA3kkkhV)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Withered Hearts](https://modrinth.com/project/LQI4ZTHY)|❌|❌|✅|✅|✅|✅|✅|✅|✅|
+|[World Play Time](https://modrinth.com/project/YkKeggdl)|✅|✅|✅|✅|✅|✅|❌|❌|❌|
+|[WorldEdit](https://modrinth.com/project/1u6JkXh5)|❌|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Xaero's Minimap](https://modrinth.com/project/1bokaNcj)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Xaero's World Map](https://modrinth.com/project/NcUtCpym)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[XaeroPlus](https://modrinth.com/project/EnPUzSTg)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Xander's Sodium Options](https://modrinth.com/project/sTkQBVyo)|✅|❌|✅|✅|✅|✅|❌|❌|❌|
+|[YetAnotherConfigLib (YACL)](https://modrinth.com/project/1eAoo2KR)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Your Options Shall Be Respected (YOSBR)](https://modrinth.com/project/WwbubTsV)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[Zoomify](https://modrinth.com/project/w7ThoJFB)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[[EMF] Entity Model Features](https://modrinth.com/project/4I1XuqiY)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[[ETF] Entity Texture Features](https://modrinth.com/project/BVzZfTc1)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[cat_jam](https://modrinth.com/project/x3s69afN)|✅|✅|✅|✅|✅|✅|❌|❌|❌|
+|[e4mc](https://modrinth.com/project/qANg5Jrr)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
+|[oωo (owo-lib)](https://modrinth.com/project/ccKDOlHs)|✅|✅|✅|✅|✅|❌|❌|❌|❌|
+|[qrafty's Capitalized Font](https://modrinth.com/project/FA4ebMMU)|✅|✅|✅|✅|✅|✅|✅|✅|✅|
