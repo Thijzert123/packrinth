@@ -22,7 +22,7 @@ cargo install packrinth
 ```
 
 ### Pre-compiled binaries
-Pre-compiled binaries will be available soon.
+You can also manually install Packrinth with one of the pre-compiled binaries from the [latest GitHub release](https://github.com/Thijzert123/packrinth/releases/latest).
 
 ## Compiling
 To compile Packrinth, clone the Git repository with:
@@ -33,8 +33,6 @@ Then, compile the debug build with:
 ```bash
 cargo build
 ```
-
-You can also manually install Packrinth with one of the pre-compiled binaries from the [latest GitHub release](https://github.com/Thijzert123/packrinth/releases/latest).
 
 ## Crate as library
 Packrinth provides a library alongside the binary. Using this, you can modify Packrinth's configuration
