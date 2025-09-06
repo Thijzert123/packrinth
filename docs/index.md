@@ -37,9 +37,9 @@ cargo install packrinth
 You can also manually install Packrinth with one of the pre-compiled binaries from the [latest GitHub release](https://github.com/Thijzert123/packrinth/releases/latest).
 
 ## Getting started
-Please read the [full guide](full-guide.md). It explains all the basics for Packrinth.
-If you just want a reference for the CLI and configuration, take a look at [CLI help](cli-help.md) and
-[configuration reference](configuration-reference.md).
+Please read the [full guide](full-guide.html). It explains all the basics for Packrinth.
+If you just want a reference for the CLI and configuration, take a look at [CLI help](cli-help.html) and
+[configuration reference](configuration-reference.html).
 
 ## Packrinth as library
 Packrinth provides a library alongside the binary. Using this, you can modify Packrinth's configuration
