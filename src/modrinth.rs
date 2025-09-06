@@ -51,7 +51,7 @@ fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError>
 }
 
 /// Part of the fields returned from the `/project` Modrinth API endpoint (v2).
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Project {
     pub id: String,
     pub title: String,
@@ -61,7 +61,7 @@ pub struct Project {
 }
 
 /// The type of project.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum ProjectType {
     #[serde(rename = "mod")]
     Mod,
@@ -77,7 +77,7 @@ pub enum ProjectType {
 }
 
 /// The support for a specific environment (server or client).
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum SideSupport {
     #[serde(rename = "required")]
     Required,
