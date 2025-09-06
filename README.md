@@ -1,11 +1,18 @@
-# Packrinth
-[![Crates.io Version](https://img.shields.io/crates/v/packrinth?style=for-the-badge)](https://crates.io/crates/packrinth)
-[![Crates.io Total Downloads](https://img.shields.io/crates/d/packrinth?style=for-the-badge)](https://crates.io/crates/packrinth)
+<div align="center">
+  <a href="https://thijzert123.github.io/packrinth"><img src="https://github.com/Thijzert123/packrinth/blob/ff8455254b966d7879ca2c378a4350c1a56cbfc6/logo.png" alt="logo" width=100 height=100 /></a>
+  <h1><a href="https://thijzert123.github.io/packrinth">Packrinth</a></h1>
+  CLI tool for creating and managing Minecraft modpacks with Modrinth projects
+
+  <p></p>
+
+  [![Crates.io Version](https://img.shields.io/crates/v/packrinth?style=for-the-badge)](https://crates.io/crates/packrinth)
+  [![Crates.io Total Downloads](https://img.shields.io/crates/d/packrinth?style=for-the-badge)](https://crates.io/crates/packrinth)
+</div>
 
 Packrinth is a CLI tool for creating and managing Minecraft modpacks with Modrinth projects. The main features are being able to automatically update mods in a modpack and separate a modpack in branches.
 If you want to see Packrinth in action, please take a look at [Client+](https://github.com/Thijzert123/client-plus), a modpack managed by Packrinth.
 
-For more detail on how to use Packrinth, go [the website](https://thijzert123.github.io/packrinth).
+### For more detail on how to use Packrinth, go [the website](https://thijzert123.github.io/packrinth).
 
 ## Installation
 ### Cargo
