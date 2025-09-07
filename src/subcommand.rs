@@ -845,6 +845,7 @@ impl DocArgs {
             }
         }
 
+        let project_map_is_empty = project_map.is_empty();
         let table = DocMarkdownTable {
             column_names,
             project_map,
@@ -852,8 +853,11 @@ impl DocArgs {
 
         println!("# {} _by {}_", modpack.name, modpack.author);
         println!("{}", modpack.summary);
-        println!("## What is included?");
-        println!("{table}");
+
+        if !project_map_is_empty {
+            println!("## What is included?");
+            println!("{table}");
+        }
 
         Ok(())
     }
