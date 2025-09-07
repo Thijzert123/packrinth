@@ -1,6 +1,6 @@
+use packrinth::PackrinthError;
 use packrinth::config::{BranchConfig, MainLoader, ProjectSettings};
 use packrinth::modrinth::{Env, File, FileHashes, FileResult, Project, ProjectType, SideSupport};
-use packrinth::PackrinthError;
 
 #[test]
 fn project_from_id() -> Result<(), PackrinthError> {
@@ -34,7 +34,14 @@ fn file_from_project() {
     };
 
     // Test with all versions (alpha and beta included)
-    let file = File::from_project(&"test".to_string(), &branch_config, "fabric-api", &project_settings, false, false);
+    let file = File::from_project(
+        &"test".to_string(),
+        &branch_config,
+        "fabric-api",
+        &project_settings,
+        false,
+        false,
+    );
     assert_eq!(FileResult::Ok {
         file: File {
             project_name: "Fabric API".to_string(),
@@ -52,7 +59,14 @@ fn file_from_project() {
     }, file);
 
     // Test without alpha and beta
-    let file = File::from_project(&"test".to_string(), &branch_config, "fabric-api", &project_settings, true, true);
+    let file = File::from_project(
+        &"test".to_string(),
+        &branch_config,
+        "fabric-api",
+        &project_settings,
+        true,
+        true,
+    );
     assert_eq!(FileResult::Ok {
         file: File {
             project_name: "Fabric API".to_string(),

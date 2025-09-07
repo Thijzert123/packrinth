@@ -69,7 +69,7 @@ impl SubCommand {
             SubCommand::Update(args) => args.run(&modpack, config_args),
             SubCommand::Export(args) => args.run(&modpack, config_args),
             SubCommand::Doc(args) => args.run(&modpack, config_args),
-            _ => Ok(()) // These cases should have been handled before this match statement.
+            _ => Ok(()), // These cases should have been handled before this match statement.
         }
     }
 }
@@ -912,8 +912,14 @@ mod tests {
     #[test]
     fn test_init() {
         let mut cli = Cli {
-            subcommand: SubCommand::Init(InitArgs { no_git_repo: false, force: false }),
-            config_args: ConfigArgs { directory: Some(TEST_MODPACK_DIR.parse().unwrap()), verbose: true },
+            subcommand: SubCommand::Init(InitArgs {
+                no_git_repo: false,
+                force: false,
+            }),
+            config_args: ConfigArgs {
+                directory: Some(TEST_MODPACK_DIR.parse().unwrap()),
+                verbose: true,
+            },
         };
 
         cli.run();

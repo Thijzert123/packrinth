@@ -270,7 +270,8 @@ impl ProjectType {
 impl File {
     /// Creates a file type from a project.
     #[must_use]
-    pub fn from_project( // TODO all &String to &str in Packrinth
+    pub fn from_project(
+        // TODO all &String to &str in Packrinth
         branch_name: &String,
         branch_config: &BranchConfig,
         project_id: &str,
