@@ -902,3 +902,20 @@ impl VersionArgs {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_MODPACK_DIR: &str = "test_output";
+
+    #[test]
+    fn test_init() {
+        let mut cli = Cli {
+            subcommand: SubCommand::Init(InitArgs { no_git_repo: false, force: false }),
+            config_args: ConfigArgs { directory: Some(TEST_MODPACK_DIR.parse().unwrap()), verbose: true },
+        };
+
+        cli.run();
+    }
+}

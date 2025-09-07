@@ -90,11 +90,10 @@ pub enum SideSupport {
 }
 
 /// Part of the fields returned from the `/version` Modrinth API endpoint (v2).
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Version {
     pub id: String,
     pub project_id: String,
-    pub version_number: String,
     pub version_type: VersionType,
     pub game_versions: Vec<String>,
     pub files: Vec<VersionFile>,
@@ -102,7 +101,7 @@ pub struct Version {
 }
 
 /// Type of version.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum VersionType {
     #[serde(rename = "release")]
     Release,
@@ -115,7 +114,7 @@ pub enum VersionType {
 }
 
 /// File in a version.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct VersionFile {
     pub url: String,
     pub filename: String,
@@ -125,21 +124,21 @@ pub struct VersionFile {
 }
 
 /// Hashes for a file.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FileHashes {
     pub sha1: String,
     pub sha512: String,
 }
 
 /// Dependency for a version.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct VersionDependency {
     pub project_id: Option<String>,
     pub dependency_type: VersionDependencyType,
 }
 
 /// Type of version dependency.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum VersionDependencyType {
     #[serde(rename = "required")]
     Required,
@@ -171,7 +170,7 @@ pub struct MrPack {
 }
 
 /// A file in a modpack.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
     #[serde(skip_serializing)]
@@ -189,7 +188,7 @@ pub struct File {
 }
 
 /// Environment information for a file in a Modrinth modpack.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Env {
     pub client: SideSupport,
@@ -218,7 +217,7 @@ pub struct MrPackDependencies {
 }
 
 /// The result of creating a file.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FileResult {
     Ok {
         file: File,
@@ -271,7 +270,7 @@ impl ProjectType {
 impl File {
     /// Creates a file type from a project.
     #[must_use]
-    pub fn from_project(
+    pub fn from_project( // TODO all &String to &str in Packrinth
         branch_name: &String,
         branch_config: &BranchConfig,
         project_id: &str,
@@ -450,5 +449,44 @@ impl File {
             dependencies: modrinth_version.dependencies.clone(),
             project_id: modrinth_project.id,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_file_from_modrinth_version() {
+        let modrinth_version = Version {
+            id: "X2hTodix".to_string(),
+            project_id: "P7dR8mSH".to_string(),
+            version_type: VersionType::Release,
+            game_versions: vec!["1.21.8".to_string()],
+            files: vec![VersionFile {
+                url: "https://cdn.modrinth.com/data/P7dR8mSH/versions/X2hTodix/fabric-api-0.129.0%2B1.21.8.jar".to_string(),
+                filename: "fabric-api-0.129.0+1.21.8.jar".to_string(),
+                primary: true,
+                size: 2_212_412,
+                hashes: FileHashes { sha1: "9be74f9c3120ffb9f38df8f4164392d69e6ba84e".to_string(), sha512: "471babff84b36bd0f5051051bc192a97136ba733df6a49f222cb67a231d857eb4b1c5ec8dea605e146f49f75f800709f8836540a472fe8032f9fbd3f6690ec3d".to_string() },
+            }],
+            dependencies: vec![],
+        };
+        let file = File::from_modrinth_version(&modrinth_version);
+        assert_eq!(FileResult::Ok {
+            file: File {
+                project_name: "Fabric API".to_string(),
+                path: "mods/fabric-api-0.129.0+1.21.8.jar".to_string(),
+                hashes: FileHashes { sha1: "9be74f9c3120ffb9f38df8f4164392d69e6ba84e".to_string(), sha512: "471babff84b36bd0f5051051bc192a97136ba733df6a49f222cb67a231d857eb4b1c5ec8dea605e146f49f75f800709f8836540a472fe8032f9fbd3f6690ec3d".to_string() },
+                env: Some(Env {
+                    client: SideSupport::Optional,
+                    server: SideSupport::Optional,
+                }),
+                downloads: vec!["https://cdn.modrinth.com/data/P7dR8mSH/versions/X2hTodix/fabric-api-0.129.0%2B1.21.8.jar".to_string()],
+                file_size: 2_212_412,
+            },
+            dependencies: vec![],
+            project_id: "P7dR8mSH".to_string(),
+        }, file);
     }
 }

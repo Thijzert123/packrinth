@@ -22,7 +22,7 @@ pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
 }
 
 /// An error that can occur while performing Packrinth operations.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum PackrinthError {
     PathIsFile {
         path: String,
