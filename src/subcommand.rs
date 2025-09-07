@@ -912,8 +912,8 @@ impl VersionArgs {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
     use super::*;
+    use std::path::PathBuf;
     use tempdir::TempDir;
 
     fn init(test_modpack_dir: &Path) {
@@ -926,7 +926,8 @@ mod tests {
                 directory: Some(PathBuf::from(test_modpack_dir)),
                 verbose: true,
             },
-        }.run();
+        }
+        .run();
 
         // Check if .gitignore contains .mrpack
         assert!(
