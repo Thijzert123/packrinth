@@ -23,12 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - When a project is successfully added when updating, it will now display the slug instead of the Modrinth ID
 - Don't show `What is included?` header in documentation when no projects are in any `.branch_files.json`
 
-### Other
-
-- Test 3
-- Test 2
-- Update README.md
-
 ## [0.4.1](https://github.com/Thijzert123/packrinth/compare/v0.4.0...v0.4.1) - 2025-09-06
 
 ### Fixed
