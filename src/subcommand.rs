@@ -538,7 +538,7 @@ impl UpdateArgs {
         branch_name: &String,
         branch_config: &BranchConfig,
         branch_files: &mut BranchFiles,
-        project_id: &str,
+        slug_project_id: &str,
         project_settings: &ProjectSettings,
         require_all: bool,
         progress_bar: &mut ProgressBar,
@@ -547,7 +547,7 @@ impl UpdateArgs {
         match File::from_project(
             branch_name,
             branch_config,
-            project_id,
+            slug_project_id,
             project_settings,
             self.no_beta,
             self.no_alpha,
@@ -572,7 +572,7 @@ impl UpdateArgs {
                 branch_files.files.push(file);
 
                 if verbose {
-                    progress_bar.print_info("added", &project_id, Color::Green, Style::Normal);
+                    progress_bar.print_info("added", &slug_project_id, Color::Green, Style::Normal);
                 }
 
                 return Some(dependencies);
