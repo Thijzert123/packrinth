@@ -905,7 +905,9 @@ impl BranchConfig {
                         }
                         Err(error) => {
                             if error.kind() == io::ErrorKind::NotFound {
-                                Self::create_default_branch_config(&branch_config_path)?
+                                let default_branch_config = Self::default();
+                                default_branch_config.save(directory, name)?;
+                                default_branch_config
                             } else {
                                 return Err(PackrinthError::FailedToReadToString {
                                     path_to_read: branch_config_path.display().to_string(),
@@ -928,19 +930,14 @@ impl BranchConfig {
         }
     }
 
-    fn create_default_branch_config(branch_config_path: &PathBuf) -> Result<Self, PackrinthError> {
-        // TODO move to Default impl
-        let branch_config = Self {
-            version: "1.0.0-fabric".to_string(),
-            minecraft_version: "1.21.8".to_string(),
-            acceptable_minecraft_versions: vec!["1.21.6".to_string(), "1.21.7".to_string()],
-            mod_loader: Some(MainLoader::Fabric),
-            loader_version: Some("0.17.2".to_string()),
-            acceptable_loaders: vec![Loader::Minecraft, Loader::VanillaShader],
-            manual_files: vec![],
-        };
-        json_to_file(&branch_config, branch_config_path)?;
-        Ok(branch_config)
+    /// Saves the branch configuration to the directory and name of the branch.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToSerialize`] if serialising this type to a JSON failed
+    /// - [`PackrinthError::FailedToWriteFile`] if writing the JSON to a file failed
+    pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
+        let branch_config_path = directory.join(name).join(BRANCH_CONFIG_FILE_NAME);
+        json_to_file(self, branch_config_path)
     }
 
     /// Prints a representation of the branch.
@@ -986,6 +983,20 @@ impl BranchConfig {
         }
 
         Ok(())
+    }
+}
+
+impl Default for BranchConfig {
+    fn default() -> Self {
+        Self {
+            version: "1.0.0-fabric".to_string(),
+            minecraft_version: "1.21.8".to_string(),
+            acceptable_minecraft_versions: vec!["1.21.6".to_string(), "1.21.7".to_string()],
+            mod_loader: Some(MainLoader::Fabric),
+            loader_version: Some("0.17.2".to_string()),
+            acceptable_loaders: vec![Loader::Minecraft, Loader::VanillaShader],
+            manual_files: vec![],
+        }
     }
 }
 
