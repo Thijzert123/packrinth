@@ -231,7 +231,7 @@ impl AddVersionOverrideArgs {
         modpack.save()?;
 
         print_success(format!(
-            "added override for {}, branch {} and version ID {}",
+            "added version override for {}, branch {} and version ID {}",
             self.project, self.branch, self.project_version_id
         ));
         Ok(())
@@ -572,7 +572,7 @@ impl UpdateArgs {
                 branch_files.files.push(file);
 
                 if verbose {
-                    progress_bar.print_info("added", &slug_project_id, Color::Green, Style::Normal);
+                    progress_bar.print_info("added", slug_project_id, Color::Green, Style::Normal);
                 }
 
                 return Some(dependencies);
