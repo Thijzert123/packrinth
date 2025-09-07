@@ -905,23 +905,49 @@ impl VersionArgs {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
     use super::*;
+    use tempdir::TempDir;
 
-    const TEST_MODPACK_DIR: &str = "test_output";
-
-    #[test]
-    fn test_init() {
-        let mut cli = Cli {
+    fn init(test_modpack_dir: &Path) {
+        Cli {
             subcommand: SubCommand::Init(InitArgs {
                 no_git_repo: false,
                 force: false,
             }),
             config_args: ConfigArgs {
-                directory: Some(TEST_MODPACK_DIR.parse().unwrap()),
+                directory: Some(PathBuf::from(test_modpack_dir)),
                 verbose: true,
             },
-        };
+        }.run();
 
-        cli.run();
+        // Check if .gitignore contains .mrpack
+        assert!(
+            fs::read_to_string(test_modpack_dir.join(".gitignore"))
+                .unwrap()
+                .contains(".mrpack")
+        );
+        // Check if modpack.json is right
+        assert_eq!(
+            "{
+	\"pack_format\": 1,
+	\"name\": \"My Modrinth modpack\",
+	\"summary\": \"Short summary for this modpack\",
+	\"author\": \"John Doe\",
+	\"require_all\": false,
+	\"auto_dependencies\": false,
+	\"branches\": [],
+	\"projects\": {}
+}",
+            fs::read_to_string(test_modpack_dir.join("modpack.json")).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_projects() {
+        let test_modpack_dir = TempDir::new("packrinth").unwrap().path().to_owned();
+        init(&test_modpack_dir);
+
+        // TODO test projects
     }
 }

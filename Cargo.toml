@@ -35,3 +35,6 @@ semver = "1.0.26"
 [build-dependencies]
 clap = { version = "4.5.47", features = ["derive"] }
 clap-markdown = "0.1.5"
+
+[dev-dependencies]
+tempdir = "0.3.7"
