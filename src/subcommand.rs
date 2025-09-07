@@ -399,6 +399,9 @@ impl UpdateArgs {
         if modpack_is_dirty(modpack) && !self.allow_dirty {
             return Err(PackrinthError::RepoIsDirtyWhileUpdating);
         }
+        if modpack.branches.is_empty() {
+            return Err(PackrinthError::ModpackHasNoBranchesToUpdate);
+        }
 
         let branches = if let Some(branches) = &self.branches {
             branches

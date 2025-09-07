@@ -127,6 +127,7 @@ pub enum PackrinthError {
         directory: String,
     },
     MainModLoaderProvidedButNoVersion,
+    ModpackHasNoBranchesToUpdate,
 }
 
 impl PackrinthError {
@@ -173,6 +174,7 @@ impl PackrinthError {
             PackrinthError::FailedToInitGitRepoWhileInitModpack { error_message } => (format!("failed to initialize Git repository: {error_message}"), "the modpack itself was initialized successfully, so you can try to initialize a Git repository yourself".to_string()),
             PackrinthError::ModpackAlreadyExists { directory } => (format!("a modpack instance already exists in {directory}"), "to force initializing a new repository, pass the --force flag".to_string()),
             PackrinthError::MainModLoaderProvidedButNoVersion => ("a main mod loader was specified for a branch, but no version was provided".to_string(), "add the loader_version to branch.json".to_string()),
+            PackrinthError::ModpackHasNoBranchesToUpdate => ("no branches to update".to_string(), "add a branch with subcommand: branch add".to_string()),
         }
     }
 }
