@@ -12,6 +12,10 @@ pub const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
 pub const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
 
 fn main() {
+    // TODO installation of modpack and updating it too
+    // TODO packrinth deploy: deploy to modrinth and GitHub releases
+    // TODO multithreading
+    // TODO documentation for packrinth import
     Cli::parse().run();
 }
 

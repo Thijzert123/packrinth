@@ -3,7 +3,13 @@
 pub mod config;
 pub mod modrinth;
 
+use std::{fs, io};
+use std::path::Path;
+use zip::result::ZipResult;
+use zip::ZipArchive;
 use crate::config::Modpack;
+
+const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
 
 /// Checks if the modpack is dirty.
 ///
@@ -18,6 +24,41 @@ pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
     };
 
     git_repo.is_dirty().unwrap_or(false)
+}
+
+/// Extract all the contents of a Modrinth modpack, except for the main manifest file.
+///
+/// # Errors
+/// An [`Err`] is returned when one of these things go wrong:
+/// - Failed to open file
+/// - Failed to start zip archive
+/// - Failed to get file by index
+/// - Failed to create dirs
+/// - Failed to copy file
+pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<()> {
+    let zip_file = fs::File::open(mrpack_path)?;
+    let mut archive = ZipArchive::new(zip_file)?;
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let output_path = Path::new(output_directory).join(file.name());
+
+        if file.name().ends_with('/') {
+            // It's a directory
+            fs::create_dir_all(&output_path)?;
+        } else if file.name() != MRPACK_CONFIG_FILE_NAME {
+            // Make sure parent dirs exist
+            if let Some(parent) = output_path.parent()
+                && !parent.exists() {
+                fs::create_dir_all(parent)?;
+            }
+            // Copy file contents
+            let mut output_file = fs::File::create(&output_path)?;
+            io::copy(&mut file, &mut output_file)?;
+        }
+    }
+
+    Ok(())
 }
 
 /// An error that can occur while performing Packrinth operations.
@@ -127,6 +168,22 @@ pub enum PackrinthError {
     },
     MainModLoaderProvidedButNoVersion,
     ModpackHasNoBranchesToUpdate,
+    FailedToCreateZipArchive {
+        zip_path: String,
+        error_message: String,
+    },
+    InvalidMrPack {
+        mrpack_path: String,
+        error_message: String,
+    },
+    FailedToExtractMrPack {
+        mrpack_path: String,
+        output_directory: String,
+        error_message: String,
+    },
+    BranchAlreadyExists {
+        branch: String,
+    }
 }
 
 impl PackrinthError {
@@ -174,6 +231,10 @@ impl PackrinthError {
             PackrinthError::ModpackAlreadyExists { directory } => (format!("a modpack instance already exists in {directory}"), "to force initializing a new repository, pass the --force flag".to_string()),
             PackrinthError::MainModLoaderProvidedButNoVersion => ("a main mod loader was specified for a branch, but no version was provided".to_string(), "add the loader_version to branch.json".to_string()),
             PackrinthError::ModpackHasNoBranchesToUpdate => ("no branches to update".to_string(), "add a branch with subcommand: branch add".to_string()),
+            PackrinthError::FailedToCreateZipArchive { zip_path, error_message } => (format!("failed to create zip archive for zip at {zip_path}: {error_message}"), "check if you have sufficient permissions and if the zip file exists".to_string()),
+            PackrinthError::InvalidMrPack { mrpack_path, error_message } => (format!("Modrinth pack at {mrpack_path} is invalid: {error_message}"), "make sure you adhere to the specifications (https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack)".to_string()),
+            PackrinthError::FailedToExtractMrPack { mrpack_path, output_directory, error_message } => (format!("failed to extract Modrinth pack at {mrpack_path} to {output_directory}: {error_message}"), "check if you have sufficient permissions".to_string()),
+            PackrinthError::BranchAlreadyExists { branch } => (format!("branch {branch} already exists"), "you can still continue by passing the --force flag".to_string()),
         }
     }
 }

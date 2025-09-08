@@ -1,15 +1,17 @@
 //! Structs that are only used for (de)serializing JSONs associated with Modrinth.
 
-use crate::PackrinthError;
+use crate::{PackrinthError, MRPACK_CONFIG_FILE_NAME};
 use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
-use std::cmp;
-use std::path::PathBuf;
+use std::{cmp, fs};
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::Duration;
+use zip::ZipArchive;
 
 const MODRINTH_API_BASE_URL: &str = "https://api.modrinth.com/v2";
 static CLIENT: OnceLock<ClientWithMiddleware> = OnceLock::new();
@@ -54,6 +56,7 @@ fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError>
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Project {
     pub id: String,
+    pub slug: String,
     pub title: String,
     pub server_side: SideSupport,
     pub client_side: SideSupport,
@@ -263,6 +266,61 @@ impl ProjectType {
 
             ProjectType::ResourcePack => Ok("resourcepack"),
             ProjectType::Shader => Ok("shader"),
+        }
+    }
+}
+
+impl Version {
+    /// Fetches a [`Version`] from a sha512 hash.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToParseModrinthResponseJson`] if the response was invalid
+    pub fn from_sha512_hash(hash: &str) -> Result<Self, PackrinthError> {
+        let api_endpoint = format!("/version_file/{hash}?algorithm=sha512");
+        let api_response = request_text(&api_endpoint)?;
+
+        match serde_json::from_str::<Self>(&api_response) {
+            Ok(versions) => Ok(versions),
+            Err(error) => {
+                Err(PackrinthError::FailedToParseModrinthResponseJson {
+                    modrinth_endpoint: api_endpoint,
+                    error_message: error.to_string(),
+                })
+            }
+        }
+    }
+}
+
+impl MrPack {
+    /// Creates a [`MrPack`] instance from a `.mrpack` file location.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToInitializeFileType`] when creating the `.mrpack` file type failed
+    /// - [`PackrinthError::FailedToCreateZipArchive`] when creating the zip archive failed
+    /// - [`PackrinthError::InvalidMrPack`] when the modpack doesn't fully adhere to the mrpack specifications
+    /// - [`PackrinthError::FailedToReadToString`] when reading the main config in the zip failed
+    pub fn from_mrpack(mrpack_path: &Path) -> Result<Self, PackrinthError> {
+        let mrpack_file = match fs::File::open(mrpack_path) {
+            Ok(mrpack_file) => mrpack_file,
+            Err(error) => return Err(PackrinthError::FailedToInitializeFileType { file_to_create: mrpack_path.display().to_string(), error_message: error.to_string() }),
+        };
+        let mut zip_archive = match ZipArchive::new(BufReader::new(mrpack_file)) {
+            Ok(zip_archive) => zip_archive,
+            Err(error) => return Err(PackrinthError::FailedToCreateZipArchive { zip_path: mrpack_path.display().to_string(), error_message: error.to_string() }),
+        };
+
+        let mut mrpack_config_file = match zip_archive.by_name(MRPACK_CONFIG_FILE_NAME) {
+            Ok(mrpack_config_file_name) => mrpack_config_file_name,
+            Err(error) => return Err(PackrinthError::InvalidMrPack { mrpack_path: mrpack_path.display().to_string(), error_message: error.to_string() })
+        };
+        let mut mrpack = String::new();
+        if let Err(error) = mrpack_config_file.read_to_string(&mut mrpack) {
+            return Err(PackrinthError::FailedToReadToString { path_to_read: mrpack_config_file.name().to_string(), error_message: error.to_string() })
+        }
+
+        match serde_json::from_str(&mrpack) {
+            Ok(mrpack) => Ok(mrpack),
+            Err(error) => Err(PackrinthError::InvalidMrPack { mrpack_path: mrpack_path.display().to_string(), error_message: error.to_string() }),
         }
     }
 }

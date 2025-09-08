@@ -11,6 +11,7 @@ This document contains the help content for the `packrinth` command-line program
 
 * [`packrinth`↴](#packrinth)
 * [`packrinth init`↴](#packrinth-init)
+* [`packrinth import`↴](#packrinth-import)
 * [`packrinth project`↴](#packrinth-project)
 * [`packrinth project list`↴](#packrinth-project-list)
 * [`packrinth project add`↴](#packrinth-project-add)
@@ -41,6 +42,7 @@ This document contains the help content for the `packrinth` command-line program
 ###### **Subcommands:**
 
 * `init` — Initialize a new modpack project
+* `import` — Import data from a Modrinth modpack to the existing Packrinth modpack
 * `project` — Add or remove Modrinth projects and tweak them for your branches
 * `branch` — Create and remove branches that separate your Modpack for various versions
 * `update` — Update branches with the newest project versions
@@ -66,6 +68,23 @@ Initialize a new modpack project
 
 * `-G`, `--no-git-repo` — Don't initialize a Git repository
 * `-f`, `--force` — Force initializing a new modpack even if one already exists
+
+
+
+## `packrinth import`
+
+Import data from a Modrinth modpack to the existing Packrinth modpack
+
+**Usage:** `packrinth import [OPTIONS] <MODRINTH_PACK>`
+
+###### **Arguments:**
+
+* `<MODRINTH_PACK>` — Location of the Modrinth modpack to import
+
+###### **Options:**
+
+* `-p`, `--add-projects` — Add projects to the modpack configuration file if they aren't in there yet
+* `-f`, `--force` — Force importing a modpack even if the branch already exists (the branch will be overwritten)
 
 
 

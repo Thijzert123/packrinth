@@ -15,6 +15,9 @@ pub enum SubCommand {
     /// Initialize a new modpack project
     Init(InitArgs),
 
+    /// Import data from a Modrinth modpack to the existing Packrinth modpack
+    Import(ImportArgs),
+
     /// Add or remove Modrinth projects and tweak them for your branches
     Project(ProjectArgs),
 
@@ -55,6 +58,20 @@ pub struct InitArgs {
     pub no_git_repo: bool,
 
     /// Force initializing a new modpack even if one already exists
+    #[clap(short, long)]
+    pub force: bool,
+}
+
+#[derive(Debug, Parser)]
+pub struct ImportArgs {
+    /// Location of the Modrinth modpack to import
+    pub modrinth_pack: PathBuf,
+
+    /// Add projects to the modpack configuration file if they aren't in there yet
+    #[clap(short = 'p', long)]
+    pub add_projects: bool,
+
+    /// Force importing a modpack even if the branch already exists (the branch will be overwritten)
     #[clap(short, long)]
     pub force: bool,
 }

@@ -6,6 +6,7 @@ use packrinth::modrinth::{Env, File, FileHashes, FileResult, Project, ProjectTyp
 fn project_from_id() -> Result<(), PackrinthError> {
     let expected_project = Project {
         id: "P7dR8mSH".to_string(),
+        slug: "fabric-api".to_string(),
         title: "Fabric API".to_string(),
         server_side: SideSupport::Optional,
         client_side: SideSupport::Optional,

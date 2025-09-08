@@ -1,6 +1,6 @@
 //! Structs for configuring and managing a Packrinth modpack instance.
 
-use crate::PackrinthError;
+use crate::{PackrinthError, MRPACK_CONFIG_FILE_NAME};
 use crate::modrinth::{File, MrPack, MrPackDependencies};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -253,7 +253,6 @@ const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 const MODRINTH_PACK_FORMAT: u16 = 1;
 /// The game to put in the mrpack.
 const GAME: &str = "minecraft";
-const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
 const OVERRIDE_DIRS: [&str; 3] = ["overrides", "server-overrides", "client-overrides"];
 
 impl Modpack {
