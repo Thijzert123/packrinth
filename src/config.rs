@@ -1,7 +1,7 @@
 //! Structs for configuring and managing a Packrinth modpack instance.
 
-use crate::{PackrinthError, MRPACK_CONFIG_FILE_NAME};
 use crate::modrinth::{File, MrPack, MrPackDependencies};
+use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;

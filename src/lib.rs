@@ -3,11 +3,11 @@
 pub mod config;
 pub mod modrinth;
 
-use std::{fs, io};
-use std::path::Path;
-use zip::result::ZipResult;
-use zip::ZipArchive;
 use crate::config::Modpack;
+use std::path::Path;
+use std::{fs, io};
+use zip::ZipArchive;
+use zip::result::ZipResult;
 
 const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
 
@@ -49,7 +49,8 @@ pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<
         } else if file.name() != MRPACK_CONFIG_FILE_NAME {
             // Make sure parent dirs exist
             if let Some(parent) = output_path.parent()
-                && !parent.exists() {
+                && !parent.exists()
+            {
                 fs::create_dir_all(parent)?;
             }
             // Copy file contents
@@ -183,7 +184,7 @@ pub enum PackrinthError {
     },
     BranchAlreadyExists {
         branch: String,
-    }
+    },
 }
 
 impl PackrinthError {

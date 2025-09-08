@@ -3,9 +3,15 @@ use clap::CommandFactory;
 use clap_complete::{Generator, shells};
 use dialoguer::Confirm;
 use indexmap::IndexMap;
-use packrinth::config::{BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, MainLoader, Modpack, ProjectSettings};
-use packrinth::modrinth::{Env, File, FileResult, MrPack, Project, SideSupport, Version, VersionDependency, VersionDependencyType};
-use packrinth::{PackrinthError, config, modpack_is_dirty, extract_mrpack};
+use packrinth::config::{
+    BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, MainLoader, Modpack,
+    ProjectSettings,
+};
+use packrinth::modrinth::{
+    Env, File, FileResult, MrPack, Project, SideSupport, Version, VersionDependency,
+    VersionDependencyType,
+};
+use packrinth::{PackrinthError, config, extract_mrpack, modpack_is_dirty};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::collections::HashMap;
@@ -138,11 +144,16 @@ impl ImportArgs {
         let branch_name = match &self.modrinth_pack.file_name() {
             Some(branch_name) => branch_name.display().to_string(),
             None => self.modrinth_pack.display().to_string(),
-        }.split(".mrpack").collect::<Vec<&str>>()[0].to_string();
+        }
+        .split(".mrpack")
+        .collect::<Vec<&str>>()[0]
+            .to_string();
 
         // Check if branch already exists
         if modpack.branches.contains(&branch_name) && !self.force {
-            return Err(PackrinthError::BranchAlreadyExists { branch: branch_name })
+            return Err(PackrinthError::BranchAlreadyExists {
+                branch: branch_name,
+            });
         }
 
         let mut branch_config = modpack.new_branch(&branch_name)?;
@@ -177,11 +188,21 @@ impl ImportArgs {
             };
             let project = Project::from_id(&version.project_id)?;
 
-            branch_files.projects.push(BranchFilesProject { name: project.title, id: Some(project.slug.clone()) });
+            branch_files.projects.push(BranchFilesProject {
+                name: project.title,
+                id: Some(project.slug.clone()),
+            });
 
             if self.add_projects && !modpack.projects.contains_key(&version.project_id)
-                || !modpack.projects.contains_key(&project.slug) {
-                    modpack.projects.insert(project.slug, ProjectSettings { version_overrides: None, include_or_exclude: None });
+                || !modpack.projects.contains_key(&project.slug)
+            {
+                modpack.projects.insert(
+                    project.slug,
+                    ProjectSettings {
+                        version_overrides: None,
+                        include_or_exclude: None,
+                    },
+                );
             }
 
             progress_bar.inc();
@@ -199,8 +220,12 @@ impl ImportArgs {
             });
         }
 
-        progress_bar.print_info("success", &format!("imported {}", &self.modrinth_pack.display()), Color::Green,
-                                Style::Bold);
+        progress_bar.print_info(
+            "success",
+            &format!("imported {}", &self.modrinth_pack.display()),
+            Color::Green,
+            Style::Bold,
+        );
         Ok(())
     }
 }
