@@ -85,6 +85,7 @@ Import data from a Modrinth modpack to the existing Packrinth modpack
 
 * `-p`, `--add-projects` — Add projects to the modpack configuration file if they aren't in there yet
 * `-f`, `--force` — Force importing a modpack even if the branch already exists (the branch will be overwritten)
+* `-D`, `--allow-dirty` — If the modpack is in a Git repository, allow importing even if there are uncommitted changes
 
 
 
