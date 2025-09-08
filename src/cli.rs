@@ -74,6 +74,10 @@ pub struct ImportArgs {
     /// Force importing a modpack even if the branch already exists (the branch will be overwritten)
     #[clap(short, long)]
     pub force: bool,
+
+    /// If the modpack is in a Git repository, allow importing even if there are uncommitted changes
+    #[clap(short = 'D', long)]
+    pub allow_dirty: bool,
 }
 
 #[derive(Debug, Parser)]

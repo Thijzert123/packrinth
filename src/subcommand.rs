@@ -139,6 +139,10 @@ impl ImportArgs {
         modpack: &mut Modpack,
         _config_args: &ConfigArgs,
     ) -> Result<(), PackrinthError> {
+        if self.add_projects && !self.allow_dirty && modpack_is_dirty(modpack) {
+            return Err(PackrinthError::RepoIsDirty);
+        }
+
         let mrpack = MrPack::from_mrpack(&self.modrinth_pack)?;
 
         let branch_name = match &self.modrinth_pack.file_name() {
@@ -509,8 +513,8 @@ impl RemoveProjectsArgs {
 
 impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<(), PackrinthError> {
-        if modpack_is_dirty(modpack) && !self.allow_dirty {
-            return Err(PackrinthError::RepoIsDirtyWhileUpdating);
+        if !self.allow_dirty && modpack_is_dirty(modpack) {
+            return Err(PackrinthError::RepoIsDirty);
         }
         if modpack.branches.is_empty() {
             return Err(PackrinthError::ModpackHasNoBranchesToUpdate);

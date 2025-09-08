@@ -161,7 +161,7 @@ pub enum PackrinthError {
     NoBranchSpecified,
     NoInclusionsSpecified,
     NoExclusionsSpecified,
-    RepoIsDirtyWhileUpdating,
+    RepoIsDirty,
     FailedToInitGitRepoWhileInitModpack {
         error_message: String,
     },
@@ -228,7 +228,7 @@ impl PackrinthError {
             PackrinthError::NoBranchSpecified => ("no branch specified".to_string(), "specify a branch or remove all with the --all flag".to_string()),
             PackrinthError::NoInclusionsSpecified => ("no inclusions specified".to_string(), "specify inclusions or remove all with the --all flag".to_string()),
             PackrinthError::NoExclusionsSpecified => ("no exclusions specified".to_string(), "specify exclusions or remove all with the --all flag".to_string()),
-            PackrinthError::RepoIsDirtyWhileUpdating => ("git repository has uncommitted changes".to_string(), "pass the --allow-dirty flag to force updating".to_string()),
+            PackrinthError::RepoIsDirty => ("git repository has uncommitted changes".to_string(), "pass the --allow-dirty flag to force continuing".to_string()),
             PackrinthError::FailedToInitGitRepoWhileInitModpack { error_message } => (format!("failed to initialize Git repository: {error_message}"), "the modpack itself was initialized successfully, so you can try to initialize a Git repository yourself".to_string()),
             PackrinthError::ModpackAlreadyExists { directory } => (format!("a modpack instance already exists in {directory}"), "to force initializing a new repository, pass the --force flag".to_string()),
             PackrinthError::MainModLoaderProvidedButNoVersion => ("a main mod loader was specified for a branch, but no version was provided".to_string(), "add the loader_version to branch.json".to_string()),
