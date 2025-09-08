@@ -22,8 +22,9 @@ Packrinth is a CLI tool for creating and managing Minecraft modpacks with Modrin
 - Automatic mod updates from Modrinth
 - Automatic dependency fetching
 - Separation into branches
-- Exporting modpacks to Modrinth modpacks
+- Importing modpacks and convert them to a Packrinth modpack
 - Automatically generating documentation
+- Exporting modpacks to Modrinth modpacks
 
 If you want to see an example of how Packrinth is used, see [Client+](https://github.com/Thijzert123/client-plus):
 a Minecraft modpack managed by Packrinth.
