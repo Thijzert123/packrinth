@@ -63,6 +63,7 @@ pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<
 }
 
 /// An error that can occur while performing Packrinth operations.
+#[non_exhaustive]
 #[derive(Debug, PartialEq)]
 pub enum PackrinthError {
     PathIsFile {
