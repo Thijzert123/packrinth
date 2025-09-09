@@ -15,6 +15,7 @@ fn main() {
     // TODO installation of modpack and updating it too
     // TODO packrinth deploy: deploy to modrinth and GitHub releases
     // TODO multithreading
+    // TODO add override for env
     Cli::parse().run();
 }
 
