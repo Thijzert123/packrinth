@@ -76,7 +76,8 @@ impl SubCommand {
                 Err(error) => {
                     if let PackrinthError::FailedToReadToString { path_to_read, .. } = &error
                         && path_to_read.contains(config::MODPACK_CONFIG_FILE_NAME)
-                    && let Some(parent) = current_dir.parent() {
+                        && let Some(parent) = current_dir.parent()
+                    {
                         current_dir = parent.to_path_buf();
                     } else {
                         return Err(error);
