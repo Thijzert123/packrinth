@@ -54,10 +54,10 @@ impl SubCommand {
             return args.run(config_args);
         }
 
-        let current_dir = match &config_args.directory {
+        let mut current_dir = match config_args.directory.clone() {
             Some(dir) => dir,
             None => match std::env::current_dir() {
-                Ok(current_dir) => &current_dir.clone(),
+                Ok(current_dir) => current_dir.clone(),
                 Err(error) => {
                     return Err(PackrinthError::FailedToGetCurrentDirectory {
                         error_message: error.to_string(),
@@ -67,10 +67,23 @@ impl SubCommand {
         };
 
         if let Self::Init(args) = self {
-            return args.run(current_dir, config_args);
+            return args.run(&current_dir, config_args);
         }
 
-        let mut modpack = Modpack::from_directory(current_dir)?;
+        let mut modpack = loop {
+            match Modpack::from_directory(&current_dir) {
+                Ok(modpack) => break modpack,
+                Err(error) => {
+                    if let PackrinthError::FailedToReadToString { path_to_read, .. } = &error
+                        && path_to_read.contains(config::MODPACK_CONFIG_FILE_NAME)
+                    && let Some(parent) = current_dir.parent() {
+                        current_dir = parent.to_path_buf();
+                    } else {
+                        return Err(error);
+                    }
+                }
+            }
+        };
 
         if modpack.pack_format != config::CURRENT_PACK_FORMAT {
             return Err(PackrinthError::InvalidPackFormat {

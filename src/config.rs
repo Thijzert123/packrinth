@@ -247,7 +247,8 @@ pub struct BranchFilesProject {
     pub id: Option<String>,
 }
 
-const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
+/// The name of the modpack configuration file
+pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 
 /// The current most recent pack format of a .mrpack file.
 const MODRINTH_PACK_FORMAT: u16 = 1;
