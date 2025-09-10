@@ -11,12 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Made configuration file name constants public
+- Made some configuration file name constants public
 - Packrinth will now work if `modpack.json` isn't in the current directory, but it is in one of the parent directories
-
-### Other
-
-- Update index.md
 - Check for dirty Git repository when importing a modpack with adding projects enabled
 
 ## [0.6.0](https://github.com/Thijzert123/packrinth/compare/v0.5.0...v0.6.0) - 2025-09-08
