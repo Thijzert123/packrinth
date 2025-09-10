@@ -104,7 +104,8 @@ pub enum IncludeOrExclude {
     Exclude(Vec<String>),
 }
 
-const BRANCH_CONFIG_FILE_NAME: &str = "branch.json";
+/// The branch configuration file name.
+pub const BRANCH_CONFIG_FILE_NAME: &str = "branch.json";
 
 /// Configuration for a branch.
 ///
@@ -218,7 +219,8 @@ pub enum Loader {
     Waterfall,
 }
 
-const BRANCH_FILES_FILE_NAME: &str = ".branch_files.json";
+/// The branch files configuration file name.
+pub const BRANCH_FILES_FILE_NAME: &str = ".branch_files.json";
 const BRANCH_FILES_INFO: &str = "This file is managed by Packrinth and not intended for manual editing. You should, however, add it to your Git repository.";
 
 /// A configuration file for all the files for a branch.
@@ -247,7 +249,7 @@ pub struct BranchFilesProject {
     pub id: Option<String>,
 }
 
-/// The name of the modpack configuration file
+/// The name of the modpack configuration file.
 pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 
 /// The current most recent pack format of a .mrpack file.
