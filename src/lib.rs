@@ -1,3 +1,25 @@
+//! <div align="center">
+//!   <a href="https://thijzert123.github.io/packrinth"><img src="https://github.com/Thijzert123/packrinth/blob/ff8455254b966d7879ca2c378a4350c1a56cbfc6/logo.png?raw=true" alt="logo" width=100 height=100 /></a>
+//!
+//!   <h1>Packrinth</h1>
+//!   CLI tool for creating and managing Minecraft modpacks with Modrinth projects
+//!
+//!   <p></p>
+//!
+//!   [![Crates.io Version](https://img.shields.io/crates/v/packrinth?style=for-the-badge)](https://crates.io/crates/packrinth)
+//!   [![Crates.io Total Downloads](https://img.shields.io/crates/d/packrinth?style=for-the-badge)](https://crates.io/crates/packrinth)
+//! </div>
+//!
+//! ---
+//!
+//! This library provides utilities for integrating with Packrinth. For example,
+//! the module `config` gives structs for reading and editing Packrinth configuration files.
+//! The module `modrinth` can be used to retrieve data from Modrinth and convert it to
+//! Packrinth-compatible structs.
+//!
+//! If you just want to use the Packrinth CLI, go to <https://thijzert123.github.io/packrinth>
+//! to see how to use it.
+
 #![warn(clippy::pedantic)]
 
 pub mod config;
