@@ -4,7 +4,7 @@ layout: home
 nav_order: 1
 ---
 
-<img src="logo.png" alt="logo" width=100 height=100 />
+<img src="https://github.com/Thijzert123/packrinth/blob/ff8455254b966d7879ca2c378a4350c1a56cbfc6/logo.png?raw=true" alt="logo" width=100 height=100 />
 {: .text-center}
 
 # Packrinth
