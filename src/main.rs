@@ -16,6 +16,7 @@ fn main() {
     // TODO packrinth deploy: deploy to modrinth and GitHub releases
     // TODO multithreading
     // TODO add override for env
+    // TODO when updating, dependencies look like fj3k29fj, not like fabric-api
     Cli::parse().run();
 }
 
