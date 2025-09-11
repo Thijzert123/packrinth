@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1](https://github.com/Thijzert123/packrinth/compare/v0.7.0...v0.7.1) - 2025-09-11
+
+### Changed
+
+- Show a progress percentage when a progress bar is used instead of a number
+
 ## [0.7.0](https://github.com/Thijzert123/packrinth/compare/v0.6.0...v0.7.0) - 2025-09-10
 
 ### Changed
