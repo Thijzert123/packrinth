@@ -590,6 +590,7 @@ impl UpdateArgs {
                     require_all,
                     &mut progress_bar,
                     verbose,
+                    false
                 ) {
                     dependencies.extend(new_dependencies);
                 }
@@ -619,6 +620,7 @@ impl UpdateArgs {
                             require_all,
                             &mut progress_bar,
                             verbose,
+                            true
                         );
                     }
                 }
@@ -667,6 +669,7 @@ impl UpdateArgs {
         require_all: bool,
         progress_bar: &mut ProgressBar,
         verbose: bool,
+        dependency: bool,
     ) -> Option<Vec<VersionDependency>> {
         match File::from_project(
             branch_name,
@@ -696,7 +699,11 @@ impl UpdateArgs {
                 branch_files.files.push(file);
 
                 if verbose {
-                    progress_bar.print_info("added", slug_project_id, Color::Green, Style::Normal);
+                    let mut info_name = "added";
+                    if dependency {
+                        info_name = "dependency";
+                    }
+                    progress_bar.print_info(info_name, slug_project_id, Color::Green, Style::Normal);
                 }
 
                 return Some(dependencies);
