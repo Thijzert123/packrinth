@@ -18,7 +18,7 @@ fn generate_cli_help_doc() {
     );
 
     let doc_file_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
-        .join("docs")
+        .join("site")
         .join("cli-help.md");
 
     let mut doc_file = OpenOptions::new()
