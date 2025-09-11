@@ -27,6 +27,7 @@ use crate::cli::*;
 
 fn create_progress_bar(max: usize) -> ProgressBar {
     let mut progress_bar = ProgressBar::new_with_eta(max);
+    progress_bar.set_progress_style(progress_bar::ProgressStyle::Percentage);
     if let Some((terminal_size::Width(width), terminal_size::Height(_height))) =
         terminal_size::terminal_size()
     {
