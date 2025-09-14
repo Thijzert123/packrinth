@@ -12,7 +12,6 @@ pub const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
 pub const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
 
 fn main() {
-    // TODO installation of modpack and updating it too
     // TODO packrinth deploy: deploy to modrinth and GitHub releases
     // TODO add override for env
     // TODO when updating, dependencies look like fj3k29fj, not like fabric-api
