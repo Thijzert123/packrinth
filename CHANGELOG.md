@@ -11,11 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Show error when removing a branch directory failed
+- Show an error when removing a branch directory failed
 
 ### Fixed
 
-- Removing a branch not modifying the modpack configuration file
+- Removing a branch now actually modifies the modpack configuration file
 
 ## [0.7.2](https://github.com/Thijzert123/packrinth/compare/v0.7.1...v0.7.2) - 2025-09-14
 
