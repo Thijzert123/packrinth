@@ -208,6 +208,10 @@ pub enum PackrinthError {
     BranchAlreadyExists {
         branch: String,
     },
+    FailedToRemoveDir {
+        dir_to_remove: String,
+        error_message: String,
+    }
 }
 
 impl PackrinthError {
@@ -259,6 +263,7 @@ impl PackrinthError {
             PackrinthError::InvalidMrPack { mrpack_path, error_message } => (format!("Modrinth pack at {mrpack_path} is invalid: {error_message}"), "make sure you adhere to the specifications (https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack)".to_string()),
             PackrinthError::FailedToExtractMrPack { mrpack_path, output_directory, error_message } => (format!("failed to extract Modrinth pack at {mrpack_path} to {output_directory}: {error_message}"), "check if you have sufficient permissions".to_string()),
             PackrinthError::BranchAlreadyExists { branch } => (format!("branch {branch} already exists"), "you can still continue by passing the --force flag".to_string()),
+            PackrinthError::FailedToRemoveDir { dir_to_remove, error_message } => (format!("failed to remove directory {dir_to_remove}: {error_message}"), "check if you have sufficient permissions and if the directory exists".to_string()),
         }
     }
 }

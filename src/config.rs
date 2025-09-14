@@ -664,7 +664,10 @@ impl Modpack {
     ///
     /// It also removes the branch directories. If something goes wrong during this process,
     /// all errors get ignored.
-    pub fn remove_branches(&mut self, branch_names: &Vec<String>) {
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToRemoveDir`] if removing the branch directory failed
+    pub fn remove_branches(&mut self, branch_names: &Vec<String>) -> Result<(), PackrinthError> {
         for branch_name in branch_names {
             let branch_path = self.directory.join(branch_name);
 
@@ -672,12 +675,13 @@ impl Modpack {
                 self.branches.retain(|x| x != branch_name);
                 if let Ok(exists) = fs::exists(&branch_path)
                     && exists
-                {
-                    // We don't care if the dir gets removed, it is just nice to have. TODO do care
-                    let _ = fs::remove_dir_all(&branch_path);
+                && let Err(error) = fs::remove_dir_all(&branch_path) {
+                        return Err(PackrinthError::FailedToRemoveDir { dir_to_remove: branch_path.display().to_string(), error_message: error.to_string() });
                 }
             }
         }
+
+        Ok(())
     }
 
     /// Saves the modpack to the configuration file.
