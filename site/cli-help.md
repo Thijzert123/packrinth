@@ -62,7 +62,13 @@ This document contains the help content for the `packrinth` command-line program
 
 Initialize a new modpack project
 
-**Usage:** `packrinth init [OPTIONS]`
+**Usage:** `packrinth init [OPTIONS] [MODPACK_NAME]`
+
+###### **Arguments:**
+
+* `<MODPACK_NAME>` — The name of the modpack to create.
+
+   A directory with this name will be made in the working directory.
 
 ###### **Options:**
 

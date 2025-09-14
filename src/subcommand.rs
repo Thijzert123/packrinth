@@ -107,8 +107,16 @@ impl SubCommand {
 
 impl InitArgs {
     pub fn run(&self, directory: &Path, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
-        let modpack = Modpack::new(directory, self.force)?;
+        let directory = if let Some(modpack_name) = &self.modpack_name {
+            &directory.join(modpack_name)
+        } else {
+            directory
+        };
 
+        let mut modpack = Modpack::new(directory, self.force)?;
+        if let Some(modpack_name) = &self.modpack_name {
+            modpack.name.clone_from(modpack_name);
+        }
         modpack.save()?;
 
         if !self.no_git_repo
@@ -1047,6 +1055,7 @@ mod tests {
     fn init(test_modpack_dir: &Path) {
         Cli {
             subcommand: SubCommand::Init(InitArgs {
+                modpack_name: None,
                 no_git_repo: false,
                 force: false,
             }),
