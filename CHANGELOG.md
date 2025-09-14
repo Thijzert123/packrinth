@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.2](https://github.com/Thijzert123/packrinth/compare/v0.7.1...v0.7.2) - 2025-09-14
 
+### Added
+
+- Possibility to set the modpack name when initializing a new Packrinth modpack
+
 ### Changed
 
 - When updating projects with verbose output, the test `dependency` will be shown if an automatic dependency was successfully added
