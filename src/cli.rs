@@ -53,6 +53,11 @@ pub struct ConfigArgs {
 
 #[derive(Debug, Parser)]
 pub struct InitArgs {
+    /// The name of the modpack to create.
+    ///
+    /// A directory with this name will be made in the working directory.
+    pub modpack_name: Option<String>,
+
     /// Don't initialize a Git repository
     #[clap(short = 'G', long)]
     pub no_git_repo: bool,
