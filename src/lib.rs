@@ -211,7 +211,7 @@ pub enum PackrinthError {
     FailedToRemoveDir {
         dir_to_remove: String,
         error_message: String,
-    }
+    },
 }
 
 impl PackrinthError {

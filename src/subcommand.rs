@@ -598,7 +598,7 @@ impl UpdateArgs {
                     require_all,
                     &mut progress_bar,
                     verbose,
-                    false
+                    false,
                 ) {
                     dependencies.extend(new_dependencies);
                 }
@@ -628,7 +628,7 @@ impl UpdateArgs {
                             require_all,
                             &mut progress_bar,
                             verbose,
-                            true
+                            true,
                         );
                     }
                 }
@@ -711,7 +711,12 @@ impl UpdateArgs {
                     if dependency {
                         info_name = "dependency";
                     }
-                    progress_bar.print_info(info_name, slug_project_id, Color::Green, Style::Normal);
+                    progress_bar.print_info(
+                        info_name,
+                        slug_project_id,
+                        Color::Green,
+                        Style::Normal,
+                    );
                 }
 
                 return Some(dependencies);

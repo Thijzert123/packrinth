@@ -675,8 +675,12 @@ impl Modpack {
                 self.branches.retain(|x| x != branch_name);
                 if let Ok(exists) = fs::exists(&branch_path)
                     && exists
-                && let Err(error) = fs::remove_dir_all(&branch_path) {
-                        return Err(PackrinthError::FailedToRemoveDir { dir_to_remove: branch_path.display().to_string(), error_message: error.to_string() });
+                    && let Err(error) = fs::remove_dir_all(&branch_path)
+                {
+                    return Err(PackrinthError::FailedToRemoveDir {
+                        dir_to_remove: branch_path.display().to_string(),
+                        error_message: error.to_string(),
+                    });
                 }
             }
         }
