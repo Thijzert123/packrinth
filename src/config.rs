@@ -673,7 +673,7 @@ impl Modpack {
                 if let Ok(exists) = fs::exists(&branch_path)
                     && exists
                 {
-                    // We don't care if the dir gets removed, it is just nice to have.
+                    // We don't care if the dir gets removed, it is just nice to have. TODO do care
                     let _ = fs::remove_dir_all(&branch_path);
                 }
             }

@@ -856,6 +856,7 @@ impl RemoveBranchesArgs {
 
         if confirmation {
             modpack.remove_branches(&self.branches);
+            modpack.save()?;
             print_success(format!("removed {}", self.branches.join(", ")));
         } else {
             println!("Aborted action");
