@@ -21,6 +21,12 @@ To install the latest version of Packrinth with Cargo, run:
 cargo install packrinth
 ```
 
+### AUR
+Packrinth is available on the [AUR](https://aur.archlinux.org/packages/packrinth). You can install it with:
+```bash
+yay -S packrinth
+```
+
 ### Pre-compiled binaries
 You can also manually install Packrinth with one of the pre-compiled binaries from the [latest GitHub release](https://github.com/Thijzert123/packrinth/releases/latest).
 
