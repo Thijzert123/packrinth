@@ -35,6 +35,11 @@ If you have Cargo installed, you can use that to install Packrinth:
 cargo install packrinth
 ```
 
+Packrinth is also available on the [AUR](https://aur.archlinux.org/packages/packrinth), so you can install it with:
+```bash
+yay -S packrinth
+```
+
 You can also manually install Packrinth with one of the pre-compiled binaries from the [latest GitHub release](https://github.com/Thijzert123/packrinth/releases/latest).
 
 ## Getting started
