@@ -12,6 +12,7 @@ nav_order: 1
 Packrinth is a CLI tool for creating and managing Minecraft modpacks with Modrinth projects.
 {: .text-center}
 
+[![AUR Version](https://img.shields.io/aur/version/packrinth?style=for-the-badge)](https://aur.archlinux.org/packages/packrinth)
 [![Crates.io Version](https://img.shields.io/crates/v/packrinth?style=for-the-badge)](https://crates.io/crates/packrinth)
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/packrinth?style=for-the-badge)](https://crates.io/crates/packrinth)
 {: .text-center}
