@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.4](https://github.com/Thijzert123/packrinth/compare/v0.7.3...v0.7.4) - 2025-09-20
+
+### Other
+
+- Update home page URL links
+
 ## [0.7.3](https://github.com/Thijzert123/packrinth/compare/v0.7.2...v0.7.3) - 2025-09-14
 
 ### Changed
