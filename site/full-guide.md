@@ -17,7 +17,7 @@ nav_order: 2
 
 {: .note }
 This page assumes you have already installed Packrinth.
-Instructions can be found [here](https://thijzert123.github.io/packrinth/#installation).
+Instructions can be found [here](https://packrinth.thijzert.nl/#installation).
 
 {: .note }
 Mods, resource packs, data packs, shaders and plugins will be called `projects` from now on.

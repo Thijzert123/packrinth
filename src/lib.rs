@@ -1,5 +1,5 @@
 //! <div align="center">
-//!   <a href="https://thijzert123.github.io/packrinth"><img src="https://github.com/Thijzert123/packrinth/blob/ff8455254b966d7879ca2c378a4350c1a56cbfc6/logo.png?raw=true" alt="logo" width=100 height=100 /></a>
+//!   <a href="https://packrinth.thijzert.nl"><img src="https://github.com/Thijzert123/packrinth/blob/ff8455254b966d7879ca2c378a4350c1a56cbfc6/logo.png?raw=true" alt="logo" width=100 height=100 /></a>
 //!
 //!   <h1>Packrinth</h1>
 //!   CLI tool for creating and managing Minecraft modpacks with Modrinth projects
@@ -17,7 +17,7 @@
 //! The module `modrinth` can be used to retrieve data from Modrinth and convert it to
 //! Packrinth-compatible structs.
 //!
-//! If you just want to use the Packrinth CLI, go to <https://thijzert123.github.io/packrinth>
+//! If you just want to use the Packrinth CLI, go to <https://packrinth.thijzert.nl>
 //! to see how to use it.
 
 #![warn(clippy::pedantic)]

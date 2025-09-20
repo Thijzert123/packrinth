@@ -3,7 +3,7 @@ description: CLI tool for creating and maintaining your own Minecraft modpack
 theme: just-the-docs
 color_scheme: dark
 
-url: https://thijzert123.github.io/packrinth
+url: https://packrinth.thijzert.nl
 
 aux_links:
   crates.io: https://crates.io/crates/packrinth
@@ -20,5 +20,3 @@ callouts:
   note:
     title: Note
     color: blue
-
-ga_tracking: G-98P92RM61H

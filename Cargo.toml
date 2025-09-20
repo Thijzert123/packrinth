@@ -1,7 +1,7 @@
 [package]
 name = "packrinth"
 description = "CLI tool for creating and maintaining your own Minecraft modpack"
-homepage = "https://thijzert123.github.io/packrinth"
+homepage = "https://packrinth.thijzert.nl"
 repository = "https://github.com/Thijzert123/packrinth"
 readme = "README.md"
 keywords = ["cli", "minecraft", "modpack", "modrinth"]
