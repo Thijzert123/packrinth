@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.4](https://github.com/Thijzert123/packrinth/compare/v0.7.3...v0.7.4) - 2025-09-20
+
+### Fixed
+
+- Include all source files in the crate to make sure installing Packrinth from the AUR works as intended
+
+### Other
+
+- Revert "fix: Include all source files in the crate to make sure installing Packrinth from the AUR works as intended"
+- Update README.md
+
 ## [0.7.3](https://github.com/Thijzert123/packrinth/compare/v0.7.2...v0.7.3) - 2025-09-14
 
 ### Changed
