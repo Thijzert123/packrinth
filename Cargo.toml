@@ -17,7 +17,7 @@ include = ["src/", "*.md"]
 serde = { version = "1.0.225", features = ["derive"] }
 reqwest = { version = "0.12.23", default-features = false, features = ["rustls-tls", "blocking"] }
 serde_json = "1.0.145"
-clap = { version = "4.5.47", features = ["derive"] }
+clap = { version = "4.5.48", features = ["derive"] }
 dialoguer = "0.12.0"
 zip = "5.1.1"
 walkdir = "2.5.0"
@@ -33,7 +33,7 @@ gix = "0.73.0"
 semver = "1.0.27"
 
 [build-dependencies]
-clap = { version = "4.5.47", features = ["derive"] }
+clap = { version = "4.5.48", features = ["derive"] }
 clap-markdown = "0.1.5"
 
 [dev-dependencies]
