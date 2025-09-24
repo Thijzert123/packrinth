@@ -28,8 +28,50 @@ pub mod modrinth;
 use crate::config::Modpack;
 use std::path::Path;
 use std::{fs, io};
+use std::sync::OnceLock;
+use std::time::Duration;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::policies::ExponentialBackoff;
+use reqwest_retry::RetryTransientMiddleware;
+use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 use zip::result::ZipResult;
+
+static CLIENT: OnceLock<ClientWithMiddleware> = OnceLock::new();
+const USER_AGENT: &str = concat!(
+"Thijzert123",
+"/",
+"packrinth",
+"/",
+env!("CARGO_PKG_VERSION")
+);
+
+fn request_text<T: ToString + ?Sized>(full_url: &T) -> Result<String, PackrinthError> {
+    let client = CLIENT.get_or_init(|| {
+        let retry_policy = ExponentialBackoff::builder()
+            .build_with_total_retry_duration(Duration::from_secs(60 * 2));
+        ClientBuilder::new(
+            reqwest::Client::builder()
+                .user_agent(USER_AGENT)
+                .build()
+                .expect("Failed to build request client"),
+        )
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build()
+    });
+
+    let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+    let response = runtime
+        .block_on(client.get(&full_url.to_string()).send())
+        .expect("Failed to get response");
+    match runtime.block_on(response.text()) {
+        Ok(text) => Ok(text),
+        Err(error) => Err(PackrinthError::RequestFailed {
+            url: full_url.to_string(),
+            error_message: error.to_string(),
+        }),
+    }
+}
 
 const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
 
@@ -84,6 +126,54 @@ pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<
     Ok(())
 }
 
+/// Struct representative of all versions of a crate on the `crates.io` API.
+#[derive(Debug, Serialize, Deserialize)]
+struct CratesIoVersions {
+    pub versions: Vec<CratesIoVersion>,
+}
+
+/// Struct representative of a version on the `crates.io` API.
+#[derive(Debug, Serialize, Deserialize)]
+struct CratesIoVersion {
+    pub num: String,
+}
+
+impl CratesIoVersions {
+    pub fn from_crate(crate_name: &str) -> Result<Self, PackrinthError> {
+        let endpoint = format!("/crates/{}/versions", crate_name);
+        let full_url = format!("https://crates.io/api/v1/{}", endpoint);
+        let crates_io_response = request_text(&full_url)?;
+
+        match serde_json::from_str::<Self>(&crates_io_response) {
+            Ok(versions) => Ok(versions),
+            Err(error) => Err(PackrinthError::FailedToParseCratesIoResponseJson {
+                crates_io_endpoint: endpoint.to_string(),
+                error_message: error.to_string(),
+            }),
+        }
+    }
+}
+
+// TODO doc
+pub fn is_new_version_available() -> Result<Option<String>, PackrinthError> {
+    let newest_version = &CratesIoVersions::from_crate(env!("CARGO_PKG_NAME"))?.versions[0].num;
+    let newest_version = match semver::Version::parse(newest_version) {
+        Ok(version) => version,
+        Err(error) => return Err(PackrinthError::FailedToParseSemverVersion { version_to_parse: newest_version.clone(), error_message: error.to_string() }),
+    };
+    let current_version = env!("CARGO_PKG_VERSION");
+    let current_version = match semver::Version::parse(current_version) {
+        Ok(version) => version,
+        Err(error) => return Err(PackrinthError::FailedToParseSemverVersion { version_to_parse: current_version.to_string(), error_message: error.to_string() }),
+    };
+
+    if newest_version > current_version {
+        Ok(Some(newest_version.to_string()))
+    } else {
+        Ok(None)
+    }
+}
+
 /// An error that can occur while performing Packrinth operations.
 #[non_exhaustive]
 #[derive(Debug, PartialEq)]
@@ -105,6 +195,10 @@ pub enum PackrinthError {
     },
     FailedToParseModrinthResponseJson {
         modrinth_endpoint: String,
+        error_message: String,
+    },
+    FailedToParseCratesIoResponseJson {
+        crates_io_endpoint: String,
         error_message: String,
     },
     FailedToSerialize {
@@ -212,6 +306,10 @@ pub enum PackrinthError {
         dir_to_remove: String,
         error_message: String,
     },
+    FailedToParseSemverVersion {
+        version_to_parse: String,
+        error_message: String,
+    }
 }
 
 impl PackrinthError {
@@ -227,6 +325,7 @@ impl PackrinthError {
             PackrinthError::FailedToReadToString { path_to_read, error_message } => (format!("failed to read file {path_to_read}: {error_message}"), "check if you have sufficient permissions and if the file exists".to_string()),
             PackrinthError::FailedToParseConfigJson { config_path, error_message } => (format!("config file {config_path} is invalid: {error_message}"), "fix it according to JSON standards".to_string()),
             PackrinthError::FailedToParseModrinthResponseJson { modrinth_endpoint, error_message } => (format!("modrinth response from endpoint {modrinth_endpoint} is invalid: {error_message}"), file_an_issue),
+            PackrinthError::FailedToParseCratesIoResponseJson { crates_io_endpoint, error_message } => (format!("crates.io response from endpoint {crates_io_endpoint} is invalid: {error_message}"), file_an_issue),
             PackrinthError::FailedToSerialize{ error_message } => (format!("failed to serialize to a JSON: {error_message}"), file_an_issue),
             PackrinthError::ProjectIsNotAdded { project } => (format!("project {project} is not added to this modpack"), "add it with subcommand: project add".to_string()),
             PackrinthError::OverrideDoesNotExist { project, branch } => (format!("{project} does not have an override for branch {branch}"), "add one with subcommand: project override add".to_string()),
@@ -264,6 +363,7 @@ impl PackrinthError {
             PackrinthError::FailedToExtractMrPack { mrpack_path, output_directory, error_message } => (format!("failed to extract Modrinth pack at {mrpack_path} to {output_directory}: {error_message}"), "check if you have sufficient permissions".to_string()),
             PackrinthError::BranchAlreadyExists { branch } => (format!("branch {branch} already exists"), "you can still continue by passing the --force flag".to_string()),
             PackrinthError::FailedToRemoveDir { dir_to_remove, error_message } => (format!("failed to remove directory {dir_to_remove}: {error_message}"), "check if you have sufficient permissions and if the directory exists".to_string()),
+            PackrinthError::FailedToParseSemverVersion { version_to_parse, error_message } => (format!("failed to parse semver version {version_to_parse}: {error_message}"), file_an_issue),
         }
     }
 }

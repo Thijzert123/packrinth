@@ -2,54 +2,17 @@
 
 use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
 use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError};
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::RetryTransientMiddleware;
-use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
-use std::time::Duration;
 use std::{cmp, fs};
 use zip::ZipArchive;
 
 const MODRINTH_API_BASE_URL: &str = "https://api.modrinth.com/v2";
-static CLIENT: OnceLock<ClientWithMiddleware> = OnceLock::new();
-const USER_AGENT: &str = concat!(
-    "Thijzert123",
-    "/",
-    "packrinth",
-    "/",
-    env!("CARGO_PKG_VERSION")
-);
 
 fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError> {
-    let client = CLIENT.get_or_init(|| {
-        let retry_policy = ExponentialBackoff::builder()
-            .build_with_total_retry_duration(Duration::from_secs(60 * 2));
-        ClientBuilder::new(
-            reqwest::Client::builder()
-                .user_agent(USER_AGENT)
-                .build()
-                .expect("Failed to build request client"),
-        )
-        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build()
-    });
-
     let full_url = MODRINTH_API_BASE_URL.to_string() + api_endpoint.to_string().as_str();
-
-    let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let response = runtime
-        .block_on(client.get(&full_url).send())
-        .expect("Failed to get response");
-    match runtime.block_on(response.text()) {
-        Ok(text) => Ok(text),
-        Err(error) => Err(PackrinthError::RequestFailed {
-            url: full_url,
-            error_message: error.to_string(),
-        }),
-    }
+    crate::request_text(&full_url)
 }
 
 /// Part of the fields returned from the `/project` Modrinth API endpoint (v2).
