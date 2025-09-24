@@ -36,6 +36,7 @@ use reqwest_retry::RetryTransientMiddleware;
 use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 use zip::result::ZipResult;
+use crate::modrinth::Version;
 
 static CLIENT: OnceLock<ClientWithMiddleware> = OnceLock::new();
 const USER_AGENT: &str = concat!(
@@ -128,17 +129,22 @@ pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<
 
 /// Struct representative of all versions of a crate on the `crates.io` API.
 #[derive(Debug, Serialize, Deserialize)]
-struct CratesIoVersions {
+pub struct CratesIoVersions {
     pub versions: Vec<CratesIoVersion>,
 }
 
 /// Struct representative of a version on the `crates.io` API.
 #[derive(Debug, Serialize, Deserialize)]
-struct CratesIoVersion {
+pub struct CratesIoVersion {
+    /// The version number of the crate version.
     pub num: String,
 }
 
 impl CratesIoVersions {
+    /// Gets `crates.io` versions from a crate name.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToParseCratesIoResponseJson`] if the response was invalid
     pub fn from_crate(crate_name: &str) -> Result<Self, PackrinthError> {
         let endpoint = format!("/crates/{}/versions", crate_name);
         let full_url = format!("https://crates.io/api/v1/{}", endpoint);
@@ -154,7 +160,11 @@ impl CratesIoVersions {
     }
 }
 
-// TODO doc
+/// Checks if a new Packrinth version is available by checking if a newer semantic version is
+/// present on `crates.io`.
+///
+/// # Errors
+/// - [`PackrinthError::FailedToParseSemverVersion`] if parsing a version to a semver version failed
 pub fn is_new_version_available() -> Result<Option<String>, PackrinthError> {
     let newest_version = &CratesIoVersions::from_crate(env!("CARGO_PKG_NAME"))?.versions[0].num;
     let newest_version = match semver::Version::parse(newest_version) {
