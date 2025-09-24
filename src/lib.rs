@@ -216,10 +216,6 @@ pub enum PackrinthError {
         modrinth_endpoint: String,
         error_message: String,
     },
-    FailedToParseCratesIoResponseJson {
-        crates_io_endpoint: String,
-        error_message: String,
-    },
     FailedToSerialize {
         error_message: String,
     },
@@ -323,6 +319,10 @@ pub enum PackrinthError {
     },
     FailedToRemoveDir {
         dir_to_remove: String,
+        error_message: String,
+    },
+    FailedToParseCratesIoResponseJson {
+        crates_io_endpoint: String,
         error_message: String,
     },
     FailedToParseSemverVersion {
