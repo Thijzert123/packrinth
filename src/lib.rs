@@ -36,7 +36,6 @@ use reqwest_retry::RetryTransientMiddleware;
 use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 use zip::result::ZipResult;
-use crate::modrinth::Version;
 
 static CLIENT: OnceLock<ClientWithMiddleware> = OnceLock::new();
 const USER_AGENT: &str = concat!(
@@ -63,7 +62,7 @@ fn request_text<T: ToString + ?Sized>(full_url: &T) -> Result<String, PackrinthE
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
     let response = runtime
-        .block_on(client.get(&full_url.to_string()).send())
+        .block_on(client.get(full_url.to_string()).send())
         .expect("Failed to get response");
     match runtime.block_on(response.text()) {
         Ok(text) => Ok(text),
@@ -146,8 +145,8 @@ impl CratesIoVersions {
     /// # Errors
     /// - [`PackrinthError::FailedToParseCratesIoResponseJson`] if the response was invalid
     pub fn from_crate(crate_name: &str) -> Result<Self, PackrinthError> {
-        let endpoint = format!("/crates/{}/versions", crate_name);
-        let full_url = format!("https://crates.io/api/v1/{}", endpoint);
+        let endpoint = format!("/crates/{crate_name}/versions");
+        let full_url = format!("https://crates.io/api/v1/{endpoint}");
         let crates_io_response = request_text(&full_url)?;
 
         match serde_json::from_str::<Self>(&crates_io_response) {
