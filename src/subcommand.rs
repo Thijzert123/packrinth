@@ -1044,8 +1044,13 @@ impl VersionArgs {
         println!("Version {}", crate::VERSION);
 
         if let Ok(newest_version) = packrinth::is_new_version_available()
-            && let Some(newest_version) = newest_version {
-            println!("A new version is available: {} v{}", env!("CARGO_PKG_NAME"), newest_version);
+            && let Some(newest_version) = newest_version
+        {
+            println!(
+                "A new version is available: {} v{}",
+                env!("CARGO_PKG_NAME"),
+                newest_version
+            );
         }
 
         println!();

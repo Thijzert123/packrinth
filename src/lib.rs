@@ -26,24 +26,24 @@ pub mod config;
 pub mod modrinth;
 
 use crate::config::Modpack;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::RetryTransientMiddleware;
+use reqwest_retry::policies::ExponentialBackoff;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
-use std::{fs, io};
 use std::sync::OnceLock;
 use std::time::Duration;
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::policies::ExponentialBackoff;
-use reqwest_retry::RetryTransientMiddleware;
-use serde::{Deserialize, Serialize};
+use std::{fs, io};
 use zip::ZipArchive;
 use zip::result::ZipResult;
 
 static CLIENT: OnceLock<ClientWithMiddleware> = OnceLock::new();
 const USER_AGENT: &str = concat!(
-"Thijzert123",
-"/",
-"packrinth",
-"/",
-env!("CARGO_PKG_VERSION")
+    "Thijzert123",
+    "/",
+    "packrinth",
+    "/",
+    env!("CARGO_PKG_VERSION")
 );
 
 fn request_text<T: ToString + ?Sized>(full_url: &T) -> Result<String, PackrinthError> {
@@ -56,8 +56,8 @@ fn request_text<T: ToString + ?Sized>(full_url: &T) -> Result<String, PackrinthE
                 .build()
                 .expect("Failed to build request client"),
         )
-            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-            .build()
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build()
     });
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
@@ -168,12 +168,22 @@ pub fn is_new_version_available() -> Result<Option<String>, PackrinthError> {
     let newest_version = &CratesIoVersions::from_crate(env!("CARGO_PKG_NAME"))?.versions[0].num;
     let newest_version = match semver::Version::parse(newest_version) {
         Ok(version) => version,
-        Err(error) => return Err(PackrinthError::FailedToParseSemverVersion { version_to_parse: newest_version.clone(), error_message: error.to_string() }),
+        Err(error) => {
+            return Err(PackrinthError::FailedToParseSemverVersion {
+                version_to_parse: newest_version.clone(),
+                error_message: error.to_string(),
+            });
+        }
     };
     let current_version = env!("CARGO_PKG_VERSION");
     let current_version = match semver::Version::parse(current_version) {
         Ok(version) => version,
-        Err(error) => return Err(PackrinthError::FailedToParseSemverVersion { version_to_parse: current_version.to_string(), error_message: error.to_string() }),
+        Err(error) => {
+            return Err(PackrinthError::FailedToParseSemverVersion {
+                version_to_parse: current_version.to_string(),
+                error_message: error.to_string(),
+            });
+        }
     };
 
     if newest_version > current_version {
@@ -318,7 +328,7 @@ pub enum PackrinthError {
     FailedToParseSemverVersion {
         version_to_parse: String,
         error_message: String,
-    }
+    },
 }
 
 impl PackrinthError {
