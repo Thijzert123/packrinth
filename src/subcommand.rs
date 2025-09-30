@@ -142,7 +142,7 @@ impl InitArgs {
         {
             // If the gitignore file can't be written to, so be it.
             let _ = writeln!(&gitignore_file, "# Exported files");
-            let _ = writeln!(&gitignore_file, "target");
+            let _ = writeln!(&gitignore_file, "{}", TARGET_DIRECTORY);
             let _ = gitignore_file.sync_all();
         }
 
