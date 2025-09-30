@@ -30,6 +30,9 @@ pub enum SubCommand {
     /// Export a branch to a Modrinth modpack
     Export(ExportArgs),
 
+    /// Removes the target directory
+    Clean(CleanArgs),
+
     /// Generate Markdown documentation
     Doc(DocArgs),
 
@@ -352,6 +355,9 @@ pub struct ExportArgs {
     /// Branches to export. If no branches are specified, all branches will be exported.
     pub branches: Option<Vec<String>>,
 }
+
+#[derive(Parser, Debug)]
+pub struct CleanArgs;
 
 #[derive(Parser, Debug)]
 pub struct DocArgs;

@@ -252,6 +252,9 @@ pub struct BranchFilesProject {
 /// The name of the modpack configuration file.
 pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 
+/// The name of the target directory
+pub const TARGET_DIRECTORY: &str = "target";
+
 /// The current most recent pack format of a .mrpack file.
 const MODRINTH_PACK_FORMAT: u16 = 1;
 /// The game to put in the mrpack.
@@ -723,7 +726,7 @@ impl Modpack {
 
         let mrpack_file_name = format!("{}_{}.mrpack", self.name, branch_config.version);
         let branch_dir = self.directory.join(branch);
-        let target_dir = self.directory.join("target").join(branch);
+        let target_dir = self.directory.join(TARGET_DIRECTORY).join(branch);
         if let Err(error) = fs::create_dir_all(&target_dir) {
             return Err(PackrinthError::FailedToCreateDir { dir_to_create: target_dir.display().to_string(), error_message: error.to_string() })
         }

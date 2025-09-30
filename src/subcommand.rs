@@ -3,10 +3,7 @@ use clap::CommandFactory;
 use clap_complete::{Generator, shells};
 use dialoguer::Confirm;
 use indexmap::IndexMap;
-use packrinth::config::{
-    BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, MainLoader, Modpack,
-    ProjectSettings,
-};
+use packrinth::config::{BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, MainLoader, Modpack, ProjectSettings, TARGET_DIRECTORY};
 use packrinth::modrinth::{
     Env, File, FileResult, MrPack, Project, SideSupport, Version, VersionDependency,
     VersionDependencyType,
@@ -99,6 +96,7 @@ impl SubCommand {
             SubCommand::Branch(args) => args.run(&mut modpack, config_args),
             SubCommand::Update(args) => args.run(&modpack, config_args),
             SubCommand::Export(args) => args.run(&modpack, config_args),
+            SubCommand::Clean(args) => args.run(&modpack, config_args),
             SubCommand::Doc(args) => args.run(&modpack, config_args),
             _ => Ok(()), // These cases should have been handled before this match statement.
         }
@@ -894,6 +892,19 @@ impl ExportArgs {
             }
         }
         Ok(())
+    }
+}
+
+impl CleanArgs {
+    pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
+        let target_dir = modpack.directory.join(TARGET_DIRECTORY);
+        match fs::remove_dir_all(&target_dir) {
+            Ok(()) => {
+                print_success(format!("removed {}", target_dir.display()));
+                Ok(())
+            }
+            Err(error) => Err(PackrinthError::FailedToRemoveDir { dir_to_remove: target_dir.display().to_string(), error_message: error.to_string() })
+        }
     }
 }
 

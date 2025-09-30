@@ -31,6 +31,7 @@ This document contains the help content for the `packrinth` command-line program
 * [`packrinth branch remove`↴](#packrinth-branch-remove)
 * [`packrinth update`↴](#packrinth-update)
 * [`packrinth export`↴](#packrinth-export)
+* [`packrinth clean`↴](#packrinth-clean)
 * [`packrinth doc`↴](#packrinth-doc)
 * [`packrinth completions`↴](#packrinth-completions)
 * [`packrinth version`↴](#packrinth-version)
@@ -47,6 +48,7 @@ This document contains the help content for the `packrinth` command-line program
 * `branch` — Create and remove branches that separate your Modpack for various versions
 * `update` — Update branches with the newest project versions
 * `export` — Export a branch to a Modrinth modpack
+* `clean` — Removes the target directory
 * `doc` — Generate Markdown documentation
 * `completions` — Generate shell completion for Packrinth
 * `version` — Show information about the current Packrinth installation
@@ -384,6 +386,14 @@ Export a branch to a Modrinth modpack
 ###### **Arguments:**
 
 * `<BRANCHES>` — Branches to export. If no branches are specified, all branches will be exported
+
+
+
+## `packrinth clean`
+
+Removes the target directory
+
+**Usage:** `packrinth clean`
 
 
 
