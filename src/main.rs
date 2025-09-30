@@ -15,8 +15,6 @@ fn main() {
     // TODO packrinth deploy: deploy to modrinth and GitHub releases
     // TODO add override for env
     // TODO when updating, dependencies look like fj3k29fj, not like fabric-api
-    // TODO make acceptable_minecraft_versions optional
-    // TODO make acceptable_loaders optional
     // TODO add clean subcommand to remove all .mrpacks
     Cli::parse().run();
 }

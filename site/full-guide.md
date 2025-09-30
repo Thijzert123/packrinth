@@ -134,7 +134,8 @@ For acceptable values for `acceptable_loaders`, check [here](configuration-refer
 
 {: .note }
 You can also choose to not provide a main mod loader. To do this, remove the `mod_loader` and `loader_version`
-fields.
+fields. The same goes for the `acceptable_minecraft_versions` and `acceptable_loaders` fields. However, if you leave
+all of these fields out, no projects will be found because there were no loaders specified at all.
 
 ## Adding projects
 Let's add some projects to our modpack with `packrinth project add <PROJECTS>`. To add Sodium and Lithium, run this:
