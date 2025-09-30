@@ -340,6 +340,10 @@ impl File {
             loaders.push(mod_loader.modrinth_value());
         }
 
+        // Default loaders that will always be added
+        loaders.push(Loader::Minecraft.modrinth_value());
+        loaders.push(Loader::VanillaShader.modrinth_value());
+
         // Always add main minecraft version to acceptable minecraft versions
         let mut game_versions = vec![branch_config.minecraft_version.clone()];
         game_versions.extend(branch_config.acceptable_minecraft_versions.clone());
