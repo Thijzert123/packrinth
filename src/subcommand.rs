@@ -1098,7 +1098,7 @@ mod tests {
         assert!(
             fs::read_to_string(test_modpack_dir.join(".gitignore"))
                 .unwrap()
-                .contains(".mrpack")
+                .contains("target")
         );
         // Check if modpack.json is right
         assert_eq!(
