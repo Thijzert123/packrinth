@@ -142,7 +142,7 @@ impl InitArgs {
         {
             // If the gitignore file can't be written to, so be it.
             let _ = writeln!(&gitignore_file, "# Exported files");
-            let _ = writeln!(&gitignore_file, "{}", TARGET_DIRECTORY);
+            let _ = writeln!(&gitignore_file, "{TARGET_DIRECTORY}");
             let _ = gitignore_file.sync_all();
         }
 
@@ -896,6 +896,8 @@ impl ExportArgs {
 }
 
 impl CleanArgs {
+    // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
+    #[allow(clippy::unused_self)]
     pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
         let target_dir = modpack.directory.join(TARGET_DIRECTORY);
         match fs::remove_dir_all(&target_dir) {
