@@ -143,8 +143,8 @@ impl InitArgs {
                 .open(gitignore_path)
         {
             // If the gitignore file can't be written to, so be it.
-            let _ = writeln!(&gitignore_file, "# Exported Modrinth modpacks");
-            let _ = writeln!(&gitignore_file, "*.mrpack");
+            let _ = writeln!(&gitignore_file, "# Exported files");
+            let _ = writeln!(&gitignore_file, "target");
             let _ = gitignore_file.sync_all();
         }
 

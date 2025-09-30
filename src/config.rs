@@ -723,7 +723,11 @@ impl Modpack {
 
         let mrpack_file_name = format!("{}_{}.mrpack", self.name, branch_config.version);
         let branch_dir = self.directory.join(branch);
-        let mrpack_path = branch_dir.join(&mrpack_file_name);
+        let target_dir = self.directory.join("target").join(branch);
+        if let Err(error) = fs::create_dir_all(&target_dir) {
+            return Err(PackrinthError::FailedToCreateDir { dir_to_create: target_dir.display().to_string(), error_message: error.to_string() })
+        }
+        let mrpack_path = target_dir.join(&mrpack_file_name);
 
         let mrpack = MrPack {
             format_version: MODRINTH_PACK_FORMAT,
