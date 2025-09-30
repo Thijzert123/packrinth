@@ -12,12 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - All modpacks will be exported to a `target` directory
-- Minecraft and VanillaShader WILL be automatically added to the acceptable loaders list **REVERT CHANGELOG!**
-- Minecraft and VanillaShader won't be automatically added to the acceptable loaders list anymore
 
-### Other
+### Added
 
-- `clean` subcommand to remove the `target` directory
+- Added `clean` subcommand to remove the `target` directory
 
 ## [0.7.5](https://github.com/Thijzert123/packrinth/compare/v0.7.4...v0.7.5) - 2025-09-24
 
