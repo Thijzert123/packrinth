@@ -3,7 +3,10 @@ use clap::CommandFactory;
 use clap_complete::{Generator, shells};
 use dialoguer::Confirm;
 use indexmap::IndexMap;
-use packrinth::config::{BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, MainLoader, Modpack, ProjectSettings, TARGET_DIRECTORY};
+use packrinth::config::{
+    BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, MainLoader, Modpack,
+    ProjectSettings, TARGET_DIRECTORY,
+};
 use packrinth::modrinth::{
     Env, File, FileResult, MrPack, Project, SideSupport, Version, VersionDependency,
     VersionDependencyType,
@@ -905,7 +908,10 @@ impl CleanArgs {
                 print_success(format!("removed {}", target_dir.display()));
                 Ok(())
             }
-            Err(error) => Err(PackrinthError::FailedToRemoveDir { dir_to_remove: target_dir.display().to_string(), error_message: error.to_string() })
+            Err(error) => Err(PackrinthError::FailedToRemoveDir {
+                dir_to_remove: target_dir.display().to_string(),
+                error_message: error.to_string(),
+            }),
         }
     }
 }

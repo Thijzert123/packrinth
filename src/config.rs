@@ -728,7 +728,10 @@ impl Modpack {
         let branch_dir = self.directory.join(branch);
         let target_dir = self.directory.join(TARGET_DIRECTORY).join(branch);
         if let Err(error) = fs::create_dir_all(&target_dir) {
-            return Err(PackrinthError::FailedToCreateDir { dir_to_create: target_dir.display().to_string(), error_message: error.to_string() })
+            return Err(PackrinthError::FailedToCreateDir {
+                dir_to_create: target_dir.display().to_string(),
+                error_message: error.to_string(),
+            });
         }
         let mrpack_path = target_dir.join(&mrpack_file_name);
 
