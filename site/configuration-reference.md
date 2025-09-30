@@ -103,15 +103,15 @@ nav_order: 8
 
 # `branch.json`
 
-| Key                                        | Type                                | Default                | Description                                                                       |
-|--------------------------------------------|-------------------------------------|:-----------------------|-----------------------------------------------------------------------------------|
-| `version`                                  | string                              | `1.0.0-fabric`         | The version of the branch that should be appended to the final modpack file.      |
-| `minecraft_version`                        | string                              | `1.21.8`               | The Minecraft version to use with this modpack.                                   |
-| `acceptable_minecraft_versions` (optional) | string array                        | `1.21.6`, `1.21.7`     | Minecraft versions that are acceptable for downloading Modrinth mods.             |
-| `mod_loader` (optional)                    | [main mod loader](#main-mod-loader) | `fabric`               | The mod loader to install alongside the modpack.                                  |
-| `loader_version` (optional)                | string                              | `0.17.2`               | The version of the mod loader. Has to be present if `mod_loader` is also present. |
-| `acceptable_loaders` (optional)            | [loader](#other-loaders) array      | `minecraft`, `vanilla` | All the loaders that are acceptable for downloading Modrinth mods.                |
-| `manual_files` (optional)                  | [`file` object](#file-object) array | _not present_          | Manual files to add while updating the branch files.                              |
+| Key                                        | Type                                | Default                | Description                                                                                                                                                                   |
+|--------------------------------------------|-------------------------------------|:-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `version`                                  | string                              | `1.0.0-fabric`         | The version of the branch that should be appended to the final modpack file.                                                                                                  |
+| `minecraft_version`                        | string                              | `1.21.8`               | The Minecraft version to use with this modpack.                                                                                                                               |
+| `acceptable_minecraft_versions` (optional) | string array                        | `1.21.6`, `1.21.7`     | Minecraft versions that are acceptable for downloading Modrinth mods.                                                                                                         |
+| `mod_loader` (optional)                    | [main mod loader](#main-mod-loader) | `fabric`               | The mod loader to install alongside the modpack.                                                                                                                              |
+| `loader_version` (optional)                | string                              | `0.17.2`               | The version of the mod loader. Has to be present if `mod_loader` is also present.                                                                                             |
+| `acceptable_loaders` (optional)            | [loader](#other-loaders) array      | `minecraft`, `vanilla` | All the loaders that are acceptable for downloading Modrinth mods. The `minecraft` and `vanilla` loaders will always be added under the hood, even if you don't specify them. |
+| `manual_files` (optional)                  | [`file` object](#file-object) array | _not present_          | Manual files to add while updating the branch files.                                                                                                                          |
 
 ## Main mod loader
 
