@@ -306,16 +306,9 @@ impl Modpack {
         }
 
         let modpack = Self {
-            pack_format: CURRENT_PACK_FORMAT,
-            name: "My Modrinth modpack".to_string(),
-            summary: "Short summary for this modpack".to_string(),
-            author: "John Doe".to_string(),
-            require_all: false,
-            auto_dependencies: false,
-            branches: Vec::new(),
-            projects: IndexMap::new(),
             directory: PathBuf::from(directory),
             modpack_config_path: directory.join(MODPACK_CONFIG_FILE_NAME),
+            ..Self::default()
         };
 
         Ok(modpack)
@@ -893,6 +886,23 @@ impl Modpack {
             fabric_loader,
             quilt_loader,
         })
+    }
+}
+
+impl Default for Modpack {
+    fn default() -> Self {
+        Self {
+            pack_format: CURRENT_PACK_FORMAT,
+            name: "My Modrinth modpack".to_string(),
+            summary: "Short summary for this modpack".to_string(),
+            author: "John Doe".to_string(),
+            require_all: true,
+            auto_dependencies: true,
+            branches: Vec::default(),
+            projects: IndexMap::default(),
+            directory: PathBuf::default(),
+            modpack_config_path: PathBuf::default(),
+        }
     }
 }
 
