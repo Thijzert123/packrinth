@@ -31,11 +31,11 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
+use std::fs::OpenOptions;
 use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
 use std::{fs, io};
-use std::fs::OpenOptions;
 use zip::ZipArchive;
 use zip::result::ZipResult;
 
@@ -122,8 +122,7 @@ pub struct GitUtils;
 impl GitUtils {
     // TODO api doc
     pub fn initialize_modpack_repo(directory: &Path) -> Result<(), PackrinthError> {
-        if  let Err(error) = gix::init(directory)
-        {
+        if let Err(error) = gix::init(directory) {
             // If the repo already exists, don't show an error.
             if !matches!(
                 &error,
@@ -140,9 +139,9 @@ impl GitUtils {
         if let Ok(exists) = fs::exists(&gitignore_path)
             && !exists
             && let Ok(gitignore_file) = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(gitignore_path)
+                .append(true)
+                .create(true)
+                .open(gitignore_path)
         {
             // If the gitignore file can't be written to, so be it.
             let _ = writeln!(&gitignore_file, "# Exported files");

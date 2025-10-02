@@ -11,7 +11,7 @@ use packrinth::modrinth::{
     Env, File, FileResult, MrPack, Project, SideSupport, Version, VersionDependency,
     VersionDependencyType,
 };
-use packrinth::{PackrinthError, config, extract_mrpack, GitUtils};
+use packrinth::{GitUtils, PackrinthError, config, extract_mrpack};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::collections::HashMap;
@@ -118,8 +118,7 @@ impl InitArgs {
         }
         modpack.save()?;
 
-        if !self.no_git_repo
-        {
+        if !self.no_git_repo {
             GitUtils::initialize_modpack_repo(directory)?;
         }
 
