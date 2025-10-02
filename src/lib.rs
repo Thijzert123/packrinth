@@ -22,6 +22,7 @@
 
 #![warn(clippy::pedantic)]
 
+use std::io::Write;
 pub mod config;
 pub mod modrinth;
 
@@ -34,8 +35,12 @@ use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
 use std::{fs, io};
+use std::fs::OpenOptions;
 use zip::ZipArchive;
 use zip::result::ZipResult;
+
+/// The name of the target directory
+pub const TARGET_DIRECTORY: &str = "target";
 
 static CLIENT: OnceLock<ClientWithMiddleware> = OnceLock::new();
 const USER_AGENT: &str = concat!(
@@ -75,21 +80,6 @@ fn request_text<T: ToString + ?Sized>(full_url: &T) -> Result<String, PackrinthE
 
 const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
 
-/// Checks if the modpack is dirty.
-///
-/// It does this by checking whether the directory of the modpack
-/// has uncommitted changes. If any errors occur (for example, if no Git repository exists),
-/// `false` will be returned.
-#[must_use]
-pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
-    let git_repo = match gix::open(&modpack.directory) {
-        Ok(git_repo) => git_repo,
-        Err(_error) => return false,
-    };
-
-    git_repo.is_dirty().unwrap_or(false)
-}
-
 /// Extract all the contents of a Modrinth modpack, except for the main manifest file.
 ///
 /// # Errors
@@ -124,6 +114,59 @@ pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<
     }
 
     Ok(())
+}
+
+// TODO api doc
+pub struct GitUtils;
+
+impl GitUtils {
+    // TODO api doc
+    pub fn initialize_modpack_repo(directory: &Path) -> Result<(), PackrinthError> {
+        if  let Err(error) = gix::init(directory)
+        {
+            // If the repo already exists, don't show an error.
+            if !matches!(
+                &error,
+                gix::init::Error::Init(gix::create::Error::DirectoryExists { path })
+                    if path.file_name() == Some(std::ffi::OsStr::new(".git"))
+            ) {
+                return Err(PackrinthError::FailedToInitGitRepoWhileInitModpack {
+                    error_message: error.to_string(),
+                });
+            }
+        }
+
+        let gitignore_path = directory.join(".gitignore");
+        if let Ok(exists) = fs::exists(&gitignore_path)
+            && !exists
+            && let Ok(gitignore_file) = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(gitignore_path)
+        {
+            // If the gitignore file can't be written to, so be it.
+            let _ = writeln!(&gitignore_file, "# Exported files");
+            let _ = writeln!(&gitignore_file, "{TARGET_DIRECTORY}");
+            let _ = gitignore_file.sync_all();
+        }
+
+        Ok(())
+    }
+
+    /// Checks if the modpack is dirty.
+    ///
+    /// It does this by checking whether the directory of the modpack
+    /// has uncommitted changes. If any errors occur (for example, if no Git repository exists),
+    /// `false` will be returned.
+    #[must_use]
+    pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
+        let git_repo = match gix::open(&modpack.directory) {
+            Ok(git_repo) => git_repo,
+            Err(_error) => return false,
+        };
+
+        git_repo.is_dirty().unwrap_or(false)
+    }
 }
 
 /// Struct representative of all versions of a crate on the `crates.io` API.

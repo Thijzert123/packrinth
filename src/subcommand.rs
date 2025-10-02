@@ -5,19 +5,17 @@ use dialoguer::Confirm;
 use indexmap::IndexMap;
 use packrinth::config::{
     BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, MainLoader, Modpack,
-    ProjectSettings, TARGET_DIRECTORY,
+    ProjectSettings,
 };
 use packrinth::modrinth::{
     Env, File, FileResult, MrPack, Project, SideSupport, Version, VersionDependency,
     VersionDependencyType,
 };
-use packrinth::{PackrinthError, config, extract_mrpack, modpack_is_dirty};
+use packrinth::{PackrinthError, config, extract_mrpack, GitUtils};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::path::Path;
 use std::{cmp, fs, io};
 
@@ -121,32 +119,8 @@ impl InitArgs {
         modpack.save()?;
 
         if !self.no_git_repo
-            && let Err(error) = gix::init(directory)
         {
-            // If the repo already exists, don't show an error.
-            if !matches!(
-                &error,
-                gix::init::Error::Init(gix::create::Error::DirectoryExists { path })
-                    if path.file_name() == Some(std::ffi::OsStr::new(".git"))
-            ) {
-                return Err(PackrinthError::FailedToInitGitRepoWhileInitModpack {
-                    error_message: error.to_string(),
-                });
-            }
-        }
-
-        let gitignore_path = directory.join(".gitignore");
-        if let Ok(exists) = fs::exists(&gitignore_path)
-            && !exists
-            && let Ok(gitignore_file) = OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(gitignore_path)
-        {
-            // If the gitignore file can't be written to, so be it.
-            let _ = writeln!(&gitignore_file, "# Exported files");
-            let _ = writeln!(&gitignore_file, "{TARGET_DIRECTORY}");
-            let _ = gitignore_file.sync_all();
+            GitUtils::initialize_modpack_repo(directory)?;
         }
 
         print_success(format!(
@@ -163,7 +137,7 @@ impl ImportArgs {
         modpack: &mut Modpack,
         _config_args: &ConfigArgs,
     ) -> Result<(), PackrinthError> {
-        if self.add_projects && !self.allow_dirty && modpack_is_dirty(modpack) {
+        if self.add_projects && !self.allow_dirty && GitUtils::modpack_is_dirty(modpack) {
             return Err(PackrinthError::RepoIsDirty);
         }
 
@@ -537,7 +511,7 @@ impl RemoveProjectsArgs {
 
 impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<(), PackrinthError> {
-        if !self.allow_dirty && modpack_is_dirty(modpack) {
+        if !self.allow_dirty && GitUtils::modpack_is_dirty(modpack) {
             return Err(PackrinthError::RepoIsDirty);
         }
         if modpack.branches.is_empty() {
@@ -902,7 +876,7 @@ impl CleanArgs {
     // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
     #[allow(clippy::unused_self)]
     pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
-        let target_dir = modpack.directory.join(TARGET_DIRECTORY);
+        let target_dir = modpack.directory.join(packrinth::TARGET_DIRECTORY);
         match fs::remove_dir_all(&target_dir) {
             Ok(()) => {
                 print_success(format!("removed {}", target_dir.display()));
