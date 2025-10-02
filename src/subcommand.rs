@@ -1090,7 +1090,7 @@ mod tests {
 	\"summary\": \"Short summary for this modpack\",
 	\"author\": \"John Doe\",
 	\"require_all\": false,
-	\"auto_dependencies\": false,
+	\"auto_dependencies\": true,
 	\"branches\": [],
 	\"projects\": {}
 }",
