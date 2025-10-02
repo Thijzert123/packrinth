@@ -896,7 +896,7 @@ impl Default for Modpack {
             name: "My Modrinth modpack".to_string(),
             summary: "Short summary for this modpack".to_string(),
             author: "John Doe".to_string(),
-            require_all: true,
+            require_all: false,
             auto_dependencies: true,
             branches: Vec::default(),
             projects: IndexMap::default(),
