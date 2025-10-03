@@ -7,11 +7,10 @@ use packrinth::config::{
     BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, MainLoader, Modpack,
     ProjectSettings,
 };
-use packrinth::modrinth::{
-     MrPack, Project, Version, VersionDependency,
-    VersionDependencyType,
+use packrinth::modrinth::{MrPack, Project, Version, VersionDependency, VersionDependencyType};
+use packrinth::{
+    GitUtils, PackrinthError, ProjectUpdateResult, ProjectUpdater, config, extract_mrpack,
 };
-use packrinth::{GitUtils, PackrinthError, config, extract_mrpack, ProjectUpdater, ProjectUpdateResult};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::collections::HashMap;
@@ -645,7 +644,11 @@ impl UpdateArgs {
         Ok(())
     }
 
-    fn update_project(mut project_updater: ProjectUpdater, dependencies: &mut Vec<VersionDependency>, progress_bar: &mut ProgressBar) {
+    fn update_project(
+        mut project_updater: ProjectUpdater,
+        dependencies: &mut Vec<VersionDependency>,
+        progress_bar: &mut ProgressBar,
+    ) {
         match project_updater.update_project() {
             ProjectUpdateResult::Added(new_dependencies) => {
                 dependencies.extend(new_dependencies);
@@ -669,13 +672,24 @@ impl UpdateArgs {
                     );
                 }
             }
-            ProjectUpdateResult::Skipped => {if project_updater.verbose {
-                progress_bar.print_info("skipped", project_updater.slug_project_id, Color::Yellow, Style::Normal); // TODO test if this displays correctly
-            }
+            ProjectUpdateResult::Skipped => {
+                if project_updater.verbose {
+                    progress_bar.print_info(
+                        "skipped",
+                        project_updater.slug_project_id,
+                        Color::Yellow,
+                        Style::Normal,
+                    ); // TODO test if this displays correctly
+                }
             }
             ProjectUpdateResult::NotFound => {
                 if project_updater.verbose {
-                    progress_bar.print_info("not found", project_updater.slug_project_id, Color::Yellow, Style::Bold);
+                    progress_bar.print_info(
+                        "not found",
+                        project_updater.slug_project_id,
+                        Color::Yellow,
+                        Style::Bold,
+                    );
                 }
             }
             ProjectUpdateResult::Failed(error) => progress_bar.print_info(
@@ -683,7 +697,7 @@ impl UpdateArgs {
                 &single_line_error(error.message_and_tip()),
                 Color::Red,
                 Style::Bold,
-            )
+            ),
         }
     }
 }

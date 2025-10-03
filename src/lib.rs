@@ -27,18 +27,18 @@ pub mod config;
 pub mod modrinth;
 
 use crate::config::{BranchConfig, BranchFiles, BranchFilesProject, Modpack, ProjectSettings};
+use crate::modrinth::{Env, File, FileResult, SideSupport, VersionDependency};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
-use std::path::{Path};
+use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
 use std::{fs, io};
 use zip::ZipArchive;
 use zip::result::ZipResult;
-use crate::modrinth::{Env, File, FileResult, SideSupport, VersionDependency};
 
 /// The name of the target directory
 pub const TARGET_DIRECTORY: &str = "target";
@@ -153,7 +153,7 @@ impl<'a> ProjectUpdater<'a> {
         ) {
             FileResult::Ok {
                 mut file,
-                dependencies
+                dependencies,
             } => {
                 self.branch_files.projects.push(BranchFilesProject {
                     name: file.project_name.clone(),
@@ -174,15 +174,9 @@ impl<'a> ProjectUpdater<'a> {
                     ProjectUpdateResult::Added(dependencies)
                 }
             }
-            FileResult::Skipped => {
-                ProjectUpdateResult::Skipped
-            }
-            FileResult::NotFound => {
-                ProjectUpdateResult::NotFound
-            }
-            FileResult::Err(error) => {
-                ProjectUpdateResult::Failed(error)
-            }
+            FileResult::Skipped => ProjectUpdateResult::Skipped,
+            FileResult::NotFound => ProjectUpdateResult::NotFound,
+            FileResult::Err(error) => ProjectUpdateResult::Failed(error),
         }
     }
 }
