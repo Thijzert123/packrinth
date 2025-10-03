@@ -26,18 +26,19 @@ use std::io::Write;
 pub mod config;
 pub mod modrinth;
 
-use crate::config::Modpack;
+use crate::config::{BranchConfig, BranchFiles, BranchFilesProject, Modpack, ProjectSettings};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
-use std::path::Path;
+use std::path::{Path};
 use std::sync::OnceLock;
 use std::time::Duration;
 use std::{fs, io};
 use zip::ZipArchive;
 use zip::result::ZipResult;
+use crate::modrinth::{Env, File, FileResult, SideSupport, VersionDependency};
 
 /// The name of the target directory
 pub const TARGET_DIRECTORY: &str = "target";
@@ -115,6 +116,78 @@ pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<
 
     Ok(())
 }
+
+// TODO api docs
+pub struct ProjectUpdater<'a> {
+    pub branch_name: &'a str,
+    pub branch_config: &'a BranchConfig,
+    pub branch_files: &'a mut BranchFiles,
+    pub slug_project_id: &'a str,
+    pub project_settings: &'a ProjectSettings,
+    pub require_all: bool,
+    pub no_beta: bool,
+    pub no_alpha: bool,
+    pub verbose: bool,
+    pub is_dependency: bool,
+}
+
+// TODO api docs
+pub enum ProjectUpdateResult {
+    Added(Vec<VersionDependency>),
+    Dependency(Vec<VersionDependency>),
+    Skipped,
+    NotFound,
+    Failed(PackrinthError),
+}
+
+impl<'a> ProjectUpdater<'a> {
+    // TODO api docs
+    pub fn update_project(&mut self) -> ProjectUpdateResult {
+        match File::from_project(
+            &self.branch_name.to_string(),
+            &self.branch_config,
+            &self.slug_project_id,
+            &self.project_settings,
+            self.no_beta,
+            self.no_alpha,
+        ) {
+            FileResult::Ok {
+                mut file,
+                dependencies
+            } => {
+                self.branch_files.projects.push(BranchFilesProject {
+                    name: file.project_name.clone(),
+                    id: Some(self.slug_project_id.to_string()),
+                });
+
+                if self.require_all {
+                    file.env = Some(Env {
+                        client: SideSupport::Required,
+                        server: SideSupport::Required,
+                    });
+                }
+
+                self.branch_files.files.push(file);
+                if self.is_dependency {
+                    ProjectUpdateResult::Dependency(dependencies)
+                } else {
+                    ProjectUpdateResult::Added(dependencies)
+                }
+            }
+            FileResult::Skipped => {
+                ProjectUpdateResult::Skipped
+            }
+            FileResult::NotFound => {
+                ProjectUpdateResult::NotFound
+            }
+            FileResult::Err(error) => {
+                ProjectUpdateResult::Failed(error)
+            }
+        }
+    }
+}
+
+// TODO extend modrinth api structs to have all possible values, not just the ones required by packrinth
 
 // TODO api doc
 pub struct GitUtils;

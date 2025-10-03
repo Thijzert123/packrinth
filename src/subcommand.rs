@@ -8,10 +8,10 @@ use packrinth::config::{
     ProjectSettings,
 };
 use packrinth::modrinth::{
-    Env, File, FileResult, MrPack, Project, SideSupport, Version, VersionDependency,
+     MrPack, Project, Version, VersionDependency,
     VersionDependencyType,
 };
-use packrinth::{GitUtils, PackrinthError, config, extract_mrpack};
+use packrinth::{GitUtils, PackrinthError, config, extract_mrpack, ProjectUpdater, ProjectUpdateResult};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::collections::HashMap;
@@ -508,7 +508,7 @@ impl RemoveProjectsArgs {
         Ok(())
     }
 }
-
+// TODO here
 impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<(), PackrinthError> {
         if !self.allow_dirty && GitUtils::modpack_is_dirty(modpack) {
@@ -563,20 +563,21 @@ impl UpdateArgs {
 
             let mut dependencies: Vec<VersionDependency> = Vec::new();
 
-            for project in &modpack.projects {
-                if let Some(new_dependencies) = self.update_project(
+            for (slug_project_id, project_settings) in &modpack.projects {
+                let project_updater = ProjectUpdater {
                     branch_name,
-                    &branch_config,
-                    &mut branch_files,
-                    project.0,
-                    project.1,
+                    branch_config: &branch_config,
+                    branch_files: &mut branch_files,
+                    slug_project_id,
+                    project_settings,
                     require_all,
-                    &mut progress_bar,
+                    no_beta: self.no_beta,
+                    no_alpha: self.no_alpha,
                     verbose,
-                    false,
-                ) {
-                    dependencies.extend(new_dependencies);
-                }
+                    is_dependency: false,
+                };
+
+                Self::update_project(project_updater, &mut dependencies, &mut progress_bar);
 
                 progress_bar.inc();
             }
@@ -594,17 +595,21 @@ impl UpdateArgs {
                             version_overrides: None,
                             include_or_exclude: None,
                         };
-                        self.update_project(
+                        let project_updater = ProjectUpdater {
                             branch_name,
-                            &branch_config,
-                            &mut branch_files,
-                            &project_id,
-                            &project_settings,
+                            branch_config: &branch_config,
+                            branch_files: &mut branch_files,
+                            slug_project_id: &project_id,
+                            project_settings: &project_settings,
                             require_all,
-                            &mut progress_bar,
+                            no_beta: self.no_beta,
+                            no_alpha: self.no_alpha,
                             verbose,
-                            true,
-                        );
+                            is_dependency: true,
+                        };
+
+                        // Create new vec because we don't care about the dependencies
+                        Self::update_project(project_updater, &mut Vec::new(), &mut progress_bar);
                     }
                 }
             }
@@ -640,83 +645,46 @@ impl UpdateArgs {
         Ok(())
     }
 
-    // Allow because when calling this function, it is clear what all parameters do.
-    #[allow(clippy::too_many_arguments)]
-    fn update_project(
-        &self,
-        branch_name: &String,
-        branch_config: &BranchConfig,
-        branch_files: &mut BranchFiles,
-        slug_project_id: &str,
-        project_settings: &ProjectSettings,
-        require_all: bool,
-        progress_bar: &mut ProgressBar,
-        verbose: bool,
-        dependency: bool,
-    ) -> Option<Vec<VersionDependency>> {
-        match File::from_project(
-            branch_name,
-            branch_config,
-            slug_project_id,
-            project_settings,
-            self.no_beta,
-            self.no_alpha,
-        ) {
-            FileResult::Ok {
-                mut file,
-                dependencies,
-                project_id, // This is the actual id (t234fs23), not the slug (fabric-api)
-            } => {
-                branch_files.projects.push(BranchFilesProject {
-                    name: file.project_name.clone(),
-                    id: Some(project_id.to_string()),
-                });
-
-                if require_all {
-                    file.env = Some(Env {
-                        client: SideSupport::Required,
-                        server: SideSupport::Required,
-                    });
-                }
-
-                branch_files.files.push(file);
-
-                if verbose {
-                    let mut info_name = "added";
-                    if dependency {
-                        info_name = "dependency";
-                    }
+    fn update_project(mut project_updater: ProjectUpdater, dependencies: &mut Vec<VersionDependency>, progress_bar: &mut ProgressBar) {
+        match project_updater.update_project() {
+            ProjectUpdateResult::Added(new_dependencies) => {
+                dependencies.extend(new_dependencies);
+                if project_updater.verbose {
                     progress_bar.print_info(
-                        info_name,
-                        slug_project_id,
+                        "added",
+                        project_updater.slug_project_id,
                         Color::Green,
                         Style::Normal,
                     );
                 }
-
-                return Some(dependencies);
             }
-            FileResult::Skipped(project_id) => {
-                if verbose {
-                    progress_bar.print_info("skipped", &project_id, Color::Yellow, Style::Normal);
+            ProjectUpdateResult::Dependency(new_dependencies) => {
+                dependencies.extend(new_dependencies);
+                if project_updater.verbose {
+                    progress_bar.print_info(
+                        "dependency",
+                        project_updater.slug_project_id,
+                        Color::Green,
+                        Style::Normal,
+                    );
                 }
             }
-            FileResult::NotFound(project_id) => {
-                if verbose {
-                    progress_bar.print_info("not found", &project_id, Color::Yellow, Style::Bold);
+            ProjectUpdateResult::Skipped => {if project_updater.verbose {
+                progress_bar.print_info("skipped", project_updater.slug_project_id, Color::Yellow, Style::Normal); // TODO test if this displays correctly
+            }
+            }
+            ProjectUpdateResult::NotFound => {
+                if project_updater.verbose {
+                    progress_bar.print_info("not found", project_updater.slug_project_id, Color::Yellow, Style::Bold);
                 }
             }
-            FileResult::Err(error) => {
-                progress_bar.print_info(
-                    "failed",
-                    &single_line_error(error.message_and_tip()),
-                    Color::Red,
-                    Style::Bold,
-                );
-            }
+            ProjectUpdateResult::Failed(error) => progress_bar.print_info(
+                "failed",
+                &single_line_error(error.message_and_tip()),
+                Color::Red,
+                Style::Bold,
+            )
         }
-
-        None
     }
 }
 

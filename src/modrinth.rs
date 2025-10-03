@@ -188,10 +188,9 @@ pub enum FileResult {
     Ok {
         file: File,
         dependencies: Vec<VersionDependency>,
-        project_id: String,
     },
-    Skipped(String),
-    NotFound(String),
+    Skipped,
+    NotFound,
     Err(PackrinthError),
 }
 
@@ -324,12 +323,12 @@ impl File {
             match include_or_exclude {
                 IncludeOrExclude::Include(inclusions) => {
                     if !inclusions.contains(branch_name) {
-                        return FileResult::Skipped(project_id.to_string());
+                        return FileResult::Skipped;
                     }
                 }
                 IncludeOrExclude::Exclude(exclusions) => {
                     if exclusions.contains(branch_name) {
-                        return FileResult::Skipped(project_id.to_string());
+                        return FileResult::Skipped;
                     }
                 }
             }
@@ -425,7 +424,7 @@ impl File {
         }
 
         // If no versions were returned in the for loop.
-        FileResult::NotFound(project_id.to_string())
+        FileResult::NotFound
     }
 
     fn from_modrinth_version(modrinth_version: &Version) -> FileResult {
@@ -488,7 +487,6 @@ impl File {
                 file_size: *primary_file_size.expect("No Modrinth file found"),
             },
             dependencies: modrinth_version.dependencies.clone(),
-            project_id: modrinth_project.id,
         }
     }
 }
@@ -527,7 +525,6 @@ mod tests {
                 file_size: 2_212_412,
             },
             dependencies: vec![],
-            project_id: "P7dR8mSH".to_string(),
         }, file);
     }
 }
