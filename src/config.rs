@@ -1,9 +1,10 @@
 //! Structs for configuring and managing a Packrinth modpack instance.
 
 use crate::modrinth::{File, MrPack, MrPackDependencies};
-use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError};
+use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError, ProjectMarkdownTable};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -252,9 +253,6 @@ pub struct BranchFilesProject {
 /// The name of the modpack configuration file.
 pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 
-/// The name of the target directory
-pub const TARGET_DIRECTORY: &str = "target";
-
 /// The current most recent pack format of a .mrpack file.
 const MODRINTH_PACK_FORMAT: u16 = 1;
 /// The game to put in the mrpack.
@@ -306,16 +304,9 @@ impl Modpack {
         }
 
         let modpack = Self {
-            pack_format: CURRENT_PACK_FORMAT,
-            name: "My Modrinth modpack".to_string(),
-            summary: "Short summary for this modpack".to_string(),
-            author: "John Doe".to_string(),
-            require_all: false,
-            auto_dependencies: false,
-            branches: Vec::new(),
-            projects: IndexMap::new(),
             directory: PathBuf::from(directory),
             modpack_config_path: directory.join(MODPACK_CONFIG_FILE_NAME),
+            ..Self::default()
         };
 
         Ok(modpack)
@@ -726,7 +717,7 @@ impl Modpack {
 
         let mrpack_file_name = format!("{}_{}.mrpack", self.name, branch_config.version);
         let branch_dir = self.directory.join(branch);
-        let target_dir = self.directory.join(TARGET_DIRECTORY).join(branch);
+        let target_dir = self.directory.join(crate::TARGET_DIRECTORY).join(branch);
         if let Err(error) = fs::create_dir_all(&target_dir) {
             return Err(PackrinthError::FailedToCreateDir {
                 dir_to_create: target_dir.display().to_string(),
@@ -865,6 +856,47 @@ impl Modpack {
         }
     }
 
+    // TODO api doc
+    pub fn generate_project_table(&self) -> Result<ProjectMarkdownTable, PackrinthError> {
+        let mut column_names = vec!["Name".to_string()];
+        // project, map: branch, whether it has the project
+        let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> =
+            HashMap::new();
+
+        for branch in &self.branches {
+            column_names.push(branch.clone());
+            // Even tough we are in a loop, we want to abort the action if something goes wrong
+            // here, to avoid incorrect docs.
+            let branch_files = BranchFiles::from_directory(&self.directory, branch)?;
+
+            for project in &branch_files.projects {
+                // Vector in hashmap that shows which branches are compatible with a project.
+                if let Some(branch_map) = project_map.get_mut(project) {
+                    if branch_map.get(branch).is_none() {
+                        branch_map.insert(branch.clone(), Some(()));
+                    }
+                } else {
+                    let mut branch_map = HashMap::new();
+                    branch_map.insert(branch.clone(), Some(()));
+                    project_map.insert(project.clone(), branch_map);
+                }
+            }
+        }
+
+        for project in &mut project_map {
+            for branch in &self.branches {
+                if project.1.get(branch).is_none() {
+                    project.1.insert(branch.clone(), None);
+                }
+            }
+        }
+
+        Ok(ProjectMarkdownTable {
+            column_names,
+            project_map,
+        })
+    }
+
     fn create_dependencies(
         branch_config: BranchConfig,
     ) -> Result<MrPackDependencies, PackrinthError> {
@@ -893,6 +925,23 @@ impl Modpack {
             fabric_loader,
             quilt_loader,
         })
+    }
+}
+
+impl Default for Modpack {
+    fn default() -> Self {
+        Self {
+            pack_format: CURRENT_PACK_FORMAT,
+            name: "My Modrinth modpack".to_string(),
+            summary: "Short summary for this modpack".to_string(),
+            author: "John Doe".to_string(),
+            require_all: false,
+            auto_dependencies: true,
+            branches: Vec::default(),
+            projects: IndexMap::default(),
+            directory: PathBuf::default(),
+            modpack_config_path: PathBuf::default(),
+        }
     }
 }
 

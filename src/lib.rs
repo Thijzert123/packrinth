@@ -22,20 +22,26 @@
 
 #![warn(clippy::pedantic)]
 
+use std::io::Write;
 pub mod config;
 pub mod modrinth;
 
-use crate::config::Modpack;
+use crate::config::{BranchConfig, BranchFiles, BranchFilesProject, Modpack, ProjectSettings};
+use crate::modrinth::{Env, File, FileResult, SideSupport, VersionDependency};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
+use std::fs;
+use std::fs::OpenOptions;
 use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
-use std::{fs, io};
-use zip::ZipArchive;
-use zip::result::ZipResult;
+
+/// The name of the target directory
+pub const TARGET_DIRECTORY: &str = "target";
 
 static CLIENT: OnceLock<ClientWithMiddleware> = OnceLock::new();
 const USER_AGENT: &str = concat!(
@@ -73,57 +79,176 @@ fn request_text<T: ToString + ?Sized>(full_url: &T) -> Result<String, PackrinthE
     }
 }
 
-const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
+pub const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
 
-/// Checks if the modpack is dirty.
-///
-/// It does this by checking whether the directory of the modpack
-/// has uncommitted changes. If any errors occur (for example, if no Git repository exists),
-/// `false` will be returned.
-#[must_use]
-pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
-    let git_repo = match gix::open(&modpack.directory) {
-        Ok(git_repo) => git_repo,
-        Err(_error) => return false,
-    };
-
-    git_repo.is_dirty().unwrap_or(false)
+// TODO api docs
+// Allow because these bools aren't here because this struct is a state machine.
+// All bool value combinations are valid, so no worries at all, Clippy!
+#[allow(clippy::struct_excessive_bools)]
+pub struct ProjectUpdater<'a> {
+    pub branch_name: &'a str,
+    pub branch_config: &'a BranchConfig,
+    pub branch_files: &'a mut BranchFiles,
+    pub slug_project_id: &'a str,
+    pub project_settings: &'a ProjectSettings,
+    pub require_all: bool,
+    pub no_beta: bool,
+    pub no_alpha: bool,
 }
 
-/// Extract all the contents of a Modrinth modpack, except for the main manifest file.
-///
-/// # Errors
-/// An [`Err`] is returned when one of these things go wrong:
-/// - Failed to open file
-/// - Failed to start zip archive
-/// - Failed to get file by index
-/// - Failed to create dirs
-/// - Failed to copy file
-pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<()> {
-    let zip_file = fs::File::open(mrpack_path)?;
-    let mut archive = ZipArchive::new(zip_file)?;
+// TODO api docs
+pub enum ProjectUpdateResult {
+    Added(Vec<VersionDependency>),
+    Skipped,
+    NotFound,
+    Failed(PackrinthError),
+}
 
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        let output_path = Path::new(output_directory).join(file.name());
+impl ProjectUpdater<'_> {
+    // TODO api docs
+    pub fn update_project(&mut self) -> ProjectUpdateResult {
+        match File::from_project(
+            &self.branch_name.to_string(),
+            self.branch_config,
+            self.slug_project_id,
+            self.project_settings,
+            self.no_beta,
+            self.no_alpha,
+        ) {
+            FileResult::Ok {
+                mut file,
+                dependencies,
+            } => {
+                self.branch_files.projects.push(BranchFilesProject {
+                    name: file.project_name.clone(),
+                    id: Some(self.slug_project_id.to_string()),
+                });
 
-        if file.name().ends_with('/') {
-            // It's a directory
-            fs::create_dir_all(&output_path)?;
-        } else if file.name() != MRPACK_CONFIG_FILE_NAME {
-            // Make sure parent dirs exist
-            if let Some(parent) = output_path.parent()
-                && !parent.exists()
-            {
-                fs::create_dir_all(parent)?;
+                if self.require_all {
+                    file.env = Some(Env {
+                        client: SideSupport::Required,
+                        server: SideSupport::Required,
+                    });
+                }
+
+                self.branch_files.files.push(file);
+                ProjectUpdateResult::Added(dependencies)
             }
-            // Copy file contents
-            let mut output_file = fs::File::create(&output_path)?;
-            io::copy(&mut file, &mut output_file)?;
+            FileResult::Skipped => ProjectUpdateResult::Skipped,
+            FileResult::NotFound => ProjectUpdateResult::NotFound,
+            FileResult::Err(error) => ProjectUpdateResult::Failed(error),
         }
     }
+}
 
-    Ok(())
+#[derive(Debug)]
+pub struct ProjectMarkdownTable {
+    pub column_names: Vec<String>,
+    pub project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
+}
+
+impl Display for ProjectMarkdownTable {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // Write column names
+        writeln!(f, "|{}|", self.column_names.join("|"))?;
+
+        // Write alignment text (:-- is left, :-: is center)
+        write!(f, "|:--|")?;
+        // Use 1..len because column names include the 'Name' for the project column
+        for _ in 1..self.column_names.len() {
+            write!(f, ":-:|")?;
+        }
+        writeln!(f)?;
+
+        let mut sorted_project_map: Vec<_> = self.project_map.iter().collect();
+        // Sort by key (human name of project)
+        sorted_project_map.sort_by(|a, b| a.0.name.cmp(&b.0.name));
+
+        let mut iter = sorted_project_map.iter().peekable();
+        while let Some(project) = iter.next() {
+            if let Some(id) = &project.0.id {
+                // If project has an id (not a manual file), write a Markdown link.
+                let mut project_url = "https://modrinth.com/project/".to_string();
+                project_url.push_str(id);
+                write!(f, "|[{}]({})|", project.0.name, project_url)?;
+            } else {
+                write!(f, "|{}|", project.0.name)?;
+            }
+
+            let mut sorted_branch_map: Vec<_> = project.1.iter().collect();
+            // Sort by key (human name of project)
+            sorted_branch_map.sort_by(|a, b| a.0.cmp(b.0));
+
+            for branch in sorted_branch_map {
+                let icon = match branch.1 {
+                    Some(()) => "✅",
+                    None => "❌",
+                };
+                write!(f, "{icon}|")?;
+            }
+
+            // Print newline except for the last time of this loop.
+            if iter.peek().is_some() {
+                writeln!(f)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+// TODO extend modrinth api structs to have all possible values, not just the ones required by packrinth
+
+// TODO api doc
+pub struct GitUtils;
+
+impl GitUtils {
+    // TODO api doc
+    pub fn initialize_modpack_repo(directory: &Path) -> Result<(), PackrinthError> {
+        if let Err(error) = gix::init(directory) {
+            // If the repo already exists, don't show an error.
+            if !matches!(
+                &error,
+                gix::init::Error::Init(gix::create::Error::DirectoryExists { path })
+                    if path.file_name() == Some(std::ffi::OsStr::new(".git"))
+            ) {
+                return Err(PackrinthError::FailedToInitGitRepoWhileInitModpack {
+                    error_message: error.to_string(),
+                });
+            }
+        }
+
+        let gitignore_path = directory.join(".gitignore");
+        if let Ok(exists) = fs::exists(&gitignore_path)
+            && !exists
+            && let Ok(gitignore_file) = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(gitignore_path)
+        {
+            // If the gitignore file can't be written to, so be it.
+            let _ = writeln!(&gitignore_file, "# Exported files");
+            let _ = writeln!(&gitignore_file, "{TARGET_DIRECTORY}");
+            let _ = gitignore_file.sync_all();
+        }
+
+        Ok(())
+    }
+
+    /// Checks if the modpack is dirty.
+    ///
+    /// It does this by checking whether the directory of the modpack
+    /// has uncommitted changes. If any errors occur (for example, if no Git repository exists),
+    /// `false` will be returned.
+    #[must_use]
+    pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
+        let git_repo = match gix::open(&modpack.directory) {
+            Ok(git_repo) => git_repo,
+            Err(_error) => return false,
+        };
+
+        git_repo.is_dirty().unwrap_or(false)
+    }
 }
 
 /// Struct representative of all versions of a crate on the `crates.io` API.

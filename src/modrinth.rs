@@ -5,10 +5,47 @@ use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError};
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
-use std::{cmp, fs};
+use std::{cmp, fs, io};
 use zip::ZipArchive;
+use zip::result::ZipResult;
 
 const MODRINTH_API_BASE_URL: &str = "https://api.modrinth.com/v2";
+
+/// Extract all the contents of a Modrinth modpack, except for the main manifest file.
+///
+/// # Errors
+/// An [`Err`] is returned when one of these things go wrong:
+/// - Failed to open file
+/// - Failed to start zip archive
+/// - Failed to get file by index
+/// - Failed to create dirs
+/// - Failed to copy file
+pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<()> {
+    let zip_file = fs::File::open(mrpack_path)?;
+    let mut archive = ZipArchive::new(zip_file)?;
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let output_path = Path::new(output_directory).join(file.name());
+
+        if file.name().ends_with('/') {
+            // It's a directory
+            fs::create_dir_all(&output_path)?;
+        } else if file.name() != MRPACK_CONFIG_FILE_NAME {
+            // Make sure parent dirs exist
+            if let Some(parent) = output_path.parent()
+                && !parent.exists()
+            {
+                fs::create_dir_all(parent)?;
+            }
+            // Copy file contents
+            let mut output_file = fs::File::create(&output_path)?;
+            io::copy(&mut file, &mut output_file)?;
+        }
+    }
+
+    Ok(())
+}
 
 fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError> {
     let full_url = MODRINTH_API_BASE_URL.to_string() + api_endpoint.to_string().as_str();
@@ -188,10 +225,9 @@ pub enum FileResult {
     Ok {
         file: File,
         dependencies: Vec<VersionDependency>,
-        project_id: String,
     },
-    Skipped(String),
-    NotFound(String),
+    Skipped,
+    NotFound,
     Err(PackrinthError),
 }
 
@@ -324,12 +360,12 @@ impl File {
             match include_or_exclude {
                 IncludeOrExclude::Include(inclusions) => {
                     if !inclusions.contains(branch_name) {
-                        return FileResult::Skipped(project_id.to_string());
+                        return FileResult::Skipped;
                     }
                 }
                 IncludeOrExclude::Exclude(exclusions) => {
                     if exclusions.contains(branch_name) {
-                        return FileResult::Skipped(project_id.to_string());
+                        return FileResult::Skipped;
                     }
                 }
             }
@@ -425,7 +461,7 @@ impl File {
         }
 
         // If no versions were returned in the for loop.
-        FileResult::NotFound(project_id.to_string())
+        FileResult::NotFound
     }
 
     fn from_modrinth_version(modrinth_version: &Version) -> FileResult {
@@ -488,7 +524,6 @@ impl File {
                 file_size: *primary_file_size.expect("No Modrinth file found"),
             },
             dependencies: modrinth_version.dependencies.clone(),
-            project_id: modrinth_project.id,
         }
     }
 }
@@ -527,7 +562,6 @@ mod tests {
                 file_size: 2_212_412,
             },
             dependencies: vec![],
-            project_id: "P7dR8mSH".to_string(),
         }, file);
     }
 }

@@ -24,7 +24,7 @@ nav_order: 8
 | `summary`           | string                                              | `Short summary for this modpack` | A sort summary of the modpack.                                                                          |
 | `author`            | string                                              | `John Doe`                       | The author of the modpack.                                                                              |
 | `require_all`       | boolean                                             | `false`                          | Whether all projects are set to _required_ for all environments.                                        |
-| `auto_dependencies` | boolean                                             | `false`                          | Whether Packrinth should automatically add dependencies for projects.                                   |
+| `auto_dependencies` | boolean                                             | `true`                           | Whether Packrinth should automatically add dependencies for projects.                                   |
 | `branches`          | string array                                        | _empty_                          | All branch names.                                                                                       |
 | `projects`          | [`modpack project` object](#modpack-project-object) | _empty_                          | All projects of the modpack.                                                                            |
 
@@ -56,7 +56,7 @@ nav_order: 8
         "summary": "Short summary for this modpack",
         "author": "John Doe",
         "require_all": false,
-        "auto_dependencies": false,
+        "auto_dependencies": true,
         "branches": [],
         "projects": {}
 }
@@ -70,7 +70,7 @@ nav_order: 8
 	"summary": "Modpack focused being amazing.",
 	"author": "Mr. Awesome",
 	"require_all": true,
-	"auto_dependencies": true,
+	"auto_dependencies": false,
 	"branches": [
 		"1.21.4",
 		"1.20.4",

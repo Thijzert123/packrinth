@@ -46,7 +46,7 @@ including modpack name, author, branches and even all the projects. This is how 
         "summary": "Short summary for this modpack",
         "author": "John Doe",
         "require_all": false,
-        "auto_dependencies": false,
+        "auto_dependencies": true,
         "branches": [],
         "projects": {}
 }
@@ -69,9 +69,9 @@ setting to `false`. If you want that every user downloads all projects you have 
 this setting to `true`.
 
 `auto_dependencies` decides if Packrinth should automatically add dependencies of added projects.
-Most people should set this to `true` to prevent crashes caused by the lack of mod dependencies.
-This field is set to `false` by default to prevent confusion when more projects are added than
-you thought. It is important to know that only _required_ dependencies will be added.
+Most people should keep this set to `true` to prevent crashes caused by the lack of mod dependencies.
+Set this value to `false` if you want more control of what projects get added.
+It is important to know that only _required_ dependencies will be added.
 If you want optional dependencies to be in your modpack, you have to add them manually.
 
 {: .note }
