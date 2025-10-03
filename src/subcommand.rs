@@ -574,7 +574,13 @@ impl UpdateArgs {
                     no_alpha: self.no_alpha,
                 };
 
-                Self::update_project(project_updater, false, &mut dependencies, &mut progress_bar, verbose);
+                Self::update_project(
+                    project_updater,
+                    false,
+                    &mut dependencies,
+                    &mut progress_bar,
+                    verbose,
+                );
 
                 progress_bar.inc();
             }
@@ -604,7 +610,13 @@ impl UpdateArgs {
                         };
 
                         // Create new vec because we don't care about the dependencies
-                        Self::update_project(project_updater, true, &mut Vec::new(), &mut progress_bar, verbose);
+                        Self::update_project(
+                            project_updater,
+                            true,
+                            &mut Vec::new(),
+                            &mut progress_bar,
+                            verbose,
+                        );
                     }
                 }
             }
@@ -651,11 +663,7 @@ impl UpdateArgs {
             ProjectUpdateResult::Added(new_dependencies) => {
                 dependencies.extend(new_dependencies);
 
-                let info_text = if is_dependency {
-                    "dependency"
-                } else {
-                    "added"
-                };
+                let info_text = if is_dependency { "dependency" } else { "added" };
 
                 if verbose {
                     progress_bar.print_info(
