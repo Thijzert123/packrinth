@@ -32,13 +32,13 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::fs::OpenOptions;
 use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
 use std::{fs, io};
-use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
 use zip::ZipArchive;
 use zip::result::ZipResult;
 

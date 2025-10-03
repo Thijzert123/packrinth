@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::{cmp, fs, io};
-use zip::result::ZipResult;
 use zip::ZipArchive;
+use zip::result::ZipResult;
 
 const MODRINTH_API_BASE_URL: &str = "https://api.modrinth.com/v2";
 
