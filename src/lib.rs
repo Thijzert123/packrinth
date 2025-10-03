@@ -37,6 +37,8 @@ use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
 use std::{fs, io};
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use zip::ZipArchive;
 use zip::result::ZipResult;
 
@@ -79,43 +81,7 @@ fn request_text<T: ToString + ?Sized>(full_url: &T) -> Result<String, PackrinthE
     }
 }
 
-const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
-
-/// Extract all the contents of a Modrinth modpack, except for the main manifest file.
-///
-/// # Errors
-/// An [`Err`] is returned when one of these things go wrong:
-/// - Failed to open file
-/// - Failed to start zip archive
-/// - Failed to get file by index
-/// - Failed to create dirs
-/// - Failed to copy file
-pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<()> {
-    let zip_file = fs::File::open(mrpack_path)?;
-    let mut archive = ZipArchive::new(zip_file)?;
-
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        let output_path = Path::new(output_directory).join(file.name());
-
-        if file.name().ends_with('/') {
-            // It's a directory
-            fs::create_dir_all(&output_path)?;
-        } else if file.name() != MRPACK_CONFIG_FILE_NAME {
-            // Make sure parent dirs exist
-            if let Some(parent) = output_path.parent()
-                && !parent.exists()
-            {
-                fs::create_dir_all(parent)?;
-            }
-            // Copy file contents
-            let mut output_file = fs::File::create(&output_path)?;
-            io::copy(&mut file, &mut output_file)?;
-        }
-    }
-
-    Ok(())
-}
+pub const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
 
 // TODO api docs
 // Allow because these bools aren't here because this struct is a state machine.
@@ -174,6 +140,62 @@ impl ProjectUpdater<'_> {
             FileResult::NotFound => ProjectUpdateResult::NotFound,
             FileResult::Err(error) => ProjectUpdateResult::Failed(error),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct ProjectMarkdownTable<'a> {
+    pub column_names: Vec<&'a str>,
+    pub project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
+}
+
+impl Display for ProjectMarkdownTable<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // Write column names
+        writeln!(f, "|{}|", self.column_names.join("|"))?;
+
+        // Write alignment text (:-- is left, :-: is center)
+        write!(f, "|:--|")?;
+        // Use 1..len because column names include the 'Name' for the project column
+        for _ in 1..self.column_names.len() {
+            write!(f, ":-:|")?;
+        }
+        writeln!(f)?;
+
+        let mut sorted_project_map: Vec<_> = self.project_map.iter().collect();
+        // Sort by key (human name of project)
+        sorted_project_map.sort_by(|a, b| a.0.name.cmp(&b.0.name));
+
+        let mut iter = sorted_project_map.iter().peekable();
+        while let Some(project) = iter.next() {
+            if let Some(id) = &project.0.id {
+                // If project has an id (not a manual file), write a Markdown link.
+                let mut project_url = "https://modrinth.com/project/".to_string();
+                project_url.push_str(id);
+                write!(f, "|[{}]({})|", project.0.name, project_url)?;
+            } else {
+                write!(f, "|{}|", project.0.name)?;
+            }
+
+            let mut sorted_branch_map: Vec<_> = project.1.iter().collect();
+            // Sort by key (human name of project)
+            sorted_branch_map.sort_by(|a, b| a.0.cmp(b.0));
+
+            for branch in sorted_branch_map {
+                let icon = match branch.1 {
+                    Some(()) => "✅",
+                    None => "❌",
+                };
+                write!(f, "{icon}|")?;
+            }
+
+            // Print newline except for the last time of this loop.
+            if iter.peek().is_some() {
+                writeln!(f)?;
+            }
+        }
+
+        Ok(())
     }
 }
 

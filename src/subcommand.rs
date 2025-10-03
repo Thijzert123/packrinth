@@ -7,10 +7,8 @@ use packrinth::config::{
     BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, MainLoader, Modpack,
     ProjectSettings,
 };
-use packrinth::modrinth::{MrPack, Project, Version, VersionDependency, VersionDependencyType};
-use packrinth::{
-    GitUtils, PackrinthError, ProjectUpdateResult, ProjectUpdater, config, extract_mrpack,
-};
+use packrinth::modrinth::{extract_mrpack, MrPack, Project, Version, VersionDependency, VersionDependencyType};
+use packrinth::{GitUtils, PackrinthError, ProjectUpdateResult, ProjectUpdater, config, ProjectMarkdownTable};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::collections::HashMap;
@@ -874,111 +872,18 @@ impl CleanArgs {
     }
 }
 
-#[derive(Debug)]
-struct DocMarkdownTable<'a> {
-    column_names: Vec<&'a str>,
-    project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
-}
-
-impl Display for DocMarkdownTable<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // Write column names
-        writeln!(f, "|{}|", self.column_names.join("|"))?;
-
-        // Write alignment text (:-- is left, :-: is center)
-        write!(f, "|:--|")?;
-        // Use 1..len because column names include the 'Name' for the project column
-        for _ in 1..self.column_names.len() {
-            write!(f, ":-:|")?;
-        }
-        writeln!(f)?;
-
-        let mut sorted_project_map: Vec<_> = self.project_map.iter().collect();
-        // Sort by key (human name of project)
-        sorted_project_map.sort_by(|a, b| a.0.name.cmp(&b.0.name));
-
-        let mut iter = sorted_project_map.iter().peekable();
-        while let Some(project) = iter.next() {
-            if let Some(id) = &project.0.id {
-                // If project has an id (not a manual file), write a Markdown link.
-                let mut project_url = "https://modrinth.com/project/".to_string();
-                project_url.push_str(id);
-                write!(f, "|[{}]({})|", project.0.name, project_url)?;
-            } else {
-                write!(f, "|{}|", project.0.name)?;
-            }
-
-            let mut sorted_branch_map: Vec<_> = project.1.iter().collect();
-            // Sort by key (human name of project)
-            sorted_branch_map.sort_by(|a, b| a.0.cmp(b.0));
-
-            for branch in sorted_branch_map {
-                let icon = match branch.1 {
-                    Some(()) => "✅",
-                    None => "❌",
-                };
-                write!(f, "{icon}|")?;
-            }
-
-            // Print newline except for the last time of this loop.
-            if iter.peek().is_some() {
-                writeln!(f)?;
-            }
-        }
-
-        Ok(())
-    }
-}
-
 impl DocArgs {
     // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
     #[allow(clippy::unused_self)]
     pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
-        let mut column_names = vec!["Name"];
-        // project, map: branch, whether it has the project
-        let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> =
-            HashMap::new();
-
-        for branch in &modpack.branches {
-            column_names.push(branch);
-            // Even tough we are in a loop, we want to abort the action if something goes wrong
-            // here, to avoid incorrect docs.
-            let branch_files = BranchFiles::from_directory(&modpack.directory, branch)?;
-
-            for project in &branch_files.projects {
-                // Vector in hashmap that shows which branches are compatible with a project.
-                if let Some(branch_map) = project_map.get_mut(project) {
-                    if branch_map.get(branch).is_none() {
-                        branch_map.insert(branch.clone(), Some(()));
-                    }
-                } else {
-                    let mut branch_map = HashMap::new();
-                    branch_map.insert(branch.clone(), Some(()));
-                    project_map.insert(project.clone(), branch_map);
-                }
-            }
-        }
-
-        for project in &mut project_map {
-            for branch in &modpack.branches {
-                if project.1.get(branch).is_none() {
-                    project.1.insert(branch.clone(), None);
-                }
-            }
-        }
-
-        let project_map_is_empty = project_map.is_empty();
-        let table = DocMarkdownTable {
-            column_names,
-            project_map,
-        };
+        let doc_markdown_table = modpack.generate_project_table()?;
 
         println!("# {} _by {}_", modpack.name, modpack.author);
         println!("{}", modpack.summary);
 
-        if !project_map_is_empty {
+        if !doc_markdown_table.project_map.is_empty() {
             println!("## What is included?");
-            println!("{table}");
+            println!("{doc_markdown_table}");
         }
 
         Ok(())

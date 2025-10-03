@@ -1,13 +1,14 @@
 //! Structs for configuring and managing a Packrinth modpack instance.
 
 use crate::modrinth::{File, MrPack, MrPackDependencies};
-use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError};
+use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError, ProjectMarkdownTable};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
+use std::collections::HashMap;
 use walkdir::WalkDir;
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
@@ -853,6 +854,47 @@ impl Modpack {
             Ok(()) => Ok(mrpack_path),
             Err(error) => Err(error),
         }
+    }
+
+    // TODO api doc
+    pub fn generate_project_table(&self) -> Result<ProjectMarkdownTable, PackrinthError> {
+        let mut column_names = vec!["Name"];
+        // project, map: branch, whether it has the project
+        let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> =
+            HashMap::new();
+
+        for branch in &self.branches {
+            column_names.push(branch);
+            // Even tough we are in a loop, we want to abort the action if something goes wrong
+            // here, to avoid incorrect docs.
+            let branch_files = BranchFiles::from_directory(&self.directory, branch)?;
+
+            for project in &branch_files.projects {
+                // Vector in hashmap that shows which branches are compatible with a project.
+                if let Some(branch_map) = project_map.get_mut(project) {
+                    if branch_map.get(branch).is_none() {
+                        branch_map.insert(branch.clone(), Some(()));
+                    }
+                } else {
+                    let mut branch_map = HashMap::new();
+                    branch_map.insert(branch.clone(), Some(()));
+                    project_map.insert(project.clone(), branch_map);
+                }
+            }
+        }
+
+        for project in &mut project_map {
+            for branch in &self.branches {
+                if project.1.get(branch).is_none() {
+                    project.1.insert(branch.clone(), None);
+                }
+            }
+        }
+
+        Ok(ProjectMarkdownTable {
+            column_names,
+            project_map,
+        })
     }
 
     fn create_dependencies(
