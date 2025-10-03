@@ -572,11 +572,9 @@ impl UpdateArgs {
                     require_all,
                     no_beta: self.no_beta,
                     no_alpha: self.no_alpha,
-                    verbose,
-                    is_dependency: false,
                 };
 
-                Self::update_project(project_updater, &mut dependencies, &mut progress_bar);
+                Self::update_project(project_updater, false, &mut dependencies, &mut progress_bar, verbose);
 
                 progress_bar.inc();
             }
@@ -603,12 +601,10 @@ impl UpdateArgs {
                             require_all,
                             no_beta: self.no_beta,
                             no_alpha: self.no_alpha,
-                            verbose,
-                            is_dependency: true,
                         };
 
                         // Create new vec because we don't care about the dependencies
-                        Self::update_project(project_updater, &mut Vec::new(), &mut progress_bar);
+                        Self::update_project(project_updater, true, &mut Vec::new(), &mut progress_bar, verbose);
                     }
                 }
             }
@@ -646,26 +642,24 @@ impl UpdateArgs {
 
     fn update_project(
         mut project_updater: ProjectUpdater,
+        is_dependency: bool,
         dependencies: &mut Vec<VersionDependency>,
         progress_bar: &mut ProgressBar,
+        verbose: bool,
     ) {
         match project_updater.update_project() {
             ProjectUpdateResult::Added(new_dependencies) => {
                 dependencies.extend(new_dependencies);
-                if project_updater.verbose {
+
+                let info_text = if is_dependency {
+                    "dependency"
+                } else {
+                    "added"
+                };
+
+                if verbose {
                     progress_bar.print_info(
-                        "added",
-                        project_updater.slug_project_id,
-                        Color::Green,
-                        Style::Normal,
-                    );
-                }
-            }
-            ProjectUpdateResult::Dependency(new_dependencies) => {
-                dependencies.extend(new_dependencies);
-                if project_updater.verbose {
-                    progress_bar.print_info(
-                        "dependency",
+                        info_text,
                         project_updater.slug_project_id,
                         Color::Green,
                         Style::Normal,
@@ -673,7 +667,7 @@ impl UpdateArgs {
                 }
             }
             ProjectUpdateResult::Skipped => {
-                if project_updater.verbose {
+                if verbose {
                     progress_bar.print_info(
                         "skipped",
                         project_updater.slug_project_id,
@@ -683,7 +677,7 @@ impl UpdateArgs {
                 }
             }
             ProjectUpdateResult::NotFound => {
-                if project_updater.verbose {
+                if verbose {
                     progress_bar.print_info(
                         "not found",
                         project_updater.slug_project_id,

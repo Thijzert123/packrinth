@@ -130,14 +130,11 @@ pub struct ProjectUpdater<'a> {
     pub require_all: bool,
     pub no_beta: bool,
     pub no_alpha: bool,
-    pub verbose: bool,
-    pub is_dependency: bool,
 }
 
 // TODO api docs
 pub enum ProjectUpdateResult {
     Added(Vec<VersionDependency>),
-    Dependency(Vec<VersionDependency>),
     Skipped,
     NotFound,
     Failed(PackrinthError),
@@ -171,11 +168,7 @@ impl ProjectUpdater<'_> {
                 }
 
                 self.branch_files.files.push(file);
-                if self.is_dependency {
-                    ProjectUpdateResult::Dependency(dependencies)
-                } else {
-                    ProjectUpdateResult::Added(dependencies)
-                }
+                ProjectUpdateResult::Added(dependencies)
             }
             FileResult::Skipped => ProjectUpdateResult::Skipped,
             FileResult::NotFound => ProjectUpdateResult::NotFound,
