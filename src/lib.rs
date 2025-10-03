@@ -118,6 +118,9 @@ pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<
 }
 
 // TODO api docs
+// Allow because these bools aren't here because this struct is a state machine.
+// All bool value combinations are valid, so no worries at all, Clippy!
+#[allow(clippy::struct_excessive_bools)]
 pub struct ProjectUpdater<'a> {
     pub branch_name: &'a str,
     pub branch_config: &'a BranchConfig,
@@ -140,14 +143,14 @@ pub enum ProjectUpdateResult {
     Failed(PackrinthError),
 }
 
-impl<'a> ProjectUpdater<'a> {
+impl ProjectUpdater<'_> {
     // TODO api docs
     pub fn update_project(&mut self) -> ProjectUpdateResult {
         match File::from_project(
             &self.branch_name.to_string(),
-            &self.branch_config,
-            &self.slug_project_id,
-            &self.project_settings,
+            self.branch_config,
+            self.slug_project_id,
+            self.project_settings,
             self.no_beta,
             self.no_alpha,
         ) {
