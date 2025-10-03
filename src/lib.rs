@@ -38,9 +38,7 @@ use std::fs::OpenOptions;
 use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
-use std::{fs, io};
-use zip::ZipArchive;
-use zip::result::ZipResult;
+use std::{fs};
 
 /// The name of the target directory
 pub const TARGET_DIRECTORY: &str = "target";
@@ -144,12 +142,12 @@ impl ProjectUpdater<'_> {
 }
 
 #[derive(Debug)]
-pub struct ProjectMarkdownTable<'a> {
-    pub column_names: Vec<&'a str>,
+pub struct ProjectMarkdownTable {
+    pub column_names: Vec<String>,
     pub project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
 }
 
-impl Display for ProjectMarkdownTable<'_> {
+impl Display for ProjectMarkdownTable {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         // Write column names
         writeln!(f, "|{}|", self.column_names.join("|"))?;

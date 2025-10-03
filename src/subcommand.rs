@@ -11,12 +11,10 @@ use packrinth::modrinth::{
     MrPack, Project, Version, VersionDependency, VersionDependencyType, extract_mrpack,
 };
 use packrinth::{
-    GitUtils, PackrinthError, ProjectMarkdownTable, ProjectUpdateResult, ProjectUpdater, config,
+    GitUtils, PackrinthError, ProjectUpdateResult, ProjectUpdater, config,
 };
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
-use std::collections::HashMap;
-use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
 use std::{cmp, fs, io};
 

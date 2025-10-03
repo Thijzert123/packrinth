@@ -858,13 +858,13 @@ impl Modpack {
 
     // TODO api doc
     pub fn generate_project_table(&self) -> Result<ProjectMarkdownTable, PackrinthError> {
-        let mut column_names = vec!["Name"];
+        let mut column_names = vec!["Name".to_string()];
         // project, map: branch, whether it has the project
         let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> =
             HashMap::new();
 
         for branch in &self.branches {
-            column_names.push(branch);
+            column_names.push(branch.clone());
             // Even tough we are in a loop, we want to abort the action if something goes wrong
             // here, to avoid incorrect docs.
             let branch_files = BranchFiles::from_directory(&self.directory, branch)?;
