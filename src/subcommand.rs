@@ -10,9 +10,7 @@ use packrinth::config::{
 use packrinth::modrinth::{
     MrPack, Project, Version, VersionDependency, VersionDependencyType, extract_mrpack,
 };
-use packrinth::{
-    GitUtils, PackrinthError, ProjectUpdateResult, ProjectUpdater, config,
-};
+use packrinth::{GitUtils, PackrinthError, ProjectUpdateResult, ProjectUpdater, config};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
 use std::path::Path;

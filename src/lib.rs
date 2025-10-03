@@ -34,11 +34,11 @@ use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::fs;
 use std::fs::OpenOptions;
 use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
-use std::{fs};
 
 /// The name of the target directory
 pub const TARGET_DIRECTORY: &str = "target";
