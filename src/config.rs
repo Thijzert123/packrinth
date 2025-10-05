@@ -856,7 +856,11 @@ impl Modpack {
         }
     }
 
-    // TODO api doc
+    /// Generates a project table showing the distribution of projects across branches.
+    ///
+    /// # Errors
+    /// The only possible errors come from [`BranchFiles::from_directory`], which
+    /// is called in this function and propagated upwards.
     pub fn generate_project_table(&self) -> Result<ProjectTable, PackrinthError> {
         let mut column_names = vec!["Name".to_string()];
         // project, map: branch, whether it has the project

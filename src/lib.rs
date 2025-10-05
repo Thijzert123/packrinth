@@ -150,15 +150,29 @@ impl ProjectUpdater<'_> {
     }
 }
 
-// TODO api doc
+/// A table that can be used to show which branches contain which projects.
+///
+/// This can be useful if you provide your modpack for multiple Minecraft versions,
+/// and you want to show which mods are compatible with all the modpack branches.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProjectTable {
+    /// The column names are sorted from left to right. The first value should be something like
+    /// `Project` or `Mod name`. All the other values should be the names of the branches.
     pub column_names: Vec<String>,
+
+    /// The project map that contains information of which projects are available for which branches.
+    /// This [`HashMap`] contains the project as key, and another nested [`HashMap`] as value.
+    /// The nested map contains a branch name as key, and an empty [`Option`] as value.
+    /// [`Some`] with an empty `()` value means that the project is available for the branch,
+    /// while [`None`] means that the project isn't available for the branch.
     pub project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
 }
 
 impl Display for ProjectTable {
-    // TODO doc that explains this is markdown
+    /// Formats the [`ProjectTable`] to a Markdown table. This table will show which projects
+    /// are in the branches using checkmark icons. The resulting Markdown will be *ugly*,
+    /// meaning that a Markdown renderer can show the text correctly, but it may not be the prettiest
+    /// out-of-the-box (without a renderer).
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         // Write column names
         writeln!(f, "|{}|", self.column_names.join("|"))?;
@@ -210,11 +224,17 @@ impl Display for ProjectTable {
 
 // TODO extend modrinth api structs to have all possible values, not just the ones required by packrinth
 
-// TODO api doc
+/// Utils for working with a Git-managed modpack instance.
 pub struct GitUtils;
 
 impl GitUtils {
-    // TODO api doc
+    /// Initializes a Git repository tailored for use with a Packrinth modpack.
+    ///
+    /// This means that a `.gitignore` file will be made containing the `target` directory,
+    /// the place where all exported `.mrpack` files will be located.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::FailedToInitGitRepoWhileInitModpack`] if initializing the Git repository failed
     pub fn initialize_modpack_repo(directory: &Path) -> Result<(), PackrinthError> {
         if let Err(error) = gix::init(directory) {
             // If the repo already exists, don't show an error.
@@ -241,6 +261,7 @@ impl GitUtils {
             let _ = writeln!(&gitignore_file, "# Exported files");
             let _ = writeln!(&gitignore_file, "{TARGET_DIRECTORY}");
             let _ = gitignore_file.sync_all();
+            // TODO return error when this fails. ALSO ADD TO # Errors section!
         }
 
         Ok(())
