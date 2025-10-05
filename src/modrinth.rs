@@ -53,7 +53,7 @@ fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError>
 }
 
 /// Part of the fields returned from the `/project` Modrinth API endpoint (v2).
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Project {
     pub id: String,
     pub slug: String,
@@ -64,7 +64,7 @@ pub struct Project {
 }
 
 /// The type of project.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ProjectType {
     #[serde(rename = "mod")]
     Mod,
@@ -80,7 +80,7 @@ pub enum ProjectType {
 }
 
 /// The support for a specific environment (server or client).
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SideSupport {
     #[serde(rename = "required")]
     Required,
@@ -93,7 +93,7 @@ pub enum SideSupport {
 }
 
 /// Part of the fields returned from the `/version` Modrinth API endpoint (v2).
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Version {
     pub id: String,
     pub project_id: String,
@@ -104,7 +104,7 @@ pub struct Version {
 }
 
 /// Type of version.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum VersionType {
     #[serde(rename = "release")]
     Release,
@@ -117,7 +117,7 @@ pub enum VersionType {
 }
 
 /// File in a version.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct VersionFile {
     pub url: String,
     pub filename: String,
@@ -127,21 +127,21 @@ pub struct VersionFile {
 }
 
 /// Hashes for a file.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FileHashes {
     pub sha1: String,
     pub sha512: String,
 }
 
 /// Dependency for a version.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct VersionDependency {
     pub project_id: Option<String>,
     pub dependency_type: VersionDependencyType,
 }
 
 /// Type of version dependency.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum VersionDependencyType {
     #[serde(rename = "required")]
     Required,
@@ -157,7 +157,7 @@ pub enum VersionDependencyType {
 }
 
 /// The main index file in a Modrinth modpack.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MrPack {
     pub format_version: u16,
@@ -173,7 +173,7 @@ pub struct MrPack {
 }
 
 /// A file in a modpack.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
     #[serde(skip_serializing)]
@@ -191,7 +191,7 @@ pub struct File {
 }
 
 /// Environment information for a file in a Modrinth modpack.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Env {
     pub client: SideSupport,
@@ -199,7 +199,7 @@ pub struct Env {
 }
 
 /// Dependencies for a modpack, which are mod loaders that get installed alongside the modpack.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MrPackDependencies {
     pub minecraft: String,
@@ -220,7 +220,7 @@ pub struct MrPackDependencies {
 }
 
 /// The result of creating a file.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FileResult {
     Ok {
         file: File,

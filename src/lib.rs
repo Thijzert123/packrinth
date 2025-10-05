@@ -22,7 +22,10 @@
 
 #![warn(clippy::pedantic)]
 
-// TODO derive more stuff in all structs, like Clone and Default
+// All public structs should derive:
+// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+// Additionally, Serialize, Deserialize, PartialOrd and Ord should only be derived
+// if they make sense in their context.
 
 use std::io::Write;
 pub mod config;
@@ -87,6 +90,7 @@ pub const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
 // Allow because these bools aren't here because this struct is a state machine.
 // All bool value combinations are valid, so no worries at all, Clippy!
 #[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ProjectUpdater<'a> {
     pub branch_name: &'a str,
     pub branch_config: &'a BranchConfig,
@@ -99,6 +103,7 @@ pub struct ProjectUpdater<'a> {
 }
 
 // TODO api docs
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ProjectUpdateResult {
     Added(Vec<VersionDependency>),
     Skipped,
@@ -145,7 +150,7 @@ impl ProjectUpdater<'_> {
 }
 
 // TODO api doc
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProjectTable {
     pub column_names: Vec<String>,
     pub project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
@@ -257,13 +262,13 @@ impl GitUtils {
 }
 
 /// Struct representative of all versions of a crate on the `crates.io` API.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct CratesIoVersions {
     pub versions: Vec<CratesIoVersion>,
 }
 
 /// Struct representative of a version on the `crates.io` API.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct CratesIoVersion {
     /// The version number of the crate version.
     pub num: String,
@@ -325,7 +330,7 @@ pub fn is_new_version_available() -> Result<Option<String>, PackrinthError> {
 
 /// An error that can occur while performing Packrinth operations.
 #[non_exhaustive]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PackrinthError {
     PathIsFile {
         path: String,

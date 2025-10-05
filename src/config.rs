@@ -57,7 +57,7 @@ where
 ///
 /// It is important to know that every function that modifies the modpack, DOESN'T save it to
 /// the configuration file. To do that, use [`Modpack::save`].
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Modpack {
     pub pack_format: u16,
     pub name: String,
@@ -81,7 +81,7 @@ pub struct Modpack {
 }
 
 /// Settings for one project that is added to a modpack.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProjectSettings {
     // IndexMap<Branch, Project version id>
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -96,7 +96,7 @@ pub struct ProjectSettings {
 ///
 /// Inclusions allow projects to ONLY be added
 /// to specific branches, while exclusions remove projects from branches.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum IncludeOrExclude {
     #[serde(rename = "include")]
     Include(Vec<String>),
@@ -111,7 +111,7 @@ pub const BRANCH_CONFIG_FILE_NAME: &str = "branch.json";
 /// Configuration for a branch.
 ///
 /// This configuration is supposed to be edited by the user.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BranchConfig {
     pub version: String,
 
@@ -140,7 +140,7 @@ pub struct BranchConfig {
 ///
 /// See <https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack>
 /// at `dependencies` for more information.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MainLoader {
     #[serde(rename = "forge")]
     Forge,
@@ -153,7 +153,7 @@ pub enum MainLoader {
 }
 
 /// All Modrinth loaders, including loaders for shader packs.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Loader {
     // For resource packs and data packs
     #[serde(rename = "minecraft")]
@@ -227,7 +227,7 @@ const BRANCH_FILES_INFO: &str = "This file is managed by Packrinth and not inten
 /// A configuration file for all the files for a branch.
 ///
 /// This configuration file is intended to be updated by Packrinth, not by theo
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BranchFiles {
     info: String,
 
@@ -241,7 +241,7 @@ pub struct BranchFiles {
     pub files: Vec<File>,
 }
 /// Project for [`BranchFiles`].
-#[derive(Debug, Serialize, Deserialize, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BranchFilesProject {
     pub name: String,
 
