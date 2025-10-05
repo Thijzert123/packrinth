@@ -1,7 +1,7 @@
 //! Structs for configuring and managing a Packrinth modpack instance.
 
 use crate::modrinth::{File, MrPack, MrPackDependencies};
-use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError, ProjectMarkdownTable};
+use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError, ProjectTable};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -857,7 +857,7 @@ impl Modpack {
     }
 
     // TODO api doc
-    pub fn generate_project_table(&self) -> Result<ProjectMarkdownTable, PackrinthError> {
+    pub fn generate_project_table(&self) -> Result<ProjectTable, PackrinthError> {
         let mut column_names = vec!["Name".to_string()];
         // project, map: branch, whether it has the project
         let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> =
@@ -891,7 +891,7 @@ impl Modpack {
             }
         }
 
-        Ok(ProjectMarkdownTable {
+        Ok(ProjectTable {
             column_names,
             project_map,
         })

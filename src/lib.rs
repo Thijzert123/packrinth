@@ -141,13 +141,15 @@ impl ProjectUpdater<'_> {
     }
 }
 
+// TODO api doc
 #[derive(Debug)]
-pub struct ProjectMarkdownTable {
+pub struct ProjectTable {
     pub column_names: Vec<String>,
     pub project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
 }
 
-impl Display for ProjectMarkdownTable {
+impl Display for ProjectTable {
+    // TODO doc that explains this is markdown
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         // Write column names
         writeln!(f, "|{}|", self.column_names.join("|"))?;
