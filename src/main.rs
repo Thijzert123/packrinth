@@ -17,8 +17,8 @@ fn main() {
     // TODO when updating, dependencies look like fj3k29fj, not like fabric-api
     // TODO add launch subcommand to launch a branch
     // TODO move more code to the library
-    // TODO check if version overrides, inclusions and exclusions also work for auto-added
-    // dependencies
+    // TODO check if version overrides, inclusions and exclusions also work for auto-added dependencies
+    // TODO add changelog subcommand
     Cli::parse().run();
 }
 
