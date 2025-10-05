@@ -116,7 +116,7 @@ impl ProjectUpdater<'_> {
     // TODO api docs
     pub fn update_project(&mut self) -> ProjectUpdateResult {
         match File::from_project(
-            &self.branch_name.to_string(),
+            self.branch_name,
             self.branch_config,
             self.slug_project_id,
             self.project_settings,

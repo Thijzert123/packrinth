@@ -626,7 +626,7 @@ impl Modpack {
     pub fn remove_projects(&mut self, projects: &[&str]) {
         for project in projects {
             // shift_remove to show Git that one line was removed
-            self.projects.shift_remove(&project.to_string());
+            self.projects.shift_remove(&(*project).to_string());
         }
     }
 
