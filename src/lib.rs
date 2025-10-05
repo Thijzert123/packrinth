@@ -235,6 +235,7 @@ impl GitUtils {
     ///
     /// # Errors
     /// - [`PackrinthError::FailedToInitGitRepoWhileInitModpack`] if initializing the Git repository failed
+    /// - [`PackrinthError::FailedToWriteFile`] if writing to the `.gitignore` file failed
     pub fn initialize_modpack_repo(directory: &Path) -> Result<(), PackrinthError> {
         if let Err(error) = gix::init(directory) {
             // If the repo already exists, don't show an error.
@@ -255,13 +256,17 @@ impl GitUtils {
             && let Ok(gitignore_file) = OpenOptions::new()
                 .append(true)
                 .create(true)
-                .open(gitignore_path)
+                .open(&gitignore_path)
         {
-            // If the gitignore file can't be written to, so be it.
-            let _ = writeln!(&gitignore_file, "# Exported files");
-            let _ = writeln!(&gitignore_file, "{TARGET_DIRECTORY}");
-            let _ = gitignore_file.sync_all();
-            // TODO return error when this fails. ALSO ADD TO # Errors section!
+            if let Err(error) = writeln!(&gitignore_file, "# Exported files") {
+                return Err(PackrinthError::FailedToWriteFile { path_to_write_to: gitignore_path.display().to_string(), error_message: error.to_string() });
+            }
+            if let Err(error) = writeln!(&gitignore_file, "{TARGET_DIRECTORY}") {
+                return Err(PackrinthError::FailedToWriteFile { path_to_write_to: gitignore_path.display().to_string(), error_message: error.to_string() });
+            }
+            if let Err(error) = gitignore_file.sync_all() {
+                return Err(PackrinthError::FailedToWriteFile { path_to_write_to: gitignore_path.display().to_string(), error_message: error.to_string() });
+            }
         }
 
         Ok(())
