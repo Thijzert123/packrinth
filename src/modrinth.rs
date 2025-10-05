@@ -225,6 +225,7 @@ pub enum FileResult {
     Ok {
         file: File,
         dependencies: Vec<VersionDependency>,
+        project_id: String,
     },
     Skipped,
     NotFound,
@@ -523,7 +524,8 @@ impl File {
                 downloads: vec![primary_file_url.expect("No Modrinth file found").clone()],
                 file_size: *primary_file_size.expect("No Modrinth file found"),
             },
-            dependencies: modrinth_version.dependencies.clone(),
+            dependencies: modrinth_version.dependencies.clone(), // TODO fix clones here
+            project_id: modrinth_version.project_id.clone(),
         }
     }
 }
@@ -562,6 +564,7 @@ mod tests {
                 file_size: 2_212_412,
             },
             dependencies: vec![],
+            project_id: "P7dR8mSH".to_string(),
         }, file);
     }
 }

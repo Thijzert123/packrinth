@@ -56,6 +56,7 @@ fn file_from_project() {
             file_size: 1207739,
         },
         dependencies: vec![],
+        project_id: "P7dR8mSH".to_string(),
     }, file);
 
     // Test without alpha and beta
@@ -80,5 +81,6 @@ fn file_from_project() {
             file_size: 1207739,
         },
         dependencies: vec![],
+        project_id: "P7dR8mSH".to_string(),
     }, file);
 }
