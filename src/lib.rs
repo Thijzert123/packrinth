@@ -22,6 +22,8 @@
 
 #![warn(clippy::pedantic)]
 
+// TODO derive more stuff in all structs, like Clone and Default
+
 use std::io::Write;
 pub mod config;
 pub mod modrinth;
