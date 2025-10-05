@@ -15,7 +15,7 @@ use zip::write::SimpleFileOptions;
 
 /// Pack format version.
 ///
-/// Can be used for checking if the user uses the right packrinth
+/// Can be used for checking if the user uses the right Packrinth
 /// version for their project.
 pub const CURRENT_PACK_FORMAT: u16 = 1;
 
@@ -106,6 +106,8 @@ pub enum IncludeOrExclude {
 }
 
 /// The branch configuration file name.
+///
+/// This file is intended to be edited by the user. It should also be in version control.
 pub const BRANCH_CONFIG_FILE_NAME: &str = "branch.json";
 
 /// Configuration for a branch.
@@ -221,8 +223,15 @@ pub enum Loader {
 }
 
 /// The branch files configuration file name.
+///
+/// This file is used for storing accurate information about the updated state of a branch.
+/// This file should be added to version control to make sure the modpack is reproducible.
 pub const BRANCH_FILES_FILE_NAME: &str = ".branch_files.json";
-const BRANCH_FILES_INFO: &str = "This file is managed by Packrinth and not intended for manual editing. You should, however, add it to your Git repository.";
+
+/// The information text displayed in the branch files file.
+///
+/// This text is used to inform users of the use of the file.
+pub const BRANCH_FILES_INFO: &str = "This file is managed by Packrinth and not intended for manual editing. You should, however, add it to your Git repository.";
 
 /// A configuration file for all the files for a branch.
 ///
@@ -257,7 +266,15 @@ pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 const MODRINTH_PACK_FORMAT: u16 = 1;
 /// The game to put in the mrpack.
 const GAME: &str = "minecraft";
-const OVERRIDE_DIRS: [&str; 3] = ["overrides", "server-overrides", "client-overrides"];
+
+/// All supported override directories.
+///
+/// Override directories are directories that will be added to an exported modpack without further
+/// processing. Once a modpack is imported, the contents of the overrides will be copied to the
+/// root of the `.minecraft` directory. The contents of the `server-overrides` directory
+/// will only be copied to server instances, while the contents of the `client-overrides` directory
+/// will only be copied to client instances.
+pub const OVERRIDE_DIRS: [&str; 3] = ["overrides", "server-overrides", "client-overrides"];
 
 impl Modpack {
     /// Creates a new modpack to a directory.

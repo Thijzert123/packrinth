@@ -523,7 +523,7 @@ impl File {
                 downloads: vec![primary_file_url.expect("No Modrinth file found").clone()],
                 file_size: *primary_file_size.expect("No Modrinth file found"),
             },
-            dependencies: modrinth_version.dependencies.clone(), // TODO fix clones here
+            dependencies: modrinth_version.dependencies.clone(),
             project_id: modrinth_version.project_id.clone(),
         }
     }

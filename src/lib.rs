@@ -46,7 +46,9 @@ use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
 
-/// The name of the target directory
+/// The name of the target directory.
+///
+/// This directory is used for all exported files. It should not be in version control.
 pub const TARGET_DIRECTORY: &str = "target";
 
 static CLIENT: OnceLock<ClientWithMiddleware> = OnceLock::new();
@@ -85,9 +87,18 @@ fn request_text<T: ToString + ?Sized>(full_url: &T) -> Result<String, PackrinthE
     }
 }
 
+/// The file name of the configuration file inside a `.mrpack` pack.
+///
+/// This file contains all the mods and their metadata of a Modrinth modpack. For more information,
+/// please take a look at the
+/// [official `.mrpack` specification](https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack).
 pub const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
 
-// TODO api docs
+/// A utilization struct used for updating a project for a branch.
+///
+/// The fields in this struct are settings that can be used by
+/// the update function [`ProjectUpdater::update_project`]. You should create a new updater
+/// for every project update cycle, as the settings are different for every project.
 // Allow because these bools aren't here because this struct is a state machine.
 // All bool value combinations are valid, so no worries at all, Clippy!
 #[allow(clippy::struct_excessive_bools)]
@@ -103,17 +114,26 @@ pub struct ProjectUpdater<'a> {
     pub no_alpha: bool,
 }
 
-// TODO api docs
+/// The result when updating a project.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ProjectUpdateResult {
+    /// The project was successfully updated. All dependencies will be returned,
+    /// but the [`Vec`] may be empty.
     Added(Vec<VersionDependency>),
+
+    /// The project was skipped, because it has inclusions or exclusions specified.
     Skipped,
+
+    /// The project was not found with the specified preferences and project settings on the
+    /// Modrinth API.
     NotFound,
+
+    /// Some other error occurred while updating a project.
     Failed(PackrinthError),
 }
 
 impl ProjectUpdater<'_> {
-    // TODO api docs
+    /// Updates a project using the Modrinth API.
     pub fn update_project(&mut self) -> ProjectUpdateResult {
         match File::from_project(
             self.branch_name,

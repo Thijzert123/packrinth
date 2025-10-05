@@ -511,7 +511,7 @@ impl RemoveProjectsArgs {
         Ok(())
     }
 }
-// TODO here
+
 impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<(), PackrinthError> {
         if !self.allow_dirty && GitUtils::modpack_is_dirty(modpack) {
@@ -685,7 +685,7 @@ impl UpdateArgs {
                         project_updater.slug_project_id,
                         Color::Yellow,
                         Style::Normal,
-                    ); // TODO test if this displays correctly
+                    );
                 }
             }
             ProjectUpdateResult::NotFound => {
