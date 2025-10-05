@@ -348,8 +348,7 @@ impl File {
     /// Creates a file type from a project.
     #[must_use]
     pub fn from_project(
-        // TODO all &String to &str in Packrinth
-        branch_name: &String,
+        branch_name: &str,
         branch_config: &BranchConfig,
         project_id: &str,
         project_settings: &ProjectSettings,
@@ -360,12 +359,12 @@ impl File {
         if let Some(include_or_exclude) = &project_settings.include_or_exclude {
             match include_or_exclude {
                 IncludeOrExclude::Include(inclusions) => {
-                    if !inclusions.contains(branch_name) {
+                    if !inclusions.contains(&branch_name.to_string()) {
                         return FileResult::Skipped;
                     }
                 }
                 IncludeOrExclude::Exclude(exclusions) => {
-                    if exclusions.contains(branch_name) {
+                    if exclusions.contains(&branch_name.to_string()) {
                         return FileResult::Skipped;
                     }
                 }

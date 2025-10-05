@@ -498,7 +498,7 @@ impl RemoveProjectsArgs {
         modpack: &mut Modpack,
         _config_args: &ConfigArgs,
     ) -> Result<(), PackrinthError> {
-        modpack.remove_projects(&self.projects);
+        modpack.remove_projects(&self.projects.iter().map(AsRef::as_ref).collect::<Vec<&str>>());
         modpack.save()?;
 
         print_success(format!("removed {}", self.projects.join(", ")));

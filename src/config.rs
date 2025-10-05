@@ -623,10 +623,10 @@ impl Modpack {
     }
 
     /// Removes projects from the modpack.
-    pub fn remove_projects(&mut self, projects: &[String]) {
+    pub fn remove_projects(&mut self, projects: &[&str]) {
         for project in projects {
             // shift_remove to show Git that one line was removed
-            self.projects.shift_remove(&String::from(project));
+            self.projects.shift_remove(&project.to_string());
         }
     }
 
@@ -637,9 +637,9 @@ impl Modpack {
     ///
     /// # Errors
     /// - [`PackrinthError::FailedToCreateDir`] if the creation of the branch directory failed
-    pub fn new_branch(&mut self, name: &String) -> Result<BranchConfig, PackrinthError> {
-        if !self.branches.contains(name) {
-            self.branches.push(name.clone());
+    pub fn new_branch(&mut self, name: &str) -> Result<BranchConfig, PackrinthError> {
+        if !self.branches.contains(&name.to_string()) {
+            self.branches.push(name.to_string());
         }
         let branch_dir = self.directory.join(name);
         if let Ok(exists) = fs::exists(&branch_dir)
@@ -711,7 +711,7 @@ impl Modpack {
     // Allow because it's hard to split this function up in other functions
     // without them having lots of parameters.
     #[allow(clippy::too_many_lines)]
-    pub fn export_branch(&self, branch: &String) -> Result<PathBuf, PackrinthError> {
+    pub fn export_branch(&self, branch: &str) -> Result<PathBuf, PackrinthError> {
         let branch_config = BranchConfig::from_directory(&self.directory, branch)?;
         let branch_files = BranchFiles::from_directory(&self.directory, branch)?;
 
@@ -957,7 +957,7 @@ impl BranchConfig {
     /// - [`PackrinthError::FailedToReadToString`] if reading the configuration file failed
     /// - [`PackrinthError::DirectoryExpected`] if the given directory is not a directory
     /// - [`PackrinthError::BranchDoesNotExist`] if the branch doesn't exist
-    pub fn from_directory(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
+    pub fn from_directory(directory: &Path, name: &str) -> Result<Self, PackrinthError> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
             Ok(metadata) => {
@@ -997,7 +997,7 @@ impl BranchConfig {
                 }
             }
             Err(error) => Err(PackrinthError::BranchDoesNotExist {
-                branch: name.clone(),
+                branch: name.to_string(),
                 error_message: error.to_string(),
             }),
         }
@@ -1008,7 +1008,7 @@ impl BranchConfig {
     /// # Errors
     /// - [`PackrinthError::FailedToSerialize`] if serialising this type to a JSON failed
     /// - [`PackrinthError::FailedToWriteFile`] if writing the JSON to a file failed
-    pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
+    pub fn save(&self, directory: &Path, name: &str) -> Result<(), PackrinthError> {
         let branch_config_path = directory.join(name).join(BRANCH_CONFIG_FILE_NAME);
         json_to_file(self, branch_config_path)
     }
@@ -1081,7 +1081,7 @@ impl BranchFiles {
     /// - [`PackrinthError::FailedToReadToString`] if reading the configuration file failed
     /// - [`PackrinthError::DirectoryExpected`] if the given directory is not a directory
     /// - [`PackrinthError::BranchDoesNotExist`] if the branch doesn't exist
-    pub fn from_directory(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
+    pub fn from_directory(directory: &Path, name: &str) -> Result<Self, PackrinthError> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
             Ok(metadata) => {
@@ -1125,7 +1125,7 @@ impl BranchFiles {
                 }
             }
             Err(error) => Err(PackrinthError::BranchDoesNotExist {
-                branch: name.clone(),
+                branch: name.to_string(),
                 error_message: error.to_string(),
             }),
         }
@@ -1136,7 +1136,7 @@ impl BranchFiles {
     /// # Errors
     /// - [`PackrinthError::FailedToSerialize`] if serialising this type to a JSON failed
     /// - [`PackrinthError::FailedToWriteFile`] if writing the JSON to a file failed
-    pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
+    pub fn save(&self, directory: &Path, name: &str) -> Result<(), PackrinthError> {
         let branch_files_path = directory.join(name).join(BRANCH_FILES_FILE_NAME);
         json_to_file(self, branch_files_path)
     }
