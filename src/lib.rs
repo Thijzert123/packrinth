@@ -259,13 +259,22 @@ impl GitUtils {
                 .open(&gitignore_path)
         {
             if let Err(error) = writeln!(&gitignore_file, "# Exported files") {
-                return Err(PackrinthError::FailedToWriteFile { path_to_write_to: gitignore_path.display().to_string(), error_message: error.to_string() });
+                return Err(PackrinthError::FailedToWriteFile {
+                    path_to_write_to: gitignore_path.display().to_string(),
+                    error_message: error.to_string(),
+                });
             }
             if let Err(error) = writeln!(&gitignore_file, "{TARGET_DIRECTORY}") {
-                return Err(PackrinthError::FailedToWriteFile { path_to_write_to: gitignore_path.display().to_string(), error_message: error.to_string() });
+                return Err(PackrinthError::FailedToWriteFile {
+                    path_to_write_to: gitignore_path.display().to_string(),
+                    error_message: error.to_string(),
+                });
             }
             if let Err(error) = gitignore_file.sync_all() {
-                return Err(PackrinthError::FailedToWriteFile { path_to_write_to: gitignore_path.display().to_string(), error_message: error.to_string() });
+                return Err(PackrinthError::FailedToWriteFile {
+                    path_to_write_to: gitignore_path.display().to_string(),
+                    error_message: error.to_string(),
+                });
             }
         }
 
