@@ -120,7 +120,7 @@ impl ProjectUpdater<'_> {
             FileResult::Ok {
                 mut file,
                 dependencies,
-                project_id
+                project_id,
             } => {
                 self.branch_files.projects.push(BranchFilesProject {
                     name: file.project_name.clone(),
