@@ -1,9 +1,12 @@
 //! Structs for configuring and managing a Packrinth modpack instance.
 
-use crate::modrinth::{File, MrPack, MrPackDependencies};
-use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError};
+use crate::modrinth::{
+    File, MrPack, MrPackDependencies, Project, Version, extract_mrpack_overrides,
+};
+use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError, PackrinthResult, ProjectTable};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -14,7 +17,7 @@ use zip::write::SimpleFileOptions;
 
 /// Pack format version.
 ///
-/// Can be used for checking if the user uses the right packrinth
+/// Can be used for checking if the user uses the right Packrinth
 /// version for their project.
 pub const CURRENT_PACK_FORMAT: u16 = 1;
 
@@ -56,7 +59,7 @@ where
 ///
 /// It is important to know that every function that modifies the modpack, DOESN'T save it to
 /// the configuration file. To do that, use [`Modpack::save`].
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Modpack {
     pub pack_format: u16,
     pub name: String,
@@ -80,7 +83,7 @@ pub struct Modpack {
 }
 
 /// Settings for one project that is added to a modpack.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProjectSettings {
     // IndexMap<Branch, Project version id>
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -95,7 +98,7 @@ pub struct ProjectSettings {
 ///
 /// Inclusions allow projects to ONLY be added
 /// to specific branches, while exclusions remove projects from branches.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum IncludeOrExclude {
     #[serde(rename = "include")]
     Include(Vec<String>),
@@ -105,12 +108,14 @@ pub enum IncludeOrExclude {
 }
 
 /// The branch configuration file name.
+///
+/// This file is intended to be edited by the user. It should also be in version control.
 pub const BRANCH_CONFIG_FILE_NAME: &str = "branch.json";
 
 /// Configuration for a branch.
 ///
 /// This configuration is supposed to be edited by the user.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BranchConfig {
     pub version: String,
 
@@ -139,7 +144,7 @@ pub struct BranchConfig {
 ///
 /// See <https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack>
 /// at `dependencies` for more information.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MainLoader {
     #[serde(rename = "forge")]
     Forge,
@@ -152,7 +157,7 @@ pub enum MainLoader {
 }
 
 /// All Modrinth loaders, including loaders for shader packs.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Loader {
     // For resource packs and data packs
     #[serde(rename = "minecraft")]
@@ -220,13 +225,20 @@ pub enum Loader {
 }
 
 /// The branch files configuration file name.
+///
+/// This file is used for storing accurate information about the updated state of a branch.
+/// This file should be added to version control to make sure the modpack is reproducible.
 pub const BRANCH_FILES_FILE_NAME: &str = ".branch_files.json";
-const BRANCH_FILES_INFO: &str = "This file is managed by Packrinth and not intended for manual editing. You should, however, add it to your Git repository.";
+
+/// The information text displayed in the branch files file.
+///
+/// This text is used to inform users of the use of the file.
+pub const BRANCH_FILES_INFO: &str = "This file is managed by Packrinth and not intended for manual editing. You should, however, add it to your Git repository.";
 
 /// A configuration file for all the files for a branch.
 ///
 /// This configuration file is intended to be updated by Packrinth, not by theo
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BranchFiles {
     info: String,
 
@@ -240,7 +252,7 @@ pub struct BranchFiles {
     pub files: Vec<File>,
 }
 /// Project for [`BranchFiles`].
-#[derive(Debug, Serialize, Deserialize, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BranchFilesProject {
     pub name: String,
 
@@ -252,14 +264,19 @@ pub struct BranchFilesProject {
 /// The name of the modpack configuration file.
 pub const MODPACK_CONFIG_FILE_NAME: &str = "modpack.json";
 
-/// The name of the target directory
-pub const TARGET_DIRECTORY: &str = "target";
-
 /// The current most recent pack format of a .mrpack file.
 const MODRINTH_PACK_FORMAT: u16 = 1;
 /// The game to put in the mrpack.
 const GAME: &str = "minecraft";
-const OVERRIDE_DIRS: [&str; 3] = ["overrides", "server-overrides", "client-overrides"];
+
+/// All supported override directories.
+///
+/// Override directories are directories that will be added to an exported modpack without further
+/// processing. Once a modpack is imported, the contents of the overrides will be copied to the
+/// root of the `.minecraft` directory. The contents of the `server-overrides` directory
+/// will only be copied to server instances, while the contents of the `client-overrides` directory
+/// will only be copied to client instances.
+pub const OVERRIDE_DIRS: [&str; 3] = ["overrides", "server-overrides", "client-overrides"];
 
 impl Modpack {
     /// Creates a new modpack to a directory.
@@ -306,16 +323,9 @@ impl Modpack {
         }
 
         let modpack = Self {
-            pack_format: CURRENT_PACK_FORMAT,
-            name: "My Modrinth modpack".to_string(),
-            summary: "Short summary for this modpack".to_string(),
-            author: "John Doe".to_string(),
-            require_all: false,
-            auto_dependencies: false,
-            branches: Vec::new(),
-            projects: IndexMap::new(),
             directory: PathBuf::from(directory),
             modpack_config_path: directory.join(MODPACK_CONFIG_FILE_NAME),
+            ..Self::default()
         };
 
         Ok(modpack)
@@ -632,10 +642,10 @@ impl Modpack {
     }
 
     /// Removes projects from the modpack.
-    pub fn remove_projects(&mut self, projects: &[String]) {
+    pub fn remove_projects(&mut self, projects: &[&str]) {
         for project in projects {
             // shift_remove to show Git that one line was removed
-            self.projects.shift_remove(&String::from(project));
+            self.projects.shift_remove(&(*project).to_string());
         }
     }
 
@@ -646,9 +656,9 @@ impl Modpack {
     ///
     /// # Errors
     /// - [`PackrinthError::FailedToCreateDir`] if the creation of the branch directory failed
-    pub fn new_branch(&mut self, name: &String) -> Result<BranchConfig, PackrinthError> {
-        if !self.branches.contains(name) {
-            self.branches.push(name.clone());
+    pub fn new_branch(&mut self, name: &str) -> Result<BranchConfig, PackrinthError> {
+        if !self.branches.contains(&name.to_string()) {
+            self.branches.push(name.to_string());
         }
         let branch_dir = self.directory.join(name);
         if let Ok(exists) = fs::exists(&branch_dir)
@@ -720,13 +730,13 @@ impl Modpack {
     // Allow because it's hard to split this function up in other functions
     // without them having lots of parameters.
     #[allow(clippy::too_many_lines)]
-    pub fn export_branch(&self, branch: &String) -> Result<PathBuf, PackrinthError> {
+    pub fn export_branch(&self, branch: &str) -> Result<PathBuf, PackrinthError> {
         let branch_config = BranchConfig::from_directory(&self.directory, branch)?;
         let branch_files = BranchFiles::from_directory(&self.directory, branch)?;
 
         let mrpack_file_name = format!("{}_{}.mrpack", self.name, branch_config.version);
         let branch_dir = self.directory.join(branch);
-        let target_dir = self.directory.join(TARGET_DIRECTORY).join(branch);
+        let target_dir = self.directory.join(crate::TARGET_DIRECTORY).join(branch);
         if let Err(error) = fs::create_dir_all(&target_dir) {
             return Err(PackrinthError::FailedToCreateDir {
                 dir_to_create: target_dir.display().to_string(),
@@ -765,15 +775,15 @@ impl Modpack {
         };
 
         let mut zip = ZipWriter::new(zip_file);
-        if let Err(error) = zip.start_file(MRPACK_CONFIG_FILE_NAME, options) {
+        if let Err(error) = zip.start_file(MRPACK_INDEX_FILE_NAME, options) {
             return Err(PackrinthError::FailedToStartZipFile {
-                file_to_start: MRPACK_CONFIG_FILE_NAME.to_string(),
+                file_to_start: MRPACK_INDEX_FILE_NAME.to_string(),
                 error_message: error.to_string(),
             });
         }
         if let Err(error) = zip.write_all(mrpack_json.as_bytes()) {
             return Err(PackrinthError::FailedToWriteToZip {
-                to_write: MRPACK_CONFIG_FILE_NAME.to_string(),
+                to_write: MRPACK_INDEX_FILE_NAME.to_string(),
                 error_message: error.to_string(),
             });
         }
@@ -865,6 +875,159 @@ impl Modpack {
         }
     }
 
+    /// Generates a project table showing the distribution of projects across branches.
+    ///
+    /// # Errors
+    /// The only possible errors come from [`BranchFiles::from_directory`], which
+    /// is called in this function and propagated upwards.
+    pub fn generate_project_table(&self) -> Result<ProjectTable, PackrinthError> {
+        let mut column_names = vec!["Name".to_string()];
+        // project, map: branch, whether it has the project
+        let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> =
+            HashMap::new();
+
+        for branch in &self.branches {
+            column_names.push(branch.clone());
+            // Even tough we are in a loop, we want to abort the action if something goes wrong
+            // here, to avoid incorrect docs.
+            let branch_files = BranchFiles::from_directory(&self.directory, branch)?;
+
+            for project in &branch_files.projects {
+                // Vector in hashmap that shows which branches are compatible with a project.
+                if let Some(branch_map) = project_map.get_mut(project) {
+                    if branch_map.get(branch).is_none() {
+                        branch_map.insert(branch.clone(), Some(()));
+                    }
+                } else {
+                    let mut branch_map = HashMap::new();
+                    branch_map.insert(branch.clone(), Some(()));
+                    project_map.insert(project.clone(), branch_map);
+                }
+            }
+        }
+
+        for project in &mut project_map {
+            for branch in &self.branches {
+                if project.1.get(branch).is_none() {
+                    project.1.insert(branch.clone(), None);
+                }
+            }
+        }
+
+        Ok(ProjectTable {
+            column_names,
+            project_map,
+        })
+    }
+
+    /// Imports a Modrinth modpack to a new branch.
+    ///
+    /// If `add_projects` is set to `true`, projects will be added to the global `modpack.json` file
+    /// if the file doesn't include them. `force` indicates whether the function should continue
+    /// if the branch already exists. If set to `true`, the branch will be overridden.
+    ///
+    /// The closure can be used to execute code between iterating the `MrPack.files` field, such as
+    /// updating a progress bar.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::BranchAlreadyExists`] if the branch already exists and `force` is `false`
+    /// - [`PackrinthError::FailedToExtractMrPack`] if extracting the modpack failed
+    ///
+    /// Any other errors come from these methods that are called in this function and propagated upward:
+    /// - [`Self::new_branch`]
+    /// - [`BranchConfig::save`]
+    /// - [`BranchFiles::from_directory`]
+    /// - [`Project::from_id`]
+    /// - [`BranchFiles::save`]
+    pub fn import_mrpack<F>(
+        &mut self,
+        mrpack: MrPack,
+        mrpack_path: &Path,
+        add_projects: bool,
+        force: bool,
+        mut f: F,
+    ) -> PackrinthResult<()>
+    where
+        F: FnMut(),
+    {
+        let branch_name = match mrpack_path.file_name() {
+            Some(branch_name) => branch_name.display().to_string(),
+            None => mrpack_path.display().to_string(),
+        }
+        .split(".mrpack")
+        .collect::<Vec<&str>>()[0]
+            .to_string();
+
+        // Check if branch already exists
+        if self.branches.contains(&branch_name) && !force {
+            return Err(PackrinthError::BranchAlreadyExists {
+                branch: branch_name,
+            });
+        }
+
+        let mut branch_config = self.new_branch(&branch_name)?;
+        branch_config.version.clone_from(&branch_name);
+        branch_config.minecraft_version = mrpack.dependencies.minecraft;
+        branch_config.acceptable_minecraft_versions = Vec::new();
+        if let Some(loader_version) = mrpack.dependencies.fabric_loader {
+            branch_config.mod_loader = Some(MainLoader::Fabric);
+            branch_config.loader_version = Some(loader_version);
+        } else if let Some(loader_version) = mrpack.dependencies.forge {
+            branch_config.mod_loader = Some(MainLoader::Forge);
+            branch_config.loader_version = Some(loader_version);
+        } else if let Some(loader_version) = mrpack.dependencies.neoforge {
+            branch_config.mod_loader = Some(MainLoader::NeoForge);
+            branch_config.loader_version = Some(loader_version);
+        } else if let Some(loader_version) = mrpack.dependencies.quilt_loader {
+            branch_config.mod_loader = Some(MainLoader::Quilt);
+            branch_config.loader_version = Some(loader_version);
+        }
+        branch_config.save(&self.directory, &branch_name)?;
+
+        let mut branch_files = BranchFiles::from_directory(&self.directory, &branch_name)?;
+        branch_files.files.clone_from(&mrpack.files);
+
+        for file in mrpack.files {
+            let version = match Version::from_sha512_hash(&file.hashes.sha512) {
+                Ok(version) => version,
+                Err(_error) => continue,
+            };
+            let project = Project::from_id(&version.project_id)?;
+
+            branch_files.projects.push(BranchFilesProject {
+                name: project.title,
+                id: Some(project.slug.clone()),
+            });
+
+            if add_projects && !self.projects.contains_key(&version.project_id)
+                || !self.projects.contains_key(&project.slug)
+            {
+                self.projects.insert(
+                    project.slug,
+                    ProjectSettings {
+                        version_overrides: None,
+                        include_or_exclude: None,
+                    },
+                );
+            }
+
+            f();
+        }
+
+        branch_files.save(&self.directory, &branch_name)?;
+
+        let mrpack_output = &self.directory.join(&branch_name);
+        if let Err(error) = extract_mrpack_overrides(mrpack_path, mrpack_output) {
+            return Err(PackrinthError::FailedToExtractMrPack {
+                mrpack_path: mrpack_path.display().to_string(),
+                output_directory: mrpack_output.display().to_string(),
+                error_message: error.to_string(),
+            });
+        }
+
+        Ok(())
+    }
+
     fn create_dependencies(
         branch_config: BranchConfig,
     ) -> Result<MrPackDependencies, PackrinthError> {
@@ -896,6 +1059,23 @@ impl Modpack {
     }
 }
 
+impl Default for Modpack {
+    fn default() -> Self {
+        Self {
+            pack_format: CURRENT_PACK_FORMAT,
+            name: "My Modrinth modpack".to_string(),
+            summary: "Short summary for this modpack".to_string(),
+            author: "John Doe".to_string(),
+            require_all: false,
+            auto_dependencies: true,
+            branches: Vec::default(),
+            projects: IndexMap::default(),
+            directory: PathBuf::default(),
+            modpack_config_path: PathBuf::default(),
+        }
+    }
+}
+
 impl BranchConfig {
     /// Gets a branch configuration type from a directory and name.
     ///
@@ -904,7 +1084,7 @@ impl BranchConfig {
     /// - [`PackrinthError::FailedToReadToString`] if reading the configuration file failed
     /// - [`PackrinthError::DirectoryExpected`] if the given directory is not a directory
     /// - [`PackrinthError::BranchDoesNotExist`] if the branch doesn't exist
-    pub fn from_directory(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
+    pub fn from_directory(directory: &Path, name: &str) -> Result<Self, PackrinthError> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
             Ok(metadata) => {
@@ -944,7 +1124,7 @@ impl BranchConfig {
                 }
             }
             Err(error) => Err(PackrinthError::BranchDoesNotExist {
-                branch: name.clone(),
+                branch: name.to_string(),
                 error_message: error.to_string(),
             }),
         }
@@ -955,7 +1135,7 @@ impl BranchConfig {
     /// # Errors
     /// - [`PackrinthError::FailedToSerialize`] if serialising this type to a JSON failed
     /// - [`PackrinthError::FailedToWriteFile`] if writing the JSON to a file failed
-    pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
+    pub fn save(&self, directory: &Path, name: &str) -> Result<(), PackrinthError> {
         let branch_config_path = directory.join(name).join(BRANCH_CONFIG_FILE_NAME);
         json_to_file(self, branch_config_path)
     }
@@ -1028,7 +1208,7 @@ impl BranchFiles {
     /// - [`PackrinthError::FailedToReadToString`] if reading the configuration file failed
     /// - [`PackrinthError::DirectoryExpected`] if the given directory is not a directory
     /// - [`PackrinthError::BranchDoesNotExist`] if the branch doesn't exist
-    pub fn from_directory(directory: &Path, name: &String) -> Result<Self, PackrinthError> {
+    pub fn from_directory(directory: &Path, name: &str) -> Result<Self, PackrinthError> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
             Ok(metadata) => {
@@ -1072,7 +1252,7 @@ impl BranchFiles {
                 }
             }
             Err(error) => Err(PackrinthError::BranchDoesNotExist {
-                branch: name.clone(),
+                branch: name.to_string(),
                 error_message: error.to_string(),
             }),
         }
@@ -1083,7 +1263,7 @@ impl BranchFiles {
     /// # Errors
     /// - [`PackrinthError::FailedToSerialize`] if serialising this type to a JSON failed
     /// - [`PackrinthError::FailedToWriteFile`] if writing the JSON to a file failed
-    pub fn save(&self, directory: &Path, name: &String) -> Result<(), PackrinthError> {
+    pub fn save(&self, directory: &Path, name: &str) -> Result<(), PackrinthError> {
         let branch_files_path = directory.join(name).join(BRANCH_FILES_FILE_NAME);
         json_to_file(self, branch_files_path)
     }

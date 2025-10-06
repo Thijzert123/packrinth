@@ -1,14 +1,51 @@
 //! Structs that are only used for (de)serializing JSONs associated with Modrinth.
 
 use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
-use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError};
+use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError};
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
-use std::{cmp, fs};
+use std::{cmp, fs, io};
 use zip::ZipArchive;
+use zip::result::ZipResult;
 
 const MODRINTH_API_BASE_URL: &str = "https://api.modrinth.com/v2";
+
+/// Extract all the contents of a Modrinth modpack, except for the main manifest file.
+///
+/// # Errors
+/// An [`Err`] is returned when one of these things go wrong:
+/// - Failed to open file
+/// - Failed to start zip archive
+/// - Failed to get file by index
+/// - Failed to create dirs
+/// - Failed to copy file
+pub fn extract_mrpack_overrides(mrpack_path: &Path, output_directory: &Path) -> ZipResult<()> {
+    let zip_file = fs::File::open(mrpack_path)?;
+    let mut archive = ZipArchive::new(zip_file)?;
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let output_path = Path::new(output_directory).join(file.name());
+
+        if file.name().ends_with('/') {
+            // It's a directory
+            fs::create_dir_all(&output_path)?;
+        } else if file.name() != MRPACK_INDEX_FILE_NAME {
+            // Make sure parent dirs exist
+            if let Some(parent) = output_path.parent()
+                && !parent.exists()
+            {
+                fs::create_dir_all(parent)?;
+            }
+            // Copy file contents
+            let mut output_file = fs::File::create(&output_path)?;
+            io::copy(&mut file, &mut output_file)?;
+        }
+    }
+
+    Ok(())
+}
 
 fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError> {
     let full_url = MODRINTH_API_BASE_URL.to_string() + api_endpoint.to_string().as_str();
@@ -16,7 +53,7 @@ fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError>
 }
 
 /// Part of the fields returned from the `/project` Modrinth API endpoint (v2).
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Project {
     pub id: String,
     pub slug: String,
@@ -27,7 +64,7 @@ pub struct Project {
 }
 
 /// The type of project.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ProjectType {
     #[serde(rename = "mod")]
     Mod,
@@ -43,7 +80,7 @@ pub enum ProjectType {
 }
 
 /// The support for a specific environment (server or client).
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SideSupport {
     #[serde(rename = "required")]
     Required,
@@ -56,7 +93,7 @@ pub enum SideSupport {
 }
 
 /// Part of the fields returned from the `/version` Modrinth API endpoint (v2).
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Version {
     pub id: String,
     pub project_id: String,
@@ -67,7 +104,7 @@ pub struct Version {
 }
 
 /// Type of version.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum VersionType {
     #[serde(rename = "release")]
     Release,
@@ -80,7 +117,7 @@ pub enum VersionType {
 }
 
 /// File in a version.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct VersionFile {
     pub url: String,
     pub filename: String,
@@ -90,21 +127,21 @@ pub struct VersionFile {
 }
 
 /// Hashes for a file.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FileHashes {
     pub sha1: String,
     pub sha512: String,
 }
 
 /// Dependency for a version.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct VersionDependency {
     pub project_id: Option<String>,
     pub dependency_type: VersionDependencyType,
 }
 
 /// Type of version dependency.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum VersionDependencyType {
     #[serde(rename = "required")]
     Required,
@@ -120,7 +157,7 @@ pub enum VersionDependencyType {
 }
 
 /// The main index file in a Modrinth modpack.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MrPack {
     pub format_version: u16,
@@ -136,7 +173,7 @@ pub struct MrPack {
 }
 
 /// A file in a modpack.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
     #[serde(skip_serializing)]
@@ -154,7 +191,7 @@ pub struct File {
 }
 
 /// Environment information for a file in a Modrinth modpack.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Env {
     pub client: SideSupport,
@@ -162,7 +199,7 @@ pub struct Env {
 }
 
 /// Dependencies for a modpack, which are mod loaders that get installed alongside the modpack.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MrPackDependencies {
     pub minecraft: String,
@@ -183,15 +220,15 @@ pub struct MrPackDependencies {
 }
 
 /// The result of creating a file.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FileResult {
     Ok {
         file: File,
         dependencies: Vec<VersionDependency>,
         project_id: String,
     },
-    Skipped(String),
-    NotFound(String),
+    Skipped,
+    NotFound,
     Err(PackrinthError),
 }
 
@@ -280,7 +317,7 @@ impl MrPack {
             }
         };
 
-        let mut mrpack_config_file = match zip_archive.by_name(MRPACK_CONFIG_FILE_NAME) {
+        let mut mrpack_config_file = match zip_archive.by_name(MRPACK_INDEX_FILE_NAME) {
             Ok(mrpack_config_file_name) => mrpack_config_file_name,
             Err(error) => {
                 return Err(PackrinthError::InvalidMrPack {
@@ -311,8 +348,7 @@ impl File {
     /// Creates a file type from a project.
     #[must_use]
     pub fn from_project(
-        // TODO all &String to &str in Packrinth
-        branch_name: &String,
+        branch_name: &str,
         branch_config: &BranchConfig,
         project_id: &str,
         project_settings: &ProjectSettings,
@@ -323,13 +359,13 @@ impl File {
         if let Some(include_or_exclude) = &project_settings.include_or_exclude {
             match include_or_exclude {
                 IncludeOrExclude::Include(inclusions) => {
-                    if !inclusions.contains(branch_name) {
-                        return FileResult::Skipped(project_id.to_string());
+                    if !inclusions.contains(&branch_name.to_string()) {
+                        return FileResult::Skipped;
                     }
                 }
                 IncludeOrExclude::Exclude(exclusions) => {
-                    if exclusions.contains(branch_name) {
-                        return FileResult::Skipped(project_id.to_string());
+                    if exclusions.contains(&branch_name.to_string()) {
+                        return FileResult::Skipped;
                     }
                 }
             }
@@ -425,7 +461,7 @@ impl File {
         }
 
         // If no versions were returned in the for loop.
-        FileResult::NotFound(project_id.to_string())
+        FileResult::NotFound
     }
 
     fn from_modrinth_version(modrinth_version: &Version) -> FileResult {
@@ -488,7 +524,7 @@ impl File {
                 file_size: *primary_file_size.expect("No Modrinth file found"),
             },
             dependencies: modrinth_version.dependencies.clone(),
-            project_id: modrinth_project.id,
+            project_id: modrinth_version.project_id.clone(),
         }
     }
 }

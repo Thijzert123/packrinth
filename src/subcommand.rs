@@ -4,20 +4,12 @@ use clap_complete::{Generator, shells};
 use dialoguer::Confirm;
 use indexmap::IndexMap;
 use packrinth::config::{
-    BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, MainLoader, Modpack,
-    ProjectSettings, TARGET_DIRECTORY,
+    BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack, ProjectSettings,
 };
-use packrinth::modrinth::{
-    Env, File, FileResult, MrPack, Project, SideSupport, Version, VersionDependency,
-    VersionDependencyType,
-};
-use packrinth::{PackrinthError, config, extract_mrpack, modpack_is_dirty};
+use packrinth::modrinth::{MrPack, VersionDependency, VersionDependencyType};
+use packrinth::{GitUtils, PackrinthError, ProjectUpdateResult, ProjectUpdater, config};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
-use std::collections::HashMap;
-use std::fmt::{Debug, Display, Formatter};
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::path::Path;
 use std::{cmp, fs, io};
 
@@ -120,33 +112,8 @@ impl InitArgs {
         }
         modpack.save()?;
 
-        if !self.no_git_repo
-            && let Err(error) = gix::init(directory)
-        {
-            // If the repo already exists, don't show an error.
-            if !matches!(
-                &error,
-                gix::init::Error::Init(gix::create::Error::DirectoryExists { path })
-                    if path.file_name() == Some(std::ffi::OsStr::new(".git"))
-            ) {
-                return Err(PackrinthError::FailedToInitGitRepoWhileInitModpack {
-                    error_message: error.to_string(),
-                });
-            }
-        }
-
-        let gitignore_path = directory.join(".gitignore");
-        if let Ok(exists) = fs::exists(&gitignore_path)
-            && !exists
-            && let Ok(gitignore_file) = OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(gitignore_path)
-        {
-            // If the gitignore file can't be written to, so be it.
-            let _ = writeln!(&gitignore_file, "# Exported files");
-            let _ = writeln!(&gitignore_file, "{TARGET_DIRECTORY}");
-            let _ = gitignore_file.sync_all();
+        if !self.no_git_repo {
+            GitUtils::initialize_modpack_repo(directory)?;
         }
 
         print_success(format!(
@@ -163,90 +130,21 @@ impl ImportArgs {
         modpack: &mut Modpack,
         _config_args: &ConfigArgs,
     ) -> Result<(), PackrinthError> {
-        if self.add_projects && !self.allow_dirty && modpack_is_dirty(modpack) {
+        if self.add_projects && !self.allow_dirty && GitUtils::modpack_is_dirty(modpack) {
             return Err(PackrinthError::RepoIsDirty);
         }
 
         let mrpack = MrPack::from_mrpack(&self.modrinth_pack)?;
-
-        let branch_name = match &self.modrinth_pack.file_name() {
-            Some(branch_name) => branch_name.display().to_string(),
-            None => self.modrinth_pack.display().to_string(),
-        }
-        .split(".mrpack")
-        .collect::<Vec<&str>>()[0]
-            .to_string();
-
-        // Check if branch already exists
-        if modpack.branches.contains(&branch_name) && !self.force {
-            return Err(PackrinthError::BranchAlreadyExists {
-                branch: branch_name,
-            });
-        }
-
-        let mut branch_config = modpack.new_branch(&branch_name)?;
-        branch_config.version.clone_from(&branch_name);
-        branch_config.minecraft_version = mrpack.dependencies.minecraft;
-        branch_config.acceptable_minecraft_versions = Vec::new();
-        if let Some(loader_version) = mrpack.dependencies.fabric_loader {
-            branch_config.mod_loader = Some(MainLoader::Fabric);
-            branch_config.loader_version = Some(loader_version);
-        } else if let Some(loader_version) = mrpack.dependencies.forge {
-            branch_config.mod_loader = Some(MainLoader::Forge);
-            branch_config.loader_version = Some(loader_version);
-        } else if let Some(loader_version) = mrpack.dependencies.neoforge {
-            branch_config.mod_loader = Some(MainLoader::NeoForge);
-            branch_config.loader_version = Some(loader_version);
-        } else if let Some(loader_version) = mrpack.dependencies.quilt_loader {
-            branch_config.mod_loader = Some(MainLoader::Quilt);
-            branch_config.loader_version = Some(loader_version);
-        }
-        branch_config.save(&modpack.directory, &branch_name)?;
-
-        let mut branch_files = BranchFiles::from_directory(&modpack.directory, &branch_name)?;
-        branch_files.files.clone_from(&mrpack.files);
-
         let mut progress_bar = create_progress_bar(mrpack.files.len());
         progress_bar.set_action("importing", Color::Blue, Style::Bold);
 
-        for file in mrpack.files {
-            let version = match Version::from_sha512_hash(&file.hashes.sha512) {
-                Ok(version) => version,
-                Err(_error) => continue,
-            };
-            let project = Project::from_id(&version.project_id)?;
-
-            branch_files.projects.push(BranchFilesProject {
-                name: project.title,
-                id: Some(project.slug.clone()),
-            });
-
-            if self.add_projects && !modpack.projects.contains_key(&version.project_id)
-                || !modpack.projects.contains_key(&project.slug)
-            {
-                modpack.projects.insert(
-                    project.slug,
-                    ProjectSettings {
-                        version_overrides: None,
-                        include_or_exclude: None,
-                    },
-                );
-            }
-
-            progress_bar.inc();
-        }
-
-        branch_files.save(&modpack.directory, &branch_name)?;
-        modpack.save()?;
-
-        let mrpack_output = &modpack.directory.join(&branch_name);
-        if let Err(error) = extract_mrpack(&self.modrinth_pack, mrpack_output) {
-            return Err(PackrinthError::FailedToExtractMrPack {
-                mrpack_path: self.modrinth_pack.display().to_string(),
-                output_directory: mrpack_output.display().to_string(),
-                error_message: error.to_string(),
-            });
-        }
+        modpack.import_mrpack(
+            mrpack,
+            &self.modrinth_pack,
+            self.add_projects,
+            self.force,
+            || progress_bar.inc(),
+        )?;
 
         progress_bar.print_info(
             "success",
@@ -527,7 +425,13 @@ impl RemoveProjectsArgs {
         modpack: &mut Modpack,
         _config_args: &ConfigArgs,
     ) -> Result<(), PackrinthError> {
-        modpack.remove_projects(&self.projects);
+        modpack.remove_projects(
+            &self
+                .projects
+                .iter()
+                .map(AsRef::as_ref)
+                .collect::<Vec<&str>>(),
+        );
         modpack.save()?;
 
         print_success(format!("removed {}", self.projects.join(", ")));
@@ -537,7 +441,7 @@ impl RemoveProjectsArgs {
 
 impl UpdateArgs {
     pub fn run(&self, modpack: &Modpack, config_args: &ConfigArgs) -> Result<(), PackrinthError> {
-        if !self.allow_dirty && modpack_is_dirty(modpack) {
+        if !self.allow_dirty && GitUtils::modpack_is_dirty(modpack) {
             return Err(PackrinthError::RepoIsDirty);
         }
         if modpack.branches.is_empty() {
@@ -589,20 +493,25 @@ impl UpdateArgs {
 
             let mut dependencies: Vec<VersionDependency> = Vec::new();
 
-            for project in &modpack.projects {
-                if let Some(new_dependencies) = self.update_project(
+            for (slug_project_id, project_settings) in &modpack.projects {
+                let project_updater = ProjectUpdater {
                     branch_name,
-                    &branch_config,
-                    &mut branch_files,
-                    project.0,
-                    project.1,
+                    branch_config: &branch_config,
+                    branch_files: &mut branch_files,
+                    slug_project_id,
+                    project_settings,
                     require_all,
+                    no_beta: self.no_beta,
+                    no_alpha: self.no_alpha,
+                };
+
+                Self::update_project(
+                    project_updater,
+                    false,
+                    &mut dependencies,
                     &mut progress_bar,
                     verbose,
-                    false,
-                ) {
-                    dependencies.extend(new_dependencies);
-                }
+                );
 
                 progress_bar.inc();
             }
@@ -620,16 +529,24 @@ impl UpdateArgs {
                             version_overrides: None,
                             include_or_exclude: None,
                         };
-                        self.update_project(
+                        let project_updater = ProjectUpdater {
                             branch_name,
-                            &branch_config,
-                            &mut branch_files,
-                            &project_id,
-                            &project_settings,
+                            branch_config: &branch_config,
+                            branch_files: &mut branch_files,
+                            slug_project_id: &project_id,
+                            project_settings: &project_settings,
                             require_all,
+                            no_beta: self.no_beta,
+                            no_alpha: self.no_alpha,
+                        };
+
+                        // Create new vec because we don't care about the dependencies
+                        Self::update_project(
+                            project_updater,
+                            true,
+                            &mut Vec::new(),
                             &mut progress_bar,
                             verbose,
-                            true,
                         );
                     }
                 }
@@ -666,83 +583,55 @@ impl UpdateArgs {
         Ok(())
     }
 
-    // Allow because when calling this function, it is clear what all parameters do.
-    #[allow(clippy::too_many_arguments)]
     fn update_project(
-        &self,
-        branch_name: &String,
-        branch_config: &BranchConfig,
-        branch_files: &mut BranchFiles,
-        slug_project_id: &str,
-        project_settings: &ProjectSettings,
-        require_all: bool,
+        mut project_updater: ProjectUpdater,
+        is_dependency: bool,
+        dependencies: &mut Vec<VersionDependency>,
         progress_bar: &mut ProgressBar,
         verbose: bool,
-        dependency: bool,
-    ) -> Option<Vec<VersionDependency>> {
-        match File::from_project(
-            branch_name,
-            branch_config,
-            slug_project_id,
-            project_settings,
-            self.no_beta,
-            self.no_alpha,
-        ) {
-            FileResult::Ok {
-                mut file,
-                dependencies,
-                project_id, // This is the actual id (t234fs23), not the slug (fabric-api)
-            } => {
-                branch_files.projects.push(BranchFilesProject {
-                    name: file.project_name.clone(),
-                    id: Some(project_id.to_string()),
-                });
+    ) {
+        match project_updater.update_project() {
+            ProjectUpdateResult::Added(new_dependencies) => {
+                dependencies.extend(new_dependencies);
 
-                if require_all {
-                    file.env = Some(Env {
-                        client: SideSupport::Required,
-                        server: SideSupport::Required,
-                    });
-                }
-
-                branch_files.files.push(file);
+                let info_text = if is_dependency { "dependency" } else { "added" };
 
                 if verbose {
-                    let mut info_name = "added";
-                    if dependency {
-                        info_name = "dependency";
-                    }
                     progress_bar.print_info(
-                        info_name,
-                        slug_project_id,
+                        info_text,
+                        project_updater.slug_project_id,
                         Color::Green,
                         Style::Normal,
                     );
                 }
-
-                return Some(dependencies);
             }
-            FileResult::Skipped(project_id) => {
+            ProjectUpdateResult::Skipped => {
                 if verbose {
-                    progress_bar.print_info("skipped", &project_id, Color::Yellow, Style::Normal);
+                    progress_bar.print_info(
+                        "skipped",
+                        project_updater.slug_project_id,
+                        Color::Yellow,
+                        Style::Normal,
+                    );
                 }
             }
-            FileResult::NotFound(project_id) => {
+            ProjectUpdateResult::NotFound => {
                 if verbose {
-                    progress_bar.print_info("not found", &project_id, Color::Yellow, Style::Bold);
+                    progress_bar.print_info(
+                        "not found",
+                        project_updater.slug_project_id,
+                        Color::Yellow,
+                        Style::Bold,
+                    );
                 }
             }
-            FileResult::Err(error) => {
-                progress_bar.print_info(
-                    "failed",
-                    &single_line_error(error.message_and_tip()),
-                    Color::Red,
-                    Style::Bold,
-                );
-            }
+            ProjectUpdateResult::Failed(error) => progress_bar.print_info(
+                "failed",
+                &single_line_error(error.message_and_tip()),
+                Color::Red,
+                Style::Bold,
+            ),
         }
-
-        None
     }
 }
 
@@ -902,7 +791,7 @@ impl CleanArgs {
     // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
     #[allow(clippy::unused_self)]
     pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
-        let target_dir = modpack.directory.join(TARGET_DIRECTORY);
+        let target_dir = modpack.directory.join(packrinth::TARGET_DIRECTORY);
         match fs::remove_dir_all(&target_dir) {
             Ok(()) => {
                 print_success(format!("removed {}", target_dir.display()));
@@ -916,111 +805,18 @@ impl CleanArgs {
     }
 }
 
-#[derive(Debug)]
-struct DocMarkdownTable<'a> {
-    column_names: Vec<&'a str>,
-    project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
-}
-
-impl Display for DocMarkdownTable<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // Write column names
-        writeln!(f, "|{}|", self.column_names.join("|"))?;
-
-        // Write alignment text (:-- is left, :-: is center)
-        write!(f, "|:--|")?;
-        // Use 1..len because column names include the 'Name' for the project column
-        for _ in 1..self.column_names.len() {
-            write!(f, ":-:|")?;
-        }
-        writeln!(f)?;
-
-        let mut sorted_project_map: Vec<_> = self.project_map.iter().collect();
-        // Sort by key (human name of project)
-        sorted_project_map.sort_by(|a, b| a.0.name.cmp(&b.0.name));
-
-        let mut iter = sorted_project_map.iter().peekable();
-        while let Some(project) = iter.next() {
-            if let Some(id) = &project.0.id {
-                // If project has an id (not a manual file), write a Markdown link.
-                let mut project_url = "https://modrinth.com/project/".to_string();
-                project_url.push_str(id);
-                write!(f, "|[{}]({})|", project.0.name, project_url)?;
-            } else {
-                write!(f, "|{}|", project.0.name)?;
-            }
-
-            let mut sorted_branch_map: Vec<_> = project.1.iter().collect();
-            // Sort by key (human name of project)
-            sorted_branch_map.sort_by(|a, b| a.0.cmp(b.0));
-
-            for branch in sorted_branch_map {
-                let icon = match branch.1 {
-                    Some(()) => "✅",
-                    None => "❌",
-                };
-                write!(f, "{icon}|")?;
-            }
-
-            // Print newline except for the last time of this loop.
-            if iter.peek().is_some() {
-                writeln!(f)?;
-            }
-        }
-
-        Ok(())
-    }
-}
-
 impl DocArgs {
     // Allow unused self, because then it is clear to the maintainer that self is available for code expansion.
     #[allow(clippy::unused_self)]
     pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
-        let mut column_names = vec!["Name"];
-        // project, map: branch, whether it has the project
-        let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> =
-            HashMap::new();
-
-        for branch in &modpack.branches {
-            column_names.push(branch);
-            // Even tough we are in a loop, we want to abort the action if something goes wrong
-            // here, to avoid incorrect docs.
-            let branch_files = BranchFiles::from_directory(&modpack.directory, branch)?;
-
-            for project in &branch_files.projects {
-                // Vector in hashmap that shows which branches are compatible with a project.
-                if let Some(branch_map) = project_map.get_mut(project) {
-                    if branch_map.get(branch).is_none() {
-                        branch_map.insert(branch.clone(), Some(()));
-                    }
-                } else {
-                    let mut branch_map = HashMap::new();
-                    branch_map.insert(branch.clone(), Some(()));
-                    project_map.insert(project.clone(), branch_map);
-                }
-            }
-        }
-
-        for project in &mut project_map {
-            for branch in &modpack.branches {
-                if project.1.get(branch).is_none() {
-                    project.1.insert(branch.clone(), None);
-                }
-            }
-        }
-
-        let project_map_is_empty = project_map.is_empty();
-        let table = DocMarkdownTable {
-            column_names,
-            project_map,
-        };
+        let doc_markdown_table = modpack.generate_project_table()?;
 
         println!("# {} _by {}_", modpack.name, modpack.author);
         println!("{}", modpack.summary);
 
-        if !project_map_is_empty {
+        if !doc_markdown_table.project_map.is_empty() {
             println!("## What is included?");
-            println!("{table}");
+            println!("{doc_markdown_table}");
         }
 
         Ok(())
@@ -1062,7 +858,7 @@ impl VersionArgs {
         println!("Packrinth by {}", crate::AUTHORS);
         println!("Version {}", crate::VERSION);
 
-        if let Ok(newest_version) = packrinth::is_new_version_available()
+        if let Ok(newest_version) = packrinth::crates_io::is_new_version_available()
             && let Some(newest_version) = newest_version
         {
             println!(
@@ -1116,7 +912,7 @@ mod tests {
 	\"summary\": \"Short summary for this modpack\",
 	\"author\": \"John Doe\",
 	\"require_all\": false,
-	\"auto_dependencies\": false,
+	\"auto_dependencies\": true,
 	\"branches\": [],
 	\"projects\": {}
 }",

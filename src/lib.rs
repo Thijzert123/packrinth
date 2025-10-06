@@ -6,6 +6,7 @@
 //!
 //!   <p></p>
 //!
+//!   [![AUR Version](https://img.shields.io/aur/version/packrinth?style=for-the-badge)](https://aur.archlinux.org/packages/packrinth)
 //!   [![Crates.io Version](https://img.shields.io/crates/v/packrinth?style=for-the-badge)](https://crates.io/crates/packrinth)
 //!   [![Crates.io Total Downloads](https://img.shields.io/crates/d/packrinth?style=for-the-badge)](https://crates.io/crates/packrinth)
 //! </div>
@@ -18,24 +19,39 @@
 //! Packrinth-compatible structs.
 //!
 //! If you just want to use the Packrinth CLI, go to <https://packrinth.thijzert.nl>
-//! to see how to use it.
+//! to see how to use it. You can also use it to get a better understanding of Packrinth's main
+//! principles.
 
 #![warn(clippy::pedantic)]
 
+// All public structs should derive:
+// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+// Additionally, Serialize, Deserialize, PartialOrd and Ord should only be derived
+// if they make sense in their context.
+
+use std::io::Write;
+
 pub mod config;
+pub mod crates_io;
 pub mod modrinth;
 
-use crate::config::Modpack;
+use crate::config::{BranchConfig, BranchFiles, BranchFilesProject, Modpack, ProjectSettings};
+use crate::modrinth::{Env, File, FileResult, SideSupport, VersionDependency};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
-use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
+use std::fs;
+use std::fs::OpenOptions;
 use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
-use std::{fs, io};
-use zip::ZipArchive;
-use zip::result::ZipResult;
+
+/// The name of the target directory.
+///
+/// This directory is used for all exported files. It should not be in version control.
+pub const TARGET_DIRECTORY: &str = "target";
 
 static CLIENT: OnceLock<ClientWithMiddleware> = OnceLock::new();
 const USER_AGENT: &str = concat!(
@@ -73,129 +89,242 @@ fn request_text<T: ToString + ?Sized>(full_url: &T) -> Result<String, PackrinthE
     }
 }
 
-const MRPACK_CONFIG_FILE_NAME: &str = "modrinth.index.json";
-
-/// Checks if the modpack is dirty.
+/// The file name of the configuration file inside a `.mrpack` pack.
 ///
-/// It does this by checking whether the directory of the modpack
-/// has uncommitted changes. If any errors occur (for example, if no Git repository exists),
-/// `false` will be returned.
-#[must_use]
-pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
-    let git_repo = match gix::open(&modpack.directory) {
-        Ok(git_repo) => git_repo,
-        Err(_error) => return false,
-    };
+/// This file contains all the mods and their metadata of a Modrinth modpack. For more information,
+/// please take a look at the
+/// [official `.mrpack` specification](https://support.modrinth.com/en/articles/8802351-modrinth-modpack-format-mrpack).
+pub const MRPACK_INDEX_FILE_NAME: &str = "modrinth.index.json";
 
-    git_repo.is_dirty().unwrap_or(false)
+/// A utilization struct used for updating a project for a branch.
+///
+/// The fields in this struct are settings that can be used by
+/// the update function [`ProjectUpdater::update_project`]. You should create a new updater
+/// for every project update cycle, as the settings are different for every project.
+// Allow because these bools aren't here because this struct is a state machine.
+// All bool value combinations are valid, so no worries at all, Clippy!
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct ProjectUpdater<'a> {
+    pub branch_name: &'a str,
+    pub branch_config: &'a BranchConfig,
+    pub branch_files: &'a mut BranchFiles,
+    pub slug_project_id: &'a str,
+    pub project_settings: &'a ProjectSettings,
+    pub require_all: bool,
+    pub no_beta: bool,
+    pub no_alpha: bool,
 }
 
-/// Extract all the contents of a Modrinth modpack, except for the main manifest file.
-///
-/// # Errors
-/// An [`Err`] is returned when one of these things go wrong:
-/// - Failed to open file
-/// - Failed to start zip archive
-/// - Failed to get file by index
-/// - Failed to create dirs
-/// - Failed to copy file
-pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<()> {
-    let zip_file = fs::File::open(mrpack_path)?;
-    let mut archive = ZipArchive::new(zip_file)?;
+/// The result when updating a project.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ProjectUpdateResult {
+    /// The project was successfully updated. All dependencies will be returned,
+    /// but the [`Vec`] may be empty.
+    Added(Vec<VersionDependency>),
 
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        let output_path = Path::new(output_directory).join(file.name());
+    /// The project was skipped, because it has inclusions or exclusions specified.
+    Skipped,
 
-        if file.name().ends_with('/') {
-            // It's a directory
-            fs::create_dir_all(&output_path)?;
-        } else if file.name() != MRPACK_CONFIG_FILE_NAME {
-            // Make sure parent dirs exist
-            if let Some(parent) = output_path.parent()
-                && !parent.exists()
-            {
-                fs::create_dir_all(parent)?;
+    /// The project was not found with the specified preferences and project settings on the
+    /// Modrinth API.
+    NotFound,
+
+    /// Some other error occurred while updating a project.
+    Failed(PackrinthError),
+}
+
+impl ProjectUpdater<'_> {
+    /// Updates a project using the Modrinth API.
+    pub fn update_project(&mut self) -> ProjectUpdateResult {
+        match File::from_project(
+            self.branch_name,
+            self.branch_config,
+            self.slug_project_id,
+            self.project_settings,
+            self.no_beta,
+            self.no_alpha,
+        ) {
+            FileResult::Ok {
+                mut file,
+                dependencies,
+                project_id,
+            } => {
+                self.branch_files.projects.push(BranchFilesProject {
+                    name: file.project_name.clone(),
+                    id: Some(project_id),
+                });
+
+                if self.require_all {
+                    file.env = Some(Env {
+                        client: SideSupport::Required,
+                        server: SideSupport::Required,
+                    });
+                }
+
+                self.branch_files.files.push(file);
+                ProjectUpdateResult::Added(dependencies)
             }
-            // Copy file contents
-            let mut output_file = fs::File::create(&output_path)?;
-            io::copy(&mut file, &mut output_file)?;
+            FileResult::Skipped => ProjectUpdateResult::Skipped,
+            FileResult::NotFound => ProjectUpdateResult::NotFound,
+            FileResult::Err(error) => ProjectUpdateResult::Failed(error),
         }
     }
-
-    Ok(())
 }
 
-/// Struct representative of all versions of a crate on the `crates.io` API.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CratesIoVersions {
-    pub versions: Vec<CratesIoVersion>,
+/// A table that can be used to show which branches contain which projects.
+///
+/// This can be useful if you provide your modpack for multiple Minecraft versions,
+/// and you want to show which mods are compatible with all the modpack branches.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectTable {
+    /// The column names are sorted from left to right. The first value should be something like
+    /// `Project` or `Mod name`. All the other values should be the names of the branches.
+    pub column_names: Vec<String>,
+
+    /// The project map that contains information of which projects are available for which branches.
+    /// This [`HashMap`] contains the project as key, and another nested [`HashMap`] as value.
+    /// The nested map contains a branch name as key, and an empty [`Option`] as value.
+    /// [`Some`] with an empty `()` value means that the project is available for the branch,
+    /// while [`None`] means that the project isn't available for the branch.
+    pub project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>>,
 }
 
-/// Struct representative of a version on the `crates.io` API.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CratesIoVersion {
-    /// The version number of the crate version.
-    pub num: String,
+impl Display for ProjectTable {
+    /// Formats the [`ProjectTable`] to a Markdown table. This table will show which projects
+    /// are in the branches using checkmark icons. The resulting Markdown will be *ugly*,
+    /// meaning that a Markdown renderer can show the text correctly, but it may not be the prettiest
+    /// out-of-the-box (without a renderer).
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // Write column names
+        writeln!(f, "|{}|", self.column_names.join("|"))?;
+
+        // Write alignment text (:-- is left, :-: is center)
+        write!(f, "|:--|")?;
+        // Use 1..len because column names include the 'Name' for the project column
+        for _ in 1..self.column_names.len() {
+            write!(f, ":-:|")?;
+        }
+        writeln!(f)?;
+
+        let mut sorted_project_map: Vec<_> = self.project_map.iter().collect();
+        // Sort by key (human name of project)
+        sorted_project_map.sort_by(|a, b| a.0.name.cmp(&b.0.name));
+
+        let mut iter = sorted_project_map.iter().peekable();
+        while let Some(project) = iter.next() {
+            if let Some(id) = &project.0.id {
+                // If project has an id (not a manual file), write a Markdown link.
+                let mut project_url = "https://modrinth.com/project/".to_string();
+                project_url.push_str(id);
+                write!(f, "|[{}]({})|", project.0.name, project_url)?;
+            } else {
+                write!(f, "|{}|", project.0.name)?;
+            }
+
+            let mut sorted_branch_map: Vec<_> = project.1.iter().collect();
+            // Sort by key (human name of project)
+            sorted_branch_map.sort_by(|a, b| a.0.cmp(b.0));
+
+            for branch in sorted_branch_map {
+                let icon = match branch.1 {
+                    Some(()) => "✅",
+                    None => "❌",
+                };
+                write!(f, "{icon}|")?;
+            }
+
+            // Print newline except for the last time of this loop.
+            if iter.peek().is_some() {
+                writeln!(f)?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
-impl CratesIoVersions {
-    /// Gets `crates.io` versions from a crate name.
+// TODO extend modrinth api structs to have all possible values, not just the ones required by packrinth
+
+/// Utils for working with a Git-managed modpack instance.
+pub struct GitUtils;
+
+impl GitUtils {
+    /// Initializes a Git repository tailored for use with a Packrinth modpack.
+    ///
+    /// This means that a `.gitignore` file will be made containing the `target` directory,
+    /// the place where all exported `.mrpack` files will be located.
     ///
     /// # Errors
-    /// - [`PackrinthError::FailedToParseCratesIoResponseJson`] if the response was invalid
-    pub fn from_crate(crate_name: &str) -> Result<Self, PackrinthError> {
-        let endpoint = format!("/crates/{crate_name}/versions");
-        let full_url = format!("https://crates.io/api/v1/{endpoint}");
-        let crates_io_response = request_text(&full_url)?;
-
-        match serde_json::from_str::<Self>(&crates_io_response) {
-            Ok(versions) => Ok(versions),
-            Err(error) => Err(PackrinthError::FailedToParseCratesIoResponseJson {
-                crates_io_endpoint: endpoint.to_string(),
-                error_message: error.to_string(),
-            }),
+    /// - [`PackrinthError::FailedToInitGitRepoWhileInitModpack`] if initializing the Git repository failed
+    /// - [`PackrinthError::FailedToWriteFile`] if writing to the `.gitignore` file failed
+    pub fn initialize_modpack_repo(directory: &Path) -> Result<(), PackrinthError> {
+        if let Err(error) = gix::init(directory) {
+            // If the repo already exists, don't show an error.
+            if !matches!(
+                &error,
+                gix::init::Error::Init(gix::create::Error::DirectoryExists { path })
+                    if path.file_name() == Some(std::ffi::OsStr::new(".git"))
+            ) {
+                return Err(PackrinthError::FailedToInitGitRepoWhileInitModpack {
+                    error_message: error.to_string(),
+                });
+            }
         }
+
+        let gitignore_path = directory.join(".gitignore");
+        if let Ok(exists) = fs::exists(&gitignore_path)
+            && !exists
+            && let Ok(gitignore_file) = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(&gitignore_path)
+        {
+            if let Err(error) = writeln!(&gitignore_file, "# Exported files") {
+                return Err(PackrinthError::FailedToWriteFile {
+                    path_to_write_to: gitignore_path.display().to_string(),
+                    error_message: error.to_string(),
+                });
+            }
+            if let Err(error) = writeln!(&gitignore_file, "{TARGET_DIRECTORY}") {
+                return Err(PackrinthError::FailedToWriteFile {
+                    path_to_write_to: gitignore_path.display().to_string(),
+                    error_message: error.to_string(),
+                });
+            }
+            if let Err(error) = gitignore_file.sync_all() {
+                return Err(PackrinthError::FailedToWriteFile {
+                    path_to_write_to: gitignore_path.display().to_string(),
+                    error_message: error.to_string(),
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Checks if the modpack is dirty.
+    ///
+    /// It does this by checking whether the directory of the modpack
+    /// has uncommitted changes. If any errors occur (for example, if no Git repository exists),
+    /// `false` will be returned.
+    #[must_use]
+    pub fn modpack_is_dirty(modpack: &Modpack) -> bool {
+        let git_repo = match gix::open(&modpack.directory) {
+            Ok(git_repo) => git_repo,
+            Err(_error) => return false,
+        };
+
+        git_repo.is_dirty().unwrap_or(false)
     }
 }
 
-/// Checks if a new Packrinth version is available by checking if a newer semantic version is
-/// present on `crates.io`.
-///
-/// # Errors
-/// - [`PackrinthError::FailedToParseSemverVersion`] if parsing a version to a semver version failed
-pub fn is_new_version_available() -> Result<Option<String>, PackrinthError> {
-    let newest_version = &CratesIoVersions::from_crate(env!("CARGO_PKG_NAME"))?.versions[0].num;
-    let newest_version = match semver::Version::parse(newest_version) {
-        Ok(version) => version,
-        Err(error) => {
-            return Err(PackrinthError::FailedToParseSemverVersion {
-                version_to_parse: newest_version.clone(),
-                error_message: error.to_string(),
-            });
-        }
-    };
-    let current_version = env!("CARGO_PKG_VERSION");
-    let current_version = match semver::Version::parse(current_version) {
-        Ok(version) => version,
-        Err(error) => {
-            return Err(PackrinthError::FailedToParseSemverVersion {
-                version_to_parse: current_version.to_string(),
-                error_message: error.to_string(),
-            });
-        }
-    };
-
-    if newest_version > current_version {
-        Ok(Some(newest_version.to_string()))
-    } else {
-        Ok(None)
-    }
-}
+/// A result with [`PackrinthError`] as [`Err`].
+pub type PackrinthResult<T> = Result<T, PackrinthError>;
 
 /// An error that can occur while performing Packrinth operations.
 #[non_exhaustive]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PackrinthError {
     PathIsFile {
         path: String,
