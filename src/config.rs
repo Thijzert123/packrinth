@@ -278,13 +278,6 @@ const GAME: &str = "minecraft";
 /// will only be copied to client instances.
 pub const OVERRIDE_DIRS: [&str; 3] = ["overrides", "server-overrides", "client-overrides"];
 
-pub struct ModpackImporter<'a> {
-    files_iter: std::slice::Iter<'a, File>,
-    branch_files: &'a mut BranchFiles,
-    add_projects: bool,
-    projects: &'a mut IndexMap<String, ProjectSettings>,
-}
-
 impl Modpack {
     /// Creates a new modpack to a directory.
     ///
@@ -1063,42 +1056,6 @@ impl Modpack {
             fabric_loader,
             quilt_loader,
         })
-    }
-}
-
-impl<'a> Iterator for ModpackImporter<'a> {
-    type Item = PackrinthResult<&'a File>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let file = self.files_iter.next()?;
-
-        let version = match Version::from_sha512_hash(&file.hashes.sha512) {
-            Ok(version) => version,
-            Err(error) => return Some(Err(error)),
-        };
-        let project = match Project::from_id(&version.project_id) {
-            Ok(project) => project,
-            Err(error) => return Some(Err(error)),
-        };
-
-        self.branch_files.projects.push(BranchFilesProject {
-            name: project.title,
-            id: Some(project.slug.clone()),
-        });
-
-        if self.add_projects && !self.projects.contains_key(&version.project_id)
-            || !self.projects.contains_key(&project.slug)
-        {
-            self.projects.insert(
-                project.slug,
-                ProjectSettings {
-                    version_overrides: None,
-                    include_or_exclude: None,
-                },
-            );
-        }
-
-        Some(Ok(file))
     }
 }
 
