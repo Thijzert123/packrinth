@@ -19,7 +19,8 @@
 //! Packrinth-compatible structs.
 //!
 //! If you just want to use the Packrinth CLI, go to <https://packrinth.thijzert.nl>
-//! to see how to use it.
+//! to see how to use it. You can also use it to get a better understanding of Packrinth's main
+//! principles.
 
 #![warn(clippy::pedantic)]
 
