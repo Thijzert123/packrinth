@@ -360,7 +360,11 @@ pub struct ExportArgs {
 pub struct CleanArgs;
 
 #[derive(Parser, Debug)]
-pub struct DocArgs;
+pub struct DocArgs {
+    /// Only generate the project table
+    #[clap(short, long)]
+    pub table_only: bool,
+}
 
 #[derive(Parser, Debug)]
 pub struct CompletionsArgs {

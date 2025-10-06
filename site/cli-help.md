@@ -401,7 +401,11 @@ Removes the target directory
 
 Generate Markdown documentation
 
-**Usage:** `packrinth doc`
+**Usage:** `packrinth doc [OPTIONS]`
+
+###### **Options:**
+
+* `-t`, `--table-only` — Only generate the project table
 
 
 
