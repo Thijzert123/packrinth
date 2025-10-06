@@ -39,6 +39,9 @@ impl CratesIoVersions {
 /// Checks if a new Packrinth version is available by checking if a newer semantic version is
 /// present on `crates.io`.
 ///
+/// If the request was successful and a new version is available, a [`Some`] value with the new version
+/// gets returned. If no new version was found, a [`None`] value is the result.
+///
 /// # Errors
 /// - [`PackrinthError::FailedToParseSemverVersion`] if parsing a version to a semver version failed
 pub fn is_new_version_available() -> Result<Option<String>, PackrinthError> {
