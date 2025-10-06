@@ -72,3 +72,18 @@ pub fn is_new_version_available() -> Result<Option<String>, PackrinthError> {
         Ok(None)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn versions_from_crate() {
+        assert!(CratesIoVersions::from_crate(env!("CARGO_PKG_NAME")).is_ok());
+    }
+
+    #[test]
+    fn new_version_available() {
+        assert!(is_new_version_available().is_ok());
+    }
+}
