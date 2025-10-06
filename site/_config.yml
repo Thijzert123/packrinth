@@ -20,8 +20,5 @@ callouts:
   note:
     title: Note
     color: blue
-  tip:
-    title: Tip
-    color: green
 
 ga_tracking: G-8FM4VPDZ2T
