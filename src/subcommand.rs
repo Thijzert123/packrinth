@@ -8,7 +8,7 @@ use packrinth::config::{
     ProjectSettings,
 };
 use packrinth::modrinth::{
-    MrPack, Project, Version, VersionDependency, VersionDependencyType, extract_mrpack,
+    MrPack, Project, Version, VersionDependency, VersionDependencyType, extract_mrpack_overrides,
 };
 use packrinth::{GitUtils, PackrinthError, ProjectUpdateResult, ProjectUpdater, config};
 use progress_bar::pb::ProgressBar;
@@ -128,7 +128,6 @@ impl InitArgs {
 }
 
 impl ImportArgs {
-    // TODO move into lib
     pub fn run(
         &self,
         modpack: &mut Modpack,
@@ -139,85 +138,10 @@ impl ImportArgs {
         }
 
         let mrpack = MrPack::from_mrpack(&self.modrinth_pack)?;
-
-        let branch_name = match &self.modrinth_pack.file_name() {
-            Some(branch_name) => branch_name.display().to_string(),
-            None => self.modrinth_pack.display().to_string(),
-        }
-        .split(".mrpack")
-        .collect::<Vec<&str>>()[0]
-            .to_string();
-
-        // Check if branch already exists
-        if modpack.branches.contains(&branch_name) && !self.force {
-            return Err(PackrinthError::BranchAlreadyExists {
-                branch: branch_name,
-            });
-        }
-
-        let mut branch_config = modpack.new_branch(&branch_name)?;
-        branch_config.version.clone_from(&branch_name);
-        branch_config.minecraft_version = mrpack.dependencies.minecraft;
-        branch_config.acceptable_minecraft_versions = Vec::new();
-        if let Some(loader_version) = mrpack.dependencies.fabric_loader {
-            branch_config.mod_loader = Some(MainLoader::Fabric);
-            branch_config.loader_version = Some(loader_version);
-        } else if let Some(loader_version) = mrpack.dependencies.forge {
-            branch_config.mod_loader = Some(MainLoader::Forge);
-            branch_config.loader_version = Some(loader_version);
-        } else if let Some(loader_version) = mrpack.dependencies.neoforge {
-            branch_config.mod_loader = Some(MainLoader::NeoForge);
-            branch_config.loader_version = Some(loader_version);
-        } else if let Some(loader_version) = mrpack.dependencies.quilt_loader {
-            branch_config.mod_loader = Some(MainLoader::Quilt);
-            branch_config.loader_version = Some(loader_version);
-        }
-        branch_config.save(&modpack.directory, &branch_name)?;
-
-        let mut branch_files = BranchFiles::from_directory(&modpack.directory, &branch_name)?;
-        branch_files.files.clone_from(&mrpack.files);
-
         let mut progress_bar = create_progress_bar(mrpack.files.len());
         progress_bar.set_action("importing", Color::Blue, Style::Bold);
 
-        for file in mrpack.files {
-            let version = match Version::from_sha512_hash(&file.hashes.sha512) {
-                Ok(version) => version,
-                Err(_error) => continue,
-            };
-            let project = Project::from_id(&version.project_id)?;
-
-            branch_files.projects.push(BranchFilesProject {
-                name: project.title,
-                id: Some(project.slug.clone()),
-            });
-
-            if self.add_projects && !modpack.projects.contains_key(&version.project_id)
-                || !modpack.projects.contains_key(&project.slug)
-            {
-                modpack.projects.insert(
-                    project.slug,
-                    ProjectSettings {
-                        version_overrides: None,
-                        include_or_exclude: None,
-                    },
-                );
-            }
-
-            progress_bar.inc();
-        }
-
-        branch_files.save(&modpack.directory, &branch_name)?;
-        modpack.save()?;
-
-        let mrpack_output = &modpack.directory.join(&branch_name);
-        if let Err(error) = extract_mrpack(&self.modrinth_pack, mrpack_output) {
-            return Err(PackrinthError::FailedToExtractMrPack {
-                mrpack_path: self.modrinth_pack.display().to_string(),
-                output_directory: mrpack_output.display().to_string(),
-                error_message: error.to_string(),
-            });
-        }
+        modpack.import_mrpack(mrpack, &self.modrinth_pack, self.add_projects, self.force, || progress_bar.inc())?;
 
         progress_bar.print_info(
             "success",

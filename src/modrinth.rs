@@ -20,7 +20,7 @@ const MODRINTH_API_BASE_URL: &str = "https://api.modrinth.com/v2";
 /// - Failed to get file by index
 /// - Failed to create dirs
 /// - Failed to copy file
-pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<()> {
+pub fn extract_mrpack_overrides(mrpack_path: &Path, output_directory: &Path) -> ZipResult<()> {
     let zip_file = fs::File::open(mrpack_path)?;
     let mut archive = ZipArchive::new(zip_file)?;
 
@@ -317,6 +317,7 @@ impl MrPack {
             }
         };
 
+        // TODO auto convert zip errors to packrinth errors and use ?
         let mut mrpack_config_file = match zip_archive.by_name(MRPACK_INDEX_FILE_NAME) {
             Ok(mrpack_config_file_name) => mrpack_config_file_name,
             Err(error) => {

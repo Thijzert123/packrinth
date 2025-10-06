@@ -1,7 +1,7 @@
 //! Structs for configuring and managing a Packrinth modpack instance.
 
-use crate::modrinth::{File, MrPack, MrPackDependencies};
-use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError, ProjectTable};
+use crate::modrinth::{extract_mrpack_overrides, File, MrPack, MrPackDependencies, Project, Version};
+use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError, ProjectTable, GitUtils, PackrinthResult};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -9,6 +9,7 @@ use std::fmt::Debug;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
+use progress_bar::{Color, Style};
 use walkdir::WalkDir;
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
@@ -275,6 +276,13 @@ const GAME: &str = "minecraft";
 /// will only be copied to server instances, while the contents of the `client-overrides` directory
 /// will only be copied to client instances.
 pub const OVERRIDE_DIRS: [&str; 3] = ["overrides", "server-overrides", "client-overrides"];
+
+pub struct ModpackImporter<'a> {
+    files_iter: std::slice::Iter<'a, File>,
+    branch_files: &'a mut BranchFiles,
+    add_projects: bool,
+    projects: &'a mut IndexMap<String, ProjectSettings>,
+}
 
 impl Modpack {
     /// Creates a new modpack to a directory.
@@ -918,6 +926,86 @@ impl Modpack {
         })
     }
 
+    // TODO api docs
+    pub fn import_mrpack<F>(&mut self, mrpack: MrPack, mrpack_path: &Path, add_projects: bool, force: bool, mut f: F) -> PackrinthResult<()> where F: FnMut() {
+        let branch_name = match mrpack_path.file_name() {
+            Some(branch_name) => branch_name.display().to_string(),
+            None => mrpack_path.display().to_string(),
+        }
+            .split(".mrpack")
+            .collect::<Vec<&str>>()[0]
+            .to_string();
+
+        // Check if branch already exists
+        if self.branches.contains(&branch_name) && !force {
+            return Err(PackrinthError::BranchAlreadyExists {
+                branch: branch_name,
+            });
+        }
+
+        let mut branch_config = self.new_branch(&branch_name)?;
+        branch_config.version.clone_from(&branch_name);
+        branch_config.minecraft_version = mrpack.dependencies.minecraft;
+        branch_config.acceptable_minecraft_versions = Vec::new();
+        if let Some(loader_version) = mrpack.dependencies.fabric_loader {
+            branch_config.mod_loader = Some(MainLoader::Fabric);
+            branch_config.loader_version = Some(loader_version);
+        } else if let Some(loader_version) = mrpack.dependencies.forge {
+            branch_config.mod_loader = Some(MainLoader::Forge);
+            branch_config.loader_version = Some(loader_version);
+        } else if let Some(loader_version) = mrpack.dependencies.neoforge {
+            branch_config.mod_loader = Some(MainLoader::NeoForge);
+            branch_config.loader_version = Some(loader_version);
+        } else if let Some(loader_version) = mrpack.dependencies.quilt_loader {
+            branch_config.mod_loader = Some(MainLoader::Quilt);
+            branch_config.loader_version = Some(loader_version);
+        }
+        branch_config.save(&self.directory, &branch_name)?;
+
+        let mut branch_files = BranchFiles::from_directory(&self.directory, &branch_name)?;
+        branch_files.files.clone_from(&mrpack.files);
+
+        for file in mrpack.files {
+            let version = match Version::from_sha512_hash(&file.hashes.sha512) {
+                Ok(version) => version,
+                Err(_error) => continue,
+            };
+            let project = Project::from_id(&version.project_id)?;
+
+            branch_files.projects.push(BranchFilesProject {
+                name: project.title,
+                id: Some(project.slug.clone()),
+            });
+
+            if add_projects && !self.projects.contains_key(&version.project_id)
+                || !self.projects.contains_key(&project.slug)
+            {
+                self.projects.insert(
+                    project.slug,
+                    ProjectSettings {
+                        version_overrides: None,
+                        include_or_exclude: None,
+                    },
+                );
+            }
+
+            f();
+        }
+
+        branch_files.save(&self.directory, &branch_name)?;
+
+        let mrpack_output = &self.directory.join(&branch_name);
+        if let Err(error) = extract_mrpack_overrides(mrpack_path, mrpack_output) {
+            return Err(PackrinthError::FailedToExtractMrPack {
+                mrpack_path: mrpack_path.display().to_string(),
+                output_directory: mrpack_output.display().to_string(),
+                error_message: error.to_string(),
+            });
+        }
+
+        Ok(())
+    }
+
     fn create_dependencies(
         branch_config: BranchConfig,
     ) -> Result<MrPackDependencies, PackrinthError> {
@@ -946,6 +1034,42 @@ impl Modpack {
             fabric_loader,
             quilt_loader,
         })
+    }
+}
+
+impl<'a> Iterator for ModpackImporter<'a> {
+    type Item = PackrinthResult<&'a File>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let file = self.files_iter.next()?;
+
+        let version = match Version::from_sha512_hash(&file.hashes.sha512) {
+            Ok(version) => version,
+            Err(error) => return Some(Err(error)),
+        };
+        let project = match Project::from_id(&version.project_id) {
+            Ok(project) => project,
+            Err(error) => return Some(Err(error)),
+        };
+
+        self.branch_files.projects.push(BranchFilesProject {
+            name: project.title,
+            id: Some(project.slug.clone()),
+        });
+
+        if self.add_projects && !self.projects.contains_key(&version.project_id)
+            || !self.projects.contains_key(&project.slug)
+        {
+            self.projects.insert(
+                project.slug,
+                ProjectSettings {
+                    version_overrides: None,
+                    include_or_exclude: None,
+                },
+            );
+        }
+
+        Some(Ok(file))
     }
 }
 
