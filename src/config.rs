@@ -1,7 +1,9 @@
 //! Structs for configuring and managing a Packrinth modpack instance.
 
-use crate::modrinth::{extract_mrpack_overrides, File, MrPack, MrPackDependencies, Project, Version};
-use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError, ProjectTable, PackrinthResult};
+use crate::modrinth::{
+    File, MrPack, MrPackDependencies, Project, Version, extract_mrpack_overrides,
+};
+use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError, PackrinthResult, ProjectTable};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -944,13 +946,23 @@ impl Modpack {
     /// - [`BranchFiles::from_directory`]
     /// - [`Project::from_id`]
     /// - [`BranchFiles::save`]
-    pub fn import_mrpack<F>(&mut self, mrpack: MrPack, mrpack_path: &Path, add_projects: bool, force: bool, mut f: F) -> PackrinthResult<()> where F: FnMut() {
+    pub fn import_mrpack<F>(
+        &mut self,
+        mrpack: MrPack,
+        mrpack_path: &Path,
+        add_projects: bool,
+        force: bool,
+        mut f: F,
+    ) -> PackrinthResult<()>
+    where
+        F: FnMut(),
+    {
         let branch_name = match mrpack_path.file_name() {
             Some(branch_name) => branch_name.display().to_string(),
             None => mrpack_path.display().to_string(),
         }
-            .split(".mrpack")
-            .collect::<Vec<&str>>()[0]
+        .split(".mrpack")
+        .collect::<Vec<&str>>()[0]
             .to_string();
 
         // Check if branch already exists

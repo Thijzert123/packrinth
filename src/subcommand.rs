@@ -4,12 +4,9 @@ use clap_complete::{Generator, shells};
 use dialoguer::Confirm;
 use indexmap::IndexMap;
 use packrinth::config::{
-    BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack,
-    ProjectSettings,
+    BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack, ProjectSettings,
 };
-use packrinth::modrinth::{
-    MrPack, VersionDependency, VersionDependencyType,
-};
+use packrinth::modrinth::{MrPack, VersionDependency, VersionDependencyType};
 use packrinth::{GitUtils, PackrinthError, ProjectUpdateResult, ProjectUpdater, config};
 use progress_bar::pb::ProgressBar;
 use progress_bar::{Color, Style};
@@ -141,7 +138,13 @@ impl ImportArgs {
         let mut progress_bar = create_progress_bar(mrpack.files.len());
         progress_bar.set_action("importing", Color::Blue, Style::Bold);
 
-        modpack.import_mrpack(mrpack, &self.modrinth_pack, self.add_projects, self.force, || progress_bar.inc())?;
+        modpack.import_mrpack(
+            mrpack,
+            &self.modrinth_pack,
+            self.add_projects,
+            self.force,
+            || progress_bar.inc(),
+        )?;
 
         progress_bar.print_info(
             "success",
