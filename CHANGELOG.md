@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/Thijzert123/packrinth/compare/v0.7.6...v0.8.0) - 2025-10-06
+
+### Changed
+
+- `require_all` will be `false` by default again (**CHANGELOG: CHANGE PREVIOUS COMMIT MESSAGE**)
+- `require_all` and `auto_dependencies` in `modpack.json` will be `true` by default
+
+### Other
+
+- `--table-only` option for `doc` subcommand
+- Merge branch 'main' into lib2
+
 ## [0.7.6](https://github.com/Thijzert123/packrinth/compare/v0.7.5...v0.7.6) - 2025-09-30
 
 ### Changed
