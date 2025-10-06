@@ -62,7 +62,7 @@ const USER_AGENT: &str = concat!(
     env!("CARGO_PKG_VERSION")
 );
 
-fn request_text<T: ToString + ?Sized>(full_url: &T) -> Result<String, PackrinthError> {
+fn request_text<T: ToString + ?Sized>(full_url: &T) -> PackrinthResult<String> {
     let client = CLIENT.get_or_init(|| {
         let retry_policy = ExponentialBackoff::builder()
             .build_with_total_retry_duration(Duration::from_secs(60 * 2));
@@ -258,7 +258,7 @@ impl GitUtils {
     /// # Errors
     /// - [`PackrinthError::FailedToInitGitRepoWhileInitModpack`] if initializing the Git repository failed
     /// - [`PackrinthError::FailedToWriteFile`] if writing to the `.gitignore` file failed
-    pub fn initialize_modpack_repo(directory: &Path) -> Result<(), PackrinthError> {
+    pub fn initialize_modpack_repo(directory: &Path) -> PackrinthResult<()> {
         if let Err(error) = gix::init(directory) {
             // If the repo already exists, don't show an error.
             if !matches!(

@@ -1,7 +1,7 @@
 //! Structs that are only used for (de)serializing JSONs associated with Modrinth.
 
 use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
-use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError};
+use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError, PackrinthResult};
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
@@ -47,7 +47,7 @@ pub fn extract_mrpack_overrides(mrpack_path: &Path, output_directory: &Path) -> 
     Ok(())
 }
 
-fn request_text<T: ToString>(api_endpoint: &T) -> Result<String, PackrinthError> {
+fn request_text<T: ToString>(api_endpoint: &T) -> PackrinthResult<String> {
     let full_url = MODRINTH_API_BASE_URL.to_string() + api_endpoint.to_string().as_str();
     crate::request_text(&full_url)
 }
@@ -238,7 +238,7 @@ impl Project {
     /// # Errors
     /// - [`PackrinthError::RequestFailed`] if the Modrinth request failed
     /// - [`PackrinthError::FailedToParseConfigJson`] if the Modrinth response was invalid
-    pub fn from_id(id: &str) -> Result<Self, PackrinthError> {
+    pub fn from_id(id: &str) -> PackrinthResult<Self> {
         // Request to get general information about the project associated with the version
         let api_endpoint = format!("/project/{id}");
         let modrinth_project_response = request_text(&api_endpoint)?;
@@ -257,7 +257,7 @@ impl ProjectType {
     ///
     /// # Errors
     /// - [`PackrinthError::AttemptedToAddOtherModpack`] when [`ProjectType`] is [`ProjectType::Modpack`]
-    pub fn directory(&self) -> Result<&str, PackrinthError> {
+    pub fn directory(&self) -> PackrinthResult<&str> {
         match self {
             ProjectType::Mod => Ok("mods"),
 
@@ -275,7 +275,7 @@ impl Version {
     ///
     /// # Errors
     /// - [`PackrinthError::FailedToParseModrinthResponseJson`] if the response was invalid
-    pub fn from_sha512_hash(hash: &str) -> Result<Self, PackrinthError> {
+    pub fn from_sha512_hash(hash: &str) -> PackrinthResult<Self> {
         let api_endpoint = format!("/version_file/{hash}?algorithm=sha512");
         let api_response = request_text(&api_endpoint)?;
 
@@ -297,7 +297,7 @@ impl MrPack {
     /// - [`PackrinthError::FailedToCreateZipArchive`] when creating the zip archive failed
     /// - [`PackrinthError::InvalidMrPack`] when the modpack doesn't fully adhere to the mrpack specifications
     /// - [`PackrinthError::FailedToReadToString`] when reading the main config in the zip failed
-    pub fn from_mrpack(mrpack_path: &Path) -> Result<Self, PackrinthError> {
+    pub fn from_mrpack(mrpack_path: &Path) -> PackrinthResult<Self> {
         let mrpack_file = match fs::File::open(mrpack_path) {
             Ok(mrpack_file) => mrpack_file,
             Err(error) => {

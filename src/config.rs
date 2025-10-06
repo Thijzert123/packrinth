@@ -21,7 +21,7 @@ use zip::write::SimpleFileOptions;
 /// version for their project.
 pub const CURRENT_PACK_FORMAT: u16 = 1;
 
-fn json_to_file<T, P>(json_value: &T, file: P) -> Result<(), PackrinthError>
+fn json_to_file<T, P>(json_value: &T, file: P) -> PackrinthResult<()>
 where
     T: ?Sized + Serialize + Debug,
     P: AsRef<Path>,
@@ -293,7 +293,7 @@ impl Modpack {
     ///   in the directory and `force` was `false`
     /// - [`PackrinthError::PathIsFile`] if the directory path is a file
     /// - [`PackrinthError::ProjectIsNotAdded`] if creating the directory failed
-    pub fn new(directory: &Path, force: bool) -> Result<Self, PackrinthError> {
+    pub fn new(directory: &Path, force: bool) -> PackrinthResult<Self> {
         let modpack_config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
         if !force
             && let Ok(exists) = fs::exists(&modpack_config_path)
@@ -336,7 +336,7 @@ impl Modpack {
     /// # Errors
     /// - [`PackrinthError::FailedToReadToString`] if reading the modpack configuration failed
     /// - [`PackrinthError::FailedToParseConfigJson`] if parsing the configuration JSON failed
-    pub fn from_directory(directory: &Path) -> Result<Self, PackrinthError> {
+    pub fn from_directory(directory: &Path) -> PackrinthResult<Self> {
         let modpack_config_path = directory.join(MODPACK_CONFIG_FILE_NAME);
 
         let config = match fs::read_to_string(&modpack_config_path) {
@@ -399,7 +399,7 @@ impl Modpack {
         project: &str,
         branch: &str,
         project_version_id: &str,
-    ) -> Result<(), PackrinthError> {
+    ) -> PackrinthResult<()> {
         let Some(project_settings) = self.projects.get_mut(project) else {
             return Err(PackrinthError::ProjectIsNotAdded {
                 project: project.to_string(),
@@ -428,7 +428,7 @@ impl Modpack {
         &mut self,
         project: &str,
         branch: &str,
-    ) -> Result<(), PackrinthError> {
+    ) -> PackrinthResult<()> {
         let Some(project_settings) = self.projects.get_mut(project) else {
             return Err(PackrinthError::ProjectIsNotAdded {
                 project: project.to_string(),
@@ -456,7 +456,7 @@ impl Modpack {
     ///
     /// # Errors
     /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
-    pub fn remove_all_version_overrides(&mut self, project: &str) -> Result<(), PackrinthError> {
+    pub fn remove_all_version_overrides(&mut self, project: &str) -> PackrinthResult<()> {
         if let Some(project_settings) = self.projects.get_mut(project) {
             project_settings.version_overrides = None;
             Ok(())
@@ -476,7 +476,7 @@ impl Modpack {
         &mut self,
         project: &str,
         new_inclusions: &[String],
-    ) -> Result<(), PackrinthError> {
+    ) -> PackrinthResult<()> {
         let Some(project_settings) = self.projects.get_mut(project) else {
             return Err(PackrinthError::ProjectIsNotAdded {
                 project: project.to_string(),
@@ -510,7 +510,7 @@ impl Modpack {
         &mut self,
         project: &str,
         inclusions_to_remove: &[String],
-    ) -> Result<(), PackrinthError> {
+    ) -> PackrinthResult<()> {
         let Some(project_settings) = self.projects.get_mut(project) else {
             return Err(PackrinthError::ProjectIsNotAdded {
                 project: project.to_string(),
@@ -534,7 +534,7 @@ impl Modpack {
     /// # Errors
     /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
     /// - [`PackrinthError::NoInclusionsForProject`] if no inclusions exist for the project
-    pub fn remove_all_project_inclusions(&mut self, project: &str) -> Result<(), PackrinthError> {
+    pub fn remove_all_project_inclusions(&mut self, project: &str) -> PackrinthResult<()> {
         if let Some(project_settings) = self.projects.get_mut(project)
             && let Some(include_or_exclude) = &project_settings.include_or_exclude
         {
@@ -563,7 +563,7 @@ impl Modpack {
         &mut self,
         project: &str,
         new_exclusions: &[String],
-    ) -> Result<(), PackrinthError> {
+    ) -> PackrinthResult<()> {
         let Some(project_settings) = self.projects.get_mut(project) else {
             return Err(PackrinthError::ProjectIsNotAdded {
                 project: project.to_string(),
@@ -597,7 +597,7 @@ impl Modpack {
         &mut self,
         project: &str,
         exclusions_to_remove: &[String],
-    ) -> Result<(), PackrinthError> {
+    ) -> PackrinthResult<()> {
         let Some(project_settings) = self.projects.get_mut(project) else {
             return Err(PackrinthError::ProjectIsNotAdded {
                 project: project.to_string(),
@@ -621,7 +621,7 @@ impl Modpack {
     /// # Errors
     /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
     /// - [`PackrinthError::NoExclusionsForProject`] if no exclusions exist for the project
-    pub fn remove_all_project_exclusions(&mut self, project: &str) -> Result<(), PackrinthError> {
+    pub fn remove_all_project_exclusions(&mut self, project: &str) -> PackrinthResult<()> {
         if let Some(project_settings) = self.projects.get_mut(project)
             && let Some(include_or_exclude) = &project_settings.include_or_exclude
         {
@@ -656,7 +656,7 @@ impl Modpack {
     ///
     /// # Errors
     /// - [`PackrinthError::FailedToCreateDir`] if the creation of the branch directory failed
-    pub fn new_branch(&mut self, name: &str) -> Result<BranchConfig, PackrinthError> {
+    pub fn new_branch(&mut self, name: &str) -> PackrinthResult<BranchConfig> {
         if !self.branches.contains(&name.to_string()) {
             self.branches.push(name.to_string());
         }
@@ -680,7 +680,7 @@ impl Modpack {
     ///
     /// # Errors
     /// - [`PackrinthError::FailedToRemoveDir`] if removing the branch directory failed
-    pub fn remove_branches(&mut self, branch_names: &Vec<String>) -> Result<(), PackrinthError> {
+    pub fn remove_branches(&mut self, branch_names: &Vec<String>) -> PackrinthResult<()> {
         for branch_name in branch_names {
             let branch_path = self.directory.join(branch_name);
 
@@ -706,7 +706,7 @@ impl Modpack {
     /// # Errors
     /// - [`PackrinthError::FailedToSerialize`] if serialising this type to a JSON failed
     /// - [`PackrinthError::FailedToWriteFile`] if writing the JSON to a file failed
-    pub fn save(&self) -> Result<(), PackrinthError> {
+    pub fn save(&self) -> PackrinthResult<()> {
         json_to_file(self, &self.modpack_config_path)
     }
 
@@ -730,7 +730,7 @@ impl Modpack {
     // Allow because it's hard to split this function up in other functions
     // without them having lots of parameters.
     #[allow(clippy::too_many_lines)]
-    pub fn export_branch(&self, branch: &str) -> Result<PathBuf, PackrinthError> {
+    pub fn export_branch(&self, branch: &str) -> PackrinthResult<PathBuf> {
         let branch_config = BranchConfig::from_directory(&self.directory, branch)?;
         let branch_files = BranchFiles::from_directory(&self.directory, branch)?;
 
@@ -880,7 +880,7 @@ impl Modpack {
     /// # Errors
     /// The only possible errors come from [`BranchFiles::from_directory`], which
     /// is called in this function and propagated upwards.
-    pub fn generate_project_table(&self) -> Result<ProjectTable, PackrinthError> {
+    pub fn generate_project_table(&self) -> PackrinthResult<ProjectTable> {
         let mut column_names = vec!["Name".to_string()];
         // project, map: branch, whether it has the project
         let mut project_map: HashMap<BranchFilesProject, HashMap<String, Option<()>>> =
@@ -1030,7 +1030,7 @@ impl Modpack {
 
     fn create_dependencies(
         branch_config: BranchConfig,
-    ) -> Result<MrPackDependencies, PackrinthError> {
+    ) -> PackrinthResult<MrPackDependencies> {
         let mut forge = None;
         let mut neoforge = None;
         let mut fabric_loader = None;
@@ -1084,7 +1084,7 @@ impl BranchConfig {
     /// - [`PackrinthError::FailedToReadToString`] if reading the configuration file failed
     /// - [`PackrinthError::DirectoryExpected`] if the given directory is not a directory
     /// - [`PackrinthError::BranchDoesNotExist`] if the branch doesn't exist
-    pub fn from_directory(directory: &Path, name: &str) -> Result<Self, PackrinthError> {
+    pub fn from_directory(directory: &Path, name: &str) -> PackrinthResult<Self> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
             Ok(metadata) => {
@@ -1135,7 +1135,7 @@ impl BranchConfig {
     /// # Errors
     /// - [`PackrinthError::FailedToSerialize`] if serialising this type to a JSON failed
     /// - [`PackrinthError::FailedToWriteFile`] if writing the JSON to a file failed
-    pub fn save(&self, directory: &Path, name: &str) -> Result<(), PackrinthError> {
+    pub fn save(&self, directory: &Path, name: &str) -> PackrinthResult<()> {
         let branch_config_path = directory.join(name).join(BRANCH_CONFIG_FILE_NAME);
         json_to_file(self, branch_config_path)
     }
@@ -1157,7 +1157,7 @@ impl BranchConfig {
     /// # Errors
     /// - [`PackrinthError::MainModLoaderProvidedButNoVersion`] if a main mod loader was specified
     ///   in the configuration file, but no version for the mod loader was set
-    pub fn print_display(&self, name: &str) -> Result<(), PackrinthError> {
+    pub fn print_display(&self, name: &str) -> PackrinthResult<()> {
         println!("Branch {name}:");
         println!("  - Branch version: {}", self.version);
         println!("  - Main Minecraft version: {}", self.minecraft_version);
@@ -1208,7 +1208,7 @@ impl BranchFiles {
     /// - [`PackrinthError::FailedToReadToString`] if reading the configuration file failed
     /// - [`PackrinthError::DirectoryExpected`] if the given directory is not a directory
     /// - [`PackrinthError::BranchDoesNotExist`] if the branch doesn't exist
-    pub fn from_directory(directory: &Path, name: &str) -> Result<Self, PackrinthError> {
+    pub fn from_directory(directory: &Path, name: &str) -> PackrinthResult<Self> {
         let branch_dir = directory.join(name);
         match fs::metadata(&branch_dir) {
             Ok(metadata) => {
@@ -1263,7 +1263,7 @@ impl BranchFiles {
     /// # Errors
     /// - [`PackrinthError::FailedToSerialize`] if serialising this type to a JSON failed
     /// - [`PackrinthError::FailedToWriteFile`] if writing the JSON to a file failed
-    pub fn save(&self, directory: &Path, name: &str) -> Result<(), PackrinthError> {
+    pub fn save(&self, directory: &Path, name: &str) -> PackrinthResult<()> {
         let branch_files_path = directory.join(name).join(BRANCH_FILES_FILE_NAME);
         json_to_file(self, branch_files_path)
     }

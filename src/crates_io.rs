@@ -1,6 +1,6 @@
 //! Structs for communicating with the `crates.io` API.
 
-use crate::{PackrinthError, request_text};
+use crate::{PackrinthError, request_text, PackrinthResult};
 use serde::{Deserialize, Serialize};
 
 /// Struct representative of all versions of a crate on the `crates.io` API.
@@ -21,7 +21,7 @@ impl CratesIoVersions {
     ///
     /// # Errors
     /// - [`PackrinthError::FailedToParseCratesIoResponseJson`] if the response was invalid
-    pub fn from_crate(crate_name: &str) -> Result<Self, PackrinthError> {
+    pub fn from_crate(crate_name: &str) -> PackrinthResult<Self> {
         let endpoint = format!("/crates/{crate_name}/versions");
         let full_url = format!("https://crates.io/api/v1/{endpoint}");
         let crates_io_response = request_text(&full_url)?;
@@ -44,7 +44,7 @@ impl CratesIoVersions {
 ///
 /// # Errors
 /// - [`PackrinthError::FailedToParseSemverVersion`] if parsing a version to a semver version failed
-pub fn is_new_version_available() -> Result<Option<String>, PackrinthError> {
+pub fn is_new_version_available() -> PackrinthResult<Option<String>> {
     let newest_version = &CratesIoVersions::from_crate(env!("CARGO_PKG_NAME"))?.versions[0].num;
     let newest_version = match semver::Version::parse(newest_version) {
         Ok(version) => version,
