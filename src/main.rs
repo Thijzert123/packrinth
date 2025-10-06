@@ -16,7 +16,6 @@ fn main() {
     // TODO add override for env
     // TODO when updating, dependencies look like fj3k29fj, not like fabric-api
     // TODO add launch subcommand to launch a branch
-    // TODO move more code to the library
     Cli::parse().run();
 }
 

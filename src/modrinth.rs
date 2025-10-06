@@ -317,7 +317,6 @@ impl MrPack {
             }
         };
 
-        // TODO auto convert zip errors to packrinth errors and use ?
         let mut mrpack_config_file = match zip_archive.by_name(MRPACK_INDEX_FILE_NAME) {
             Ok(mrpack_config_file_name) => mrpack_config_file_name,
             Err(error) => {
