@@ -1,7 +1,7 @@
 //! Structs for configuring and managing a Packrinth modpack instance.
 
 use crate::modrinth::{File, MrPack, MrPackDependencies};
-use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError, ProjectTable};
+use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError, ProjectTable};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -773,15 +773,15 @@ impl Modpack {
         };
 
         let mut zip = ZipWriter::new(zip_file);
-        if let Err(error) = zip.start_file(MRPACK_CONFIG_FILE_NAME, options) {
+        if let Err(error) = zip.start_file(MRPACK_INDEX_FILE_NAME, options) {
             return Err(PackrinthError::FailedToStartZipFile {
-                file_to_start: MRPACK_CONFIG_FILE_NAME.to_string(),
+                file_to_start: MRPACK_INDEX_FILE_NAME.to_string(),
                 error_message: error.to_string(),
             });
         }
         if let Err(error) = zip.write_all(mrpack_json.as_bytes()) {
             return Err(PackrinthError::FailedToWriteToZip {
-                to_write: MRPACK_CONFIG_FILE_NAME.to_string(),
+                to_write: MRPACK_INDEX_FILE_NAME.to_string(),
                 error_message: error.to_string(),
             });
         }

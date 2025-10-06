@@ -931,7 +931,7 @@ impl VersionArgs {
         println!("Packrinth by {}", crate::AUTHORS);
         println!("Version {}", crate::VERSION);
 
-        if let Ok(newest_version) = packrinth::is_new_version_available()
+        if let Ok(newest_version) = packrinth::crates_io::is_new_version_available()
             && let Some(newest_version) = newest_version
         {
             println!(

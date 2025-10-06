@@ -1,7 +1,7 @@
 //! Structs that are only used for (de)serializing JSONs associated with Modrinth.
 
 use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
-use crate::{MRPACK_CONFIG_FILE_NAME, PackrinthError};
+use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError};
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
@@ -31,7 +31,7 @@ pub fn extract_mrpack(mrpack_path: &Path, output_directory: &Path) -> ZipResult<
         if file.name().ends_with('/') {
             // It's a directory
             fs::create_dir_all(&output_path)?;
-        } else if file.name() != MRPACK_CONFIG_FILE_NAME {
+        } else if file.name() != MRPACK_INDEX_FILE_NAME {
             // Make sure parent dirs exist
             if let Some(parent) = output_path.parent()
                 && !parent.exists()
@@ -317,7 +317,7 @@ impl MrPack {
             }
         };
 
-        let mut mrpack_config_file = match zip_archive.by_name(MRPACK_CONFIG_FILE_NAME) {
+        let mut mrpack_config_file = match zip_archive.by_name(MRPACK_INDEX_FILE_NAME) {
             Ok(mrpack_config_file_name) => mrpack_config_file_name,
             Err(error) => {
                 return Err(PackrinthError::InvalidMrPack {
