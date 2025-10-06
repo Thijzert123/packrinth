@@ -37,4 +37,5 @@ clap = { version = "4.5.48", features = ["derive"] }
 clap-markdown = "0.1.5"
 
 [dev-dependencies]
+pretty_assertions = "1.4.1"
 tempdir = "0.3.7"

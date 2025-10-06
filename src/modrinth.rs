@@ -532,6 +532,83 @@ impl File {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::{assert_eq};
+    use crate::config::MainLoader;
+
+    #[test]
+    fn project_from_id() {
+        let project = Project::from_id("fabric-api");
+        assert_eq!(Ok(Project {
+            id: "P7dR8mSH".to_string(),
+            slug: "fabric-api".to_string(),
+            title: "Fabric API".to_string(),
+            server_side: SideSupport::Optional,
+            client_side: SideSupport::Optional,
+            project_type: ProjectType::Mod,
+        }), project);
+    }
+
+    #[test]
+    fn test_version_from_sha512_hash() {
+        let version = Version::from_sha512_hash("f0ecb1e1c8f1471437c83f4f58e549efecc0ed3f275baa2a64bbb9a26fd8c14365431bf92cf68d8f8055f6ef103fcc863cd75adbbe8be80f7b752fe1c0c3a305");
+        println!("{:#?}", version);
+        assert_eq!(Ok(Version {
+            id: "9xIK4e8l".to_string(),
+            project_id: "P7dR8mSH".to_string(),
+            version_type: VersionType::Release,
+            game_versions: vec!["1.21.1".to_string()],
+            files: vec![VersionFile {
+                url: "https://cdn.modrinth.com/data/P7dR8mSH/versions/9xIK4e8l/fabric-api-0.116.6%2B1.21.1.jar".to_string(),
+                filename: "fabric-api-0.116.6+1.21.1.jar".to_string(),
+                primary: true,
+                size: 2424827,
+                hashes: FileHashes { sha1: "10d5c7cf5fb309513b4f68b85b1e0d9dccbec9ac".to_string(), sha512: "f0ecb1e1c8f1471437c83f4f58e549efecc0ed3f275baa2a64bbb9a26fd8c14365431bf92cf68d8f8055f6ef103fcc863cd75adbbe8be80f7b752fe1c0c3a305".to_string() },
+            }],
+            dependencies: vec![],
+        }), version);
+    }
+
+    // TODO add tests for MrPack struct
+
+    #[test]
+    fn test_file_from_project() {
+        let branch_config = BranchConfig {
+            version: "1.0.0".to_string(),
+            minecraft_version: "1.21.1".to_string(),
+            acceptable_minecraft_versions: vec![],
+            mod_loader: Some(MainLoader::Fabric),
+            loader_version: Some("0.17.2".to_string()),
+            acceptable_loaders: vec![],
+            manual_files: vec![],
+        };
+        let project_settings = ProjectSettings {
+            version_overrides: None,
+            include_or_exclude: None,
+        };
+        let file = File::from_project(
+            "test",
+            &branch_config,
+            "fabric-api",
+            &project_settings,
+            false,
+            false,
+        );
+        assert_eq!(FileResult::Ok {
+            file: File {
+                project_name: "Fabric API".to_string(),
+                path: "mods/fabric-api-0.116.6+1.21.1.jar".to_string(),
+                hashes: FileHashes { sha1: "10d5c7cf5fb309513b4f68b85b1e0d9dccbec9ac".to_string(), sha512: "f0ecb1e1c8f1471437c83f4f58e549efecc0ed3f275baa2a64bbb9a26fd8c14365431bf92cf68d8f8055f6ef103fcc863cd75adbbe8be80f7b752fe1c0c3a305".to_string() },
+                env: Some(Env {
+                    client: SideSupport::Optional,
+                    server: SideSupport::Optional,
+                }),
+                downloads: vec!["https://cdn.modrinth.com/data/P7dR8mSH/versions/9xIK4e8l/fabric-api-0.116.6%2B1.21.1.jar".to_string(),],
+                file_size: 2424827,
+            },
+            dependencies: vec![],
+            project_id: "P7dR8mSH".to_string(),
+        }, file);
+    }
 
     #[test]
     fn test_file_from_modrinth_version() {
