@@ -16,3 +16,7 @@ or incomplete.
 
 The command above won't change anything other than adding a branch. To add projects of the original modpack
 to the `modpack.json` file (so that `packrinth update` works), use the `--add-projects` flag.
+
+{: .tip }
+If you already have a manager for your modpack, `packrinth import` can make migrating to Packrinth a lot easier
+by doing the hard work for you!
