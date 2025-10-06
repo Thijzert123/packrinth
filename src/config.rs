@@ -1,7 +1,7 @@
 //! Structs for configuring and managing a Packrinth modpack instance.
 
 use crate::modrinth::{extract_mrpack_overrides, File, MrPack, MrPackDependencies, Project, Version};
-use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError, ProjectTable, GitUtils, PackrinthResult};
+use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError, ProjectTable, PackrinthResult};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -9,7 +9,6 @@ use std::fmt::Debug;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
-use progress_bar::{Color, Style};
 use walkdir::WalkDir;
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
@@ -926,7 +925,25 @@ impl Modpack {
         })
     }
 
-    // TODO api docs
+    /// Imports a Modrinth modpack to a new branch.
+    ///
+    /// If `add_projects` is set to `true`, projects will be added to the global `modpack.json` file
+    /// if the file doesn't include them. `force` indicates whether the function should continue
+    /// if the branch already exists. If set to `true`, the branch will be overridden.
+    ///
+    /// The closure can be used to execute code between iterating the `MrPack.files` field, such as
+    /// updating a progress bar.
+    ///
+    /// # Errors
+    /// - [`PackrinthError::BranchAlreadyExists`] if the branch already exists and `force` is `false`
+    /// - [`PackrinthError::FailedToExtractMrPack`] if extracting the modpack failed
+    ///
+    /// Any other errors come from these methods that are called in this function and propagated upward:
+    /// - [`Self::new_branch`]
+    /// - [`BranchConfig::save`]
+    /// - [`BranchFiles::from_directory`]
+    /// - [`Project::from_id`]
+    /// - [`BranchFiles::save`]
     pub fn import_mrpack<F>(&mut self, mrpack: MrPack, mrpack_path: &Path, add_projects: bool, force: bool, mut f: F) -> PackrinthResult<()> where F: FnMut() {
         let branch_name = match mrpack_path.file_name() {
             Some(branch_name) => branch_name.display().to_string(),

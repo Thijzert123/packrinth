@@ -4,11 +4,11 @@ use clap_complete::{Generator, shells};
 use dialoguer::Confirm;
 use indexmap::IndexMap;
 use packrinth::config::{
-    BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, MainLoader, Modpack,
+    BranchConfig, BranchFiles, BranchFilesProject, IncludeOrExclude, Modpack,
     ProjectSettings,
 };
 use packrinth::modrinth::{
-    MrPack, Project, Version, VersionDependency, VersionDependencyType, extract_mrpack_overrides,
+    MrPack, VersionDependency, VersionDependencyType,
 };
 use packrinth::{GitUtils, PackrinthError, ProjectUpdateResult, ProjectUpdater, config};
 use progress_bar::pb::ProgressBar;
