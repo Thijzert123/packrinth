@@ -1,6 +1,6 @@
 //! Structs for communicating with the `crates.io` API.
 
-use crate::{PackrinthError, request_text, PackrinthResult};
+use crate::{PackrinthError, PackrinthResult, request_text};
 use serde::{Deserialize, Serialize};
 
 /// Struct representative of all versions of a crate on the `crates.io` API.

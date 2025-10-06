@@ -424,11 +424,7 @@ impl Modpack {
     /// - [`PackrinthError::ProjectIsNotAdded`] if given project isn't added to the modpack
     /// - [`PackrinthError::OverrideDoesNotExist`] if given override doesn't exist for given project
     /// - [`PackrinthError::NoOverridesForProject`] if no overrides exist for given project at all
-    pub fn remove_version_override(
-        &mut self,
-        project: &str,
-        branch: &str,
-    ) -> PackrinthResult<()> {
+    pub fn remove_version_override(&mut self, project: &str, branch: &str) -> PackrinthResult<()> {
         let Some(project_settings) = self.projects.get_mut(project) else {
             return Err(PackrinthError::ProjectIsNotAdded {
                 project: project.to_string(),
@@ -1028,9 +1024,7 @@ impl Modpack {
         Ok(())
     }
 
-    fn create_dependencies(
-        branch_config: BranchConfig,
-    ) -> PackrinthResult<MrPackDependencies> {
+    fn create_dependencies(branch_config: BranchConfig) -> PackrinthResult<MrPackDependencies> {
         let mut forge = None;
         let mut neoforge = None;
         let mut fabric_loader = None;
