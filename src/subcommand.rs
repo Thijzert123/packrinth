@@ -811,11 +811,15 @@ impl DocArgs {
     pub fn run(&self, modpack: &Modpack, _config_args: &ConfigArgs) -> Result<(), PackrinthError> {
         let doc_markdown_table = modpack.generate_project_table()?;
 
-        println!("# {} _by {}_", modpack.name, modpack.author);
-        println!("{}", modpack.summary);
+        if !self.table_only {
+            println!("# {} _by {}_", modpack.name, modpack.author);
+            println!("{}", modpack.summary);
+        }
 
         if !doc_markdown_table.project_map.is_empty() {
-            println!("## What is included?");
+            if !self.table_only {
+                println!("## What is included?");
+            }
             println!("{doc_markdown_table}");
         }
 

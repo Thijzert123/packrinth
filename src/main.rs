@@ -18,7 +18,6 @@ fn main() {
     // TODO add launch subcommand to launch a branch
     // TODO check if version overrides, inclusions and exclusions also work for auto-added dependencies
     // TODO add changelog subcommand
-    // TODO add --table-only option for doc command
     Cli::parse().run();
 }
 
