@@ -16,6 +16,9 @@ fn main() {
     // TODO add override for env
     // TODO when updating, dependencies look like fj3k29fj, not like fabric-api
     // TODO add launch subcommand to launch a branch
+    // TODO check if version overrides, inclusions and exclusions also work for auto-added dependencies
+    // TODO add changelog subcommand
+    // TODO add --table-only option for doc command
     Cli::parse().run();
 }
 
