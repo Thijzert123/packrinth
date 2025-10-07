@@ -532,25 +532,30 @@ impl File {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pretty_assertions::{assert_eq};
     use crate::config::MainLoader;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn project_from_id() {
         let project = Project::from_id("fabric-api");
-        assert_eq!(Ok(Project {
-            id: "P7dR8mSH".to_string(),
-            slug: "fabric-api".to_string(),
-            title: "Fabric API".to_string(),
-            server_side: SideSupport::Optional,
-            client_side: SideSupport::Optional,
-            project_type: ProjectType::Mod,
-        }), project);
+        assert_eq!(
+            Ok(Project {
+                id: "P7dR8mSH".to_string(),
+                slug: "fabric-api".to_string(),
+                title: "Fabric API".to_string(),
+                server_side: SideSupport::Optional,
+                client_side: SideSupport::Optional,
+                project_type: ProjectType::Mod,
+            }),
+            project
+        );
     }
 
     #[test]
     fn test_version_from_sha512_hash() {
-        let version = Version::from_sha512_hash("f0ecb1e1c8f1471437c83f4f58e549efecc0ed3f275baa2a64bbb9a26fd8c14365431bf92cf68d8f8055f6ef103fcc863cd75adbbe8be80f7b752fe1c0c3a305");
+        let version = Version::from_sha512_hash(
+            "f0ecb1e1c8f1471437c83f4f58e549efecc0ed3f275baa2a64bbb9a26fd8c14365431bf92cf68d8f8055f6ef103fcc863cd75adbbe8be80f7b752fe1c0c3a305",
+        );
         println!("{:#?}", version);
         assert_eq!(Ok(Version {
             id: "9xIK4e8l".to_string(),
