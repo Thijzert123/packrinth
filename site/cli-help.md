@@ -337,6 +337,8 @@ Add new branches
 
 **Usage:** `packrinth branch add <BRANCHES>...`
 
+**Command Alias:** `new`
+
 ###### **Arguments:**
 
 * `<BRANCHES>` — Names of new branches to add

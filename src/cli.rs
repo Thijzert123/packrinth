@@ -326,6 +326,7 @@ pub enum BranchSubCommand {
     List(ListBranchesArgs),
 
     /// Add new branches
+    #[clap(visible_alias = "new")]
     Add(AddBranchesArgs),
 
     /// Remove branches
