@@ -264,8 +264,8 @@ impl ProjectType {
             // This happens when you add a modpack as project.
             ProjectType::Modpack => Err(PackrinthError::AttemptedToAddOtherModpack),
 
-            ProjectType::ResourcePack => Ok("resourcepack"),
-            ProjectType::Shader => Ok("shader"),
+            ProjectType::ResourcePack => Ok("resourcepacks"),
+            ProjectType::Shader => Ok("shaderpacks"),
         }
     }
 }
