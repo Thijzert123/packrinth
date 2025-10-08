@@ -579,7 +579,7 @@ mod tests {
     fn test_file_from_project() {
         let branch_config = BranchConfig {
             version: "1.0.0".to_string(),
-            minecraft_version: "1.21.1".to_string(),
+            minecraft_version: "1.14".to_string(),
             acceptable_minecraft_versions: vec![],
             mod_loader: Some(MainLoader::Fabric),
             loader_version: Some("0.17.2".to_string()),
@@ -601,14 +601,14 @@ mod tests {
         assert_eq!(FileResult::Ok {
             file: File {
                 project_name: "Fabric API".to_string(),
-                path: "mods/fabric-api-0.116.6+1.21.1.jar".to_string(),
-                hashes: FileHashes { sha1: "10d5c7cf5fb309513b4f68b85b1e0d9dccbec9ac".to_string(), sha512: "f0ecb1e1c8f1471437c83f4f58e549efecc0ed3f275baa2a64bbb9a26fd8c14365431bf92cf68d8f8055f6ef103fcc863cd75adbbe8be80f7b752fe1c0c3a305".to_string() },
+                path: "mods/fabric-0.2.7%2Bbuild.127.jar".to_string(),
+                hashes: FileHashes { sha1: "554edd4ffb7c05585acc8b7700f523e4b1fc0cde".to_string(), sha512: "6fc41a2adaa4d3b254cb378ec2fbe589d178d998516cf6e7abed8ad4a3fa9da7e75201dcf843698917f1f3b2fb5458587426b79ae22bc642774fc74ff38e79d6".to_string() },
                 env: Some(Env {
                     client: SideSupport::Optional,
                     server: SideSupport::Optional,
                 }),
-                downloads: vec!["https://cdn.modrinth.com/data/P7dR8mSH/versions/9xIK4e8l/fabric-api-0.116.6%2B1.21.1.jar".to_string(),],
-                file_size: 2424827,
+                downloads: vec!["https://cdn.modrinth.com/data/P7dR8mSH/versions/0.2.7%2Bbuild.127/fabric-0.2.7%2Bbuild.127.jar".to_string(),],
+                file_size: 253237,
             },
             dependencies: vec![],
             project_id: "P7dR8mSH".to_string(),
