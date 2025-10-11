@@ -31,6 +31,11 @@ yay -S packrinth
 ### Pre-compiled binaries
 You can also manually install Packrinth with one of the pre-compiled binaries from the [latest GitHub release](https://github.com/Thijzert123/packrinth/releases/latest).
 
+If you don't want to manually install this binary, you can install the AUR bin package instead:
+```bash
+yay -S packrinth-bin
+```
+
 ## Compiling
 To compile Packrinth, clone the Git repository with:
 ```bash

@@ -41,7 +41,11 @@ Packrinth is also available on the [AUR](https://aur.archlinux.org/packages/pack
 yay -S packrinth
 ```
 
-You can also manually install Packrinth with one of the pre-compiled binaries from the [latest GitHub release](https://github.com/Thijzert123/packrinth/releases/latest).
+You can also manually install Packrinth with one of the pre-compiled binaries from the [latest GitHub release](https://github.com/Thijzert123/packrinth/releases/latest). If you don't want to do that, but also don't want to compile Packrinth yourself, you can install the bin package from the AUR:
+```bash
+yay -S packrinth-bin
+```
+This downloads the latest pre-compiled Packrinth from GitHub releases and installs it to your system.
 
 ## Getting started
 Please read the [full guide](full-guide.html). It explains all the basics for Packrinth.
