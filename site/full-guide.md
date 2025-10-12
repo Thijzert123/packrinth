@@ -20,7 +20,7 @@ This page assumes you have already installed Packrinth.
 Instructions can be found [here](https://packrinth.thijzert.nl/#installation).
 
 {: .note }
-Mods, resource packs, data packs, shaders and plugins will be called `projects` from now on.
+Mods, resource packs, data packs, shaders and plugins will be called _projects_ from now on.
 
 ## Initializing the modpack
 To get started, initialize a Packrinth modpack instance with `packrinth init`.
