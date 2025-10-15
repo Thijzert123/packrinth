@@ -27,7 +27,7 @@ console = "0.16.1"
 indexmap = { version = "2.11.4", features = ["serde"] }
 reqwest-retry = "0.7.0"
 reqwest-middleware = "0.4.2"
-tokio = { version = "1.47.1", features = ["rt", "rt-multi-thread"] }
+tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread"] }
 clap_complete = "4.5.58"
 gix = "0.73.0"
 semver = "1.0.27"
