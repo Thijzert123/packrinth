@@ -366,6 +366,7 @@ pub struct DocArgs {
     #[clap(short, long)]
     pub table_only: bool,
 
+    /// Don't print the information about branch compatibility
     #[clap(short = 'C', long)]
     pub no_compatibility_icons: bool,
 }
