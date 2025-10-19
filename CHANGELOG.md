@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2](https://github.com/Thijzert123/packrinth/compare/v0.8.1...v0.8.2) - 2025-10-19
+
+### Added
+
+- `--verbose` flag works for `import` subcommand
+- Add `--no-compatibiliby-icons` option to `doc` subcommand
+
+### Fixed
+
+- Projects getting added even if `--add-project` flag wasn't passed with the `import` subcommand
+- `modpack.json` file not saving when importing a `mrpack` with `import` subcommand
+
 ## [0.8.1](https://github.com/Thijzert123/packrinth/compare/v0.8.0...v0.8.1) - 2025-10-08
 
 ### Added
