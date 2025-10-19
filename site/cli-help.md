@@ -412,6 +412,7 @@ Generate Markdown documentation
 
 
 
+
 ## `packrinth completions`
 
 Generate shell completion for Packrinth
