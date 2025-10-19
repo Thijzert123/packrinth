@@ -996,8 +996,9 @@ impl Modpack {
                 id: Some(project.slug.clone()),
             });
 
-            if add_projects && (!self.projects.contains_key(&version.project_id)
-                || !self.projects.contains_key(&project.slug))
+            if add_projects
+                && (!self.projects.contains_key(&version.project_id)
+                    || !self.projects.contains_key(&project.slug))
             {
                 self.projects.insert(
                     project.slug.clone(),

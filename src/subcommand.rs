@@ -145,12 +145,7 @@ impl ImportArgs {
             self.force,
             |project| {
                 if config_args.verbose {
-                    progress_bar.print_info(
-                        "imported",
-                        &project,
-                        Color::Green,
-                        Style::Normal,
-                    );
+                    progress_bar.print_info("imported", &project, Color::Green, Style::Normal);
                 }
 
                 progress_bar.inc()
