@@ -249,6 +249,7 @@ impl Display for ProjectTable {
 impl ProjectTable {
     /// Returns a documentation table [`String`] similar to what `display` produces,
     /// but without the branch compatibility information.
+    #[must_use]
     pub fn display_no_compatibility_icons(&self) -> String {
         // All write macros have an unwrap call, because a write call to a String never fails.
         let mut buffer = String::new();

@@ -148,7 +148,7 @@ impl ImportArgs {
                     progress_bar.print_info("imported", &project, Color::Green, Style::Normal);
                 }
 
-                progress_bar.inc()
+                progress_bar.inc();
             },
         )?;
 
