@@ -128,7 +128,7 @@ impl ImportArgs {
     pub fn run(
         &self,
         modpack: &mut Modpack,
-        _config_args: &ConfigArgs,
+        config_args: &ConfigArgs,
     ) -> Result<(), PackrinthError> {
         if self.add_projects && !self.allow_dirty && GitUtils::modpack_is_dirty(modpack) {
             return Err(PackrinthError::RepoIsDirty);
@@ -143,7 +143,18 @@ impl ImportArgs {
             &self.modrinth_pack,
             self.add_projects,
             self.force,
-            || progress_bar.inc(),
+            |project| {
+                if config_args.verbose {
+                    progress_bar.print_info(
+                        "imported",
+                        &project,
+                        Color::Green,
+                        Style::Normal,
+                    );
+                }
+
+                progress_bar.inc()
+            },
         )?;
 
         progress_bar.print_info(

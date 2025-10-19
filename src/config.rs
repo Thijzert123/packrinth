@@ -923,7 +923,8 @@ impl Modpack {
     /// if the branch already exists. If set to `true`, the branch will be overridden.
     ///
     /// The closure can be used to execute code between iterating the `MrPack.files` field, such as
-    /// updating a progress bar.
+    /// updating a progress bar. The [`String`] that gets passed is the project slug that was just
+    /// imported.
     ///
     /// # Errors
     /// - [`PackrinthError::BranchAlreadyExists`] if the branch already exists and `force` is `false`
@@ -944,7 +945,7 @@ impl Modpack {
         mut f: F,
     ) -> PackrinthResult<()>
     where
-        F: FnMut(),
+        F: FnMut(String),
     {
         let branch_name = match mrpack_path.file_name() {
             Some(branch_name) => branch_name.display().to_string(),
@@ -999,7 +1000,7 @@ impl Modpack {
                 || !self.projects.contains_key(&project.slug))
             {
                 self.projects.insert(
-                    project.slug,
+                    project.slug.clone(),
                     ProjectSettings {
                         version_overrides: None,
                         include_or_exclude: None,
@@ -1007,7 +1008,7 @@ impl Modpack {
                 );
             }
 
-            f();
+            f(project.slug);
         }
 
         branch_files.save(&self.directory, &branch_name)?;
