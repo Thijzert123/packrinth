@@ -1021,6 +1021,7 @@ impl Modpack {
             });
         }
 
+        self.save()?;
         Ok(())
     }
 
