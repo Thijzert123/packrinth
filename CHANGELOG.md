@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `--verbose` flag works for `import` subcommand
-- Add `--no-compatibiliby-icons` option to `doc` subcommand
+- `--no-compatibiliby-icons` option to `doc` subcommand
 
 ### Fixed
 
