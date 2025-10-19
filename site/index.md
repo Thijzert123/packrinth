@@ -55,3 +55,6 @@ If you just want a reference for the CLI and configuration, take a look at [CLI 
 ## Packrinth as library
 Packrinth provides a library alongside the binary. Using this, you can modify Packrinth's configuration
 in an idiomatic way. For example, you can write your own CLI interface for Packrinth!
+
+## Support or questions
+If you have any issues or questions about Packrinth, feel free to [open an issue on GitHub](https://github.com/Thijzert123/packrinth/issues/new)!
