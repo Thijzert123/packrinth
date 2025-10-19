@@ -408,6 +408,7 @@ Generate Markdown documentation
 ###### **Options:**
 
 * `-t`, `--table-only` — Only generate the project table
+* `-C`, `--no-compatibility-icons`
 
 
 

@@ -365,6 +365,9 @@ pub struct DocArgs {
     /// Only generate the project table
     #[clap(short, long)]
     pub table_only: bool,
+
+    #[clap(short = 'C', long)]
+    pub no_compatibility_icons: bool,
 }
 
 #[derive(Parser, Debug)]

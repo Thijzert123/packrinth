@@ -29,7 +29,9 @@
 // Additionally, Serialize, Deserialize, PartialOrd and Ord should only be derived
 // if they make sense in their context.
 
-use std::io::Write;
+// Both needed for trait functions, but their name is not directly used.
+use std::fmt::Write as _;
+use std::io::Write as _;
 
 pub mod config;
 pub mod crates_io;
@@ -241,6 +243,41 @@ impl Display for ProjectTable {
         }
 
         Ok(())
+    }
+}
+
+impl ProjectTable {
+    /// Returns a documentation table [`String`] similar to what `display` produces,
+    /// but without the branch compatibility information.
+    pub fn display_no_compatibility_icons(&self) -> String {
+        // All write macros have an unwrap call, because a write call to a String never fails.
+        let mut buffer = String::new();
+
+        writeln!(buffer, "|{}|", self.column_names[0]).unwrap();
+        writeln!(buffer, "|:--|").unwrap();
+
+        let mut sorted_project_map: Vec<_> = self.project_map.iter().collect();
+        // Sort by key (human name of project)
+        sorted_project_map.sort_by(|a, b| a.0.name.cmp(&b.0.name));
+
+        let mut iter = sorted_project_map.iter().peekable();
+        while let Some(project) = iter.next() {
+            if let Some(id) = &project.0.id {
+                // If project has an id (not a manual file), write a Markdown link.
+                let mut project_url = "https://modrinth.com/project/".to_string();
+                project_url.push_str(id);
+                write!(buffer, "|[{}]({})|", project.0.name, project_url).unwrap();
+            } else {
+                write!(buffer, "|{}|", project.0.name).unwrap();
+            }
+
+            // Print newline except for the last time of this loop.
+            if iter.peek().is_some() {
+                writeln!(buffer).unwrap();
+            }
+        }
+
+        buffer
     }
 }
 

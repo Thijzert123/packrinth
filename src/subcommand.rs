@@ -820,7 +820,11 @@ impl DocArgs {
             if !self.table_only {
                 println!("## What is included?");
             }
-            println!("{doc_markdown_table}");
+            if self.no_compatibility_icons {
+                println!("{}", doc_markdown_table.display_no_compatibility_icons());
+            } else {
+                println!("{doc_markdown_table}");
+            }
         }
 
         Ok(())
