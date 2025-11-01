@@ -529,7 +529,7 @@ impl UpdateArgs {
                         && !branch_files
                             .projects
                             .iter()
-                            .any(|project| project.id == Some(project_id.to_string()))
+                            .any(|project| project.id == Some(project_id.clone()))
                     {
                         let project_settings = ProjectSettings {
                             version_overrides: None,

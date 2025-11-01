@@ -29,7 +29,7 @@ impl CratesIoVersions {
         match serde_json::from_str::<Self>(&crates_io_response) {
             Ok(versions) => Ok(versions),
             Err(error) => Err(PackrinthError::FailedToParseCratesIoResponseJson {
-                crates_io_endpoint: endpoint.to_string(),
+                crates_io_endpoint: endpoint.clone(),
                 error_message: error.to_string(),
             }),
         }
