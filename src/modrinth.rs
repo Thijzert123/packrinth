@@ -4,7 +4,7 @@ use crate::config::{BranchConfig, IncludeOrExclude, Loader, ProjectSettings};
 use crate::{MRPACK_INDEX_FILE_NAME, PackrinthError, PackrinthResult};
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Read};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::{cmp, fs, io};
 use zip::ZipArchive;
 use zip::result::ZipResult;
@@ -505,11 +505,9 @@ impl File {
             Err(error) => return FileResult::Err(error),
         };
 
-        let path = PathBuf::from(directory)
-            .join(primary_file_name.expect("No Modrinth file found"))
-            .to_str()
-            .expect("File name has non-valid UTF-8 characters")
-            .to_string();
+        // Always use / as file separator, because all MrPacks should use this (even on Windows).
+        let path =
+            String::from(directory) + "/" + primary_file_name.expect("No Modrinth file found");
 
         FileResult::Ok {
             file: Self {
