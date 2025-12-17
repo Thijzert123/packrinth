@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Paths in MrPack index file now always use  as file separator, regardless of operating system
+- Paths in MrPack index file now always use `/` as file separator, regardless of operating system
 
 ## [0.8.2](https://github.com/Thijzert123/packrinth/compare/v0.8.1...v0.8.2) - 2025-10-19
 
