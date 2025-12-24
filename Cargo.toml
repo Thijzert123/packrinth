@@ -16,7 +16,7 @@ include = ["src/", "*.md"]
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
 reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls", "blocking"] }
-serde_json = "1.0.146"
+serde_json = "1.0.147"
 clap = { version = "4.5.53", features = ["derive"] }
 dialoguer = "0.12.0"
 zip = "7.0.0"
