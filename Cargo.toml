@@ -25,7 +25,7 @@ progress_bar = "1.4.0"
 terminal_size = "0.4.3"
 console = "0.16.2"
 indexmap = { version = "2.13.0", features = ["serde"] }
-reqwest-retry = "0.8.0"
+reqwest-retry = "0.9.0"
 reqwest-middleware = "0.4.2"
 tokio = { version = "1.49.0", features = ["rt", "rt-multi-thread"] }
 clap_complete = "4.5.65"
